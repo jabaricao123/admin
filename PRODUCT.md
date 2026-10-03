@@ -19,7 +19,7 @@ web
 
 ## Product Purpose
 
-企业管理系统（admin）：通用企业内部管理平台。首期已交付组织与用户管理基线，后续模块按业务优先级另行立项。追溯与 RLS 原则全量保留：权限由数据库层强制、变更留痕、版本化。
+企业管理系统（admin）：通用企业内部管理平台。首期已交付用户管理基线（规划归属组织管理模块），后续模块按 P0/P1/P2 逐个立项。追溯与 RLS 原则全量保留：权限由数据库层强制、变更留痕、版本化。
 
 ## Positioning
 
@@ -29,15 +29,32 @@ web
 
 ## Operating Context
 
-- 现状：脚手架、认证、用户管理已上线；后续模块按业务优先级另行立项。
+- 现状：脚手架、认证、工作台、用户管理已上线；10 个顶级模块定稿（2026-10-04），其余按优先级逐个立项。
 - 使用环境：工厂/办公室内网为主；中文界面（技术术语保留英文）；暂不做多语言与原生 App，响应式 H5 覆盖移动场景。
-- 关键工作流：登录 → 工作台 → 按角色访问模块（当前：用户管理，仅 admin）。
+- 关键工作流：登录 → 工作台 → 按角色访问模块（当前：用户管理，仅 admin，位于 /settings/users）。
+- 路径迁移（已定）：立项组织管理时，用户管理迁至 /organization/users，旧路径 301 重定向。
 - 角色权限矩阵：见 docs/PLAN.md §4.7（admin 全权管理用户/组织；其他角色仅读本人档案）。
 
 ## Capabilities and Constraints
 
 - 已上线：登录（Supabase 密码认证）、后台守卫、工作台（统计卡片/注册趋势/最近更新）、用户管理（列表/搜索/筛选/角色分配/启停用，仅 admin）；前端栈 Next.js 16 + shadcn/ui（官方 blocks）。
+- 模块地图（2026-10-04 定稿，子菜单与路由明细见 docs/modules/README.md）：
+
+| 序号 | 模块 | 标识 | 优先级 | 状态 |
+|---|---|---|---|---|
+| 1 | 工作台 | dashboard | — | 已上线 |
+| 2 | 组织管理 | organization | P0 | 部分已上线（用户管理） |
+| 3 | 权限管理 | access | P0 | 待立项 |
+| 4 | 审批中心 | approval | P1 | 待立项 |
+| 5 | 报表中心 | report | P1 | 待立项 |
+| 6 | 审计中心 | audit | P1 | 待立项 |
+| 7 | 接口/集成中心 | integration | P1 | 待立项 |
+| 8 | 第三方数据同步 | sync | P1 | 待立项 |
+| 9 | 系统管理 | system | P1 | 待立项 |
+| 10 | 消息中心 | message | P2 | 待立项 |
+
 - 技术约束：单 Next.js 应用（(admin) 服务端页面 + 客户端交互；(portal) 路由组为预留）；不纳入 ERP/MES 深度集成、报价核算、排产。
+- 角色范围：内部角色 admin / engineer / planner / buyer / quality 启用；外部角色 supplier / customer 已在数据库枚举中预留，当前不启用（2026-10-04 确认）。
 - 术语：RLS 等技术术语保留英文，界面文案简体中文。
 
 ## Brand Commitments
@@ -48,6 +65,7 @@ web
 ## Evidence on Hand
 
 - docs/PLAN.md：当前实施计划（架构、数据模型、权限、测试）。
+- docs/modules/：10 个顶级模块规划与子菜单（PLAN v1.4 定稿），多 agent 并行开发的认领入口。
 - README.MD：进度、测试账号（admin/engineer/buyer/planner@example.com）、命令速查。
 - supabase/migrations + seed.sql：数据库基线与种子数据。
 - /tmp/opencode/shots/：当前界面截图 01–10（桌面/移动、亮/暗色、导航与编辑抽屉）。

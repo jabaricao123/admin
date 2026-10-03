@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   Loader2Icon,
-  PencilIcon,
   RefreshCwIcon,
   SearchIcon,
   UserRoundXIcon,
@@ -237,13 +236,13 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="搜索姓名 / 邮箱"
-                className="pl-8"
+                className="h-11 pl-8 text-base lg:h-8 lg:text-sm"
                 aria-label="搜索姓名或邮箱"
               />
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger
-                className="w-full sm:w-36"
+                className="w-full sm:w-36 h-11 lg:h-8"
                 aria-label="按角色筛选"
               >
                 <SelectValue placeholder="全部角色" />
@@ -259,7 +258,7 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger
-                className="w-full sm:w-32"
+                className="w-full sm:w-32 h-11 lg:h-8"
                 aria-label="按状态筛选"
               >
                 <SelectValue placeholder="全部状态" />
@@ -279,6 +278,7 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
               onClick={() => void load()}
               disabled={loading}
               aria-label="刷新用户列表"
+              className="h-9 w-9 lg:h-8 lg:w-8"
             >
               <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
             </Button>
@@ -291,9 +291,14 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
               ))}
             </div>
           ) : error ? (
-            <p className="py-8 text-center text-sm text-destructive">
-              加载失败：{error}
-            </p>
+            <div className="flex flex-col items-center gap-2 py-8 text-sm">
+              <p className="text-destructive">
+                加载失败：{translateErrorMessage(error)}
+              </p>
+              <Button variant="outline" onClick={() => void load()}>
+                重试
+              </Button>
+            </div>
           ) : pagedRows.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-sm text-muted-foreground">
               <UserRoundXIcon className="size-8 opacity-60" />
@@ -385,12 +390,15 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
                     <TableHead className="text-center">状态</TableHead>
                     <TableHead className="text-center">更新时间</TableHead>
                     <TableHead className="text-center">最近修改人</TableHead>
-                    <TableHead className="text-center">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pagedRows.map((row) => (
-                    <TableRow key={row.id}>
+                    <TableRow
+                      key={row.id}
+                      className="cursor-pointer"
+                      onClick={() => openEdit(row)}
+                    >
                       <TableCell className="text-center">
                         <div className="font-medium">
                           {row.full_name ?? row.email ?? "-"}
@@ -426,16 +434,6 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
                           ? (editorNames.get(row.updated_by) ?? "已离职用户")
                           : "—"}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEdit(row)}
-                        >
-                          <PencilIcon data-icon="inline-start" />
-                          编辑
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -453,17 +451,17 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  size="sm"
                   disabled={currentPage <= 1}
                   onClick={() => setPage(currentPage - 1)}
+                  className="h-11 px-4 lg:h-8 lg:px-3"
                 >
                   上一页
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
                   disabled={currentPage >= pageCount}
                   onClick={() => setPage(currentPage + 1)}
+                  className="h-11 px-4 lg:h-8 lg:px-3"
                 >
                   下一页
                 </Button>
@@ -482,10 +480,8 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
         }}
       >
         <SheetContent
-          side={isMobile ? "bottom" : "right"}
-          className={
-            isMobile ? "max-h-[85svh] rounded-t-2xl" : "w-full sm:max-w-md"
-          }
+          side="right"
+          className="w-[35vw] min-w-[320px] max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>编辑用户</SheetTitle>

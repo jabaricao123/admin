@@ -1,9 +1,13 @@
 # CJTcable 企业管理系统实施计划
 
-> 版本：v1.3 ｜ 日期：2026-10-04 ｜ 状态：待评审
+> 版本：v1.4 ｜ 日期：2026-10-04 ｜ 状态：待评审
 > v1.1 变更：定位从"线缆行业 PLM"调整为"通用型 PLM"，行业差异通过数据字典与自定义属性适配。
 > v1.2 变更：前端技术栈由 Refine + Ant Design 调整为 shadcn/ui（Tailwind CSS 4），沿用 Next.js App Router + Supabase。
 > v1.3 变更：定位从"通用型 PLM"调整为"通用企业管理系统"（项目管理、采购协同、主数据、变更审批、对外门户），PLM 仅作为历史阶段术语保留。
+> v1.4 变更：定稿 10 个顶级目录及子菜单结构（独立成文 docs/modules/）；用户管理降级为组织管理（标识 org）子模块，路径规划为 /org/users。
+> v1.4.1 变更：INDEX.md 增加 RLS 统一声明模板与模块 RLS 边界速查；修正 6 份文档的 RLS 违规（service role 绕过、动态 SQL 注入、search_path 劫持等）。
+> v1.4.2 变更：三份子代理评审（架构/完整性/可执行性）后批量修正——契约规则补第 10 条（内部 RPC 授权）；新增 M0 底座里程碑与共享工件冲突矩阵；全部 AGENT.md 前置依赖改工单级；新增 approval/engine.md；修复 webhook secret 存储、审批模板版本化、audit 公开面、角色迁移（7 角色 + admin_update_profile 收敛）、service_role 禁令、Sheet 规范对齐 DESIGN v2.2 等 40+ 处。
+> v1.4.3 变更：方案评审子代理复审后终修——org/014 补 org.user_changed 发射点工单（integration/010 验收闭环）；INDEX 规则 10 名单改例举式；system 两处「模块标记校验」改专用角色 wrapper；共享工件规则措辞精确化（org/008 仅改 route 字符串）；message_deliveries 唯一约束含分区键；补跨阶段依赖与 Wave 0 串行链说明。
 
 ---
 
@@ -35,6 +39,8 @@
 
 - RLS 测试覆盖率 100%（每张表每条策略均有 pgTAP 用例）。
 - 非管理员无法访问用户管理页面与数据（服务端二次校验 + RLS 双保险）。
+
+详见 [docs/modules/README.md](./modules/README.md)（模块规划：顶级目录与子菜单，供多 agent 并行开发引用）。
 
 ---
 

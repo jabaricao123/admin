@@ -1,6 +1,8 @@
 # 企业管理系统设计规范（DESIGN.md）
 
-> 版本：2.1 · 更新于 2026-10-04
+> 版本：2.3 · 更新于 2026-10-04
+> v2.2 变更：弹窗统一为右侧 Sheet（桌面/移动同组件同视觉，35vw）；列表页去按钮化——行内不放操作按钮，行级动作全部集成弹窗内，行/卡片可点即编辑。
+> v2.3 变更：新增 §7 现状差距清单并完成 7 项收口（§1 token 对齐实现、Sheet 统一右滑 35vw、桌面删操作列+整行可点、侧栏折叠为图标、移动触控 44px、错误中文化）；`tsc`/`build`/`detect` 全绿。
 > 适用范围：企业管理系统全部管理端与移动端 H5 界面
 > 前端栈：Next.js 16 + shadcn/ui（radix-nova style）+ Tailwind CSS 4
 > 主题来源：CJT 品牌绿 `#2aaf50`
@@ -11,10 +13,10 @@
 
 | Token | 亮色 | 暗色 | 用途 |
 |---|---|---|---|
-| `--primary` | `oklch(0.6636 0.1751 148.17)`（#2aaf50） | `oklch(0.8003 0.1821 151.71)` | 主按钮、选中态、链接 |
+| `--primary` | `oklch(0.535 0.15 148)`（#0e8335） | `oklch(0.8003 0.1821 151.71)` | 主按钮、选中态、链接（亮色为对比度修复调深，白字 4.66:1） |
 | `--ring` | 同 primary | 同 primary | focus 环 |
 | `--accent` | `oklch(0.9621 0.0425 148.43)`（浅绿） | `oklch(0.2786 0.0566 148.27)`（深绿） | hover 底色、菜单选中底 |
-| `--chart-1..5` | 品牌绿梯度 | 同左（明度适配） | 图表 |
+| `--chart-1` | `oklch(0.6636 0.1751 148.17)`（#2aaf50 品牌绿） | `oklch(0.8003 0.1821 151.71)` | 品牌绿仅留图表/装饰，不用于文本 |
 
 - 暗色模式：`next-themes`（class 策略），Header 右侧按钮切换；暗色下品牌绿自动提亮，禁止为暗色单独调色。
 - 字体：Geist Sans（经 `geist` 包以 `next/font/local` 本地加载，不用 Google Fonts）+ PingFang SC / Microsoft YaHei 回退链。
@@ -31,8 +33,10 @@
 
 | 视口 | 形态 | 导航 | 列表 |
 |---|---|---|---|
-| ≥1024px | 桌面 | 左侧 Sidebar（inset，可折叠为图标） | Table |
-| <1024px | 移动 / 平板 H5 | 顶部 Header 汉堡按钮 → Sheet 侧滑 | 卡片列表（整卡可点 → 底部 Sheet） |
+| ≥1024px | 桌面 | 左侧 Sidebar（inset，可折叠为图标） | Table（行可点，无操作列） |
+| <1024px | 移动 / 平板 H5 | 顶部 Header 汉堡按钮 → Sheet 侧滑 | 卡片列表（整卡可点） |
+
+- 弹窗（Sheet）不区分端：一律右侧滑出、35vw，桌面与移动同组件同视觉。
 
 - 使用 Tailwind 默认断点（`sm 640 / md 768 / lg 1024`），禁止另设断点。
 - 页面标题在 `src/components/site-header.tsx` 的 `PAGE_TITLES` 中注册，新增页面必须同步登记。
@@ -41,10 +45,11 @@
 
 1. 顶部工具栏：搜索输入框 + 筛选 Select（角色/状态）+ 刷新按钮；移动端纵向堆叠。
 2. 数据表格：shadcn `Table`，**列头与单元格内容居中**（`text-center`），分页每页 20 条，底部显示「共 N 条 · 第 X / Y 页」。
-3. 编辑用 `Sheet`：桌面右侧（`side="right"`，`sm:max-w-md`）；底部 footer 放「取消 / 保存」，主操作在右。
-4. 保存走 Supabase RPC / 数据操作，成功后 `toast.success` + 刷新列表；失败 `toast.error(error.message)`。
-5. 枚举展示用 `Badge variant="outline"` + `src/lib/dictionaries.ts` 中的配色类名，禁止散落硬编码。
-6. **移动端（<1024px）列表渲染为卡片**：整卡是 `button`（键盘可达），标题行 = 主字段 + 角色 Badge，详情行 label 左 / value 右，间距 12px；静态态细边框 + 微投影，hover/focus 边框变主色。点击卡片打开**底部 Sheet**（`side="bottom"`，`max-h-[85svh]`），字段与 footer 与桌面一致。
+3. **行内不放按钮**：表格只有数据列，无「操作/编辑」列；新建等一切行级动作集成到弹窗内。表格行本身可点（`cursor-pointer` + hover 高亮 + 键盘可达），点击整行打开弹窗——这是列表页进入编辑的唯一路径。移动端卡片沿用既有模式（整卡可点）。
+4. 弹窗统一用 `Sheet`，**桌面与移动同为右侧滑出**（`side="right"`，同一组件、同一视觉，不按端分叉 bottom 模式）；宽度固定 **35vw**（`w-[35vw]`，最小下限 `min-w-[320px]`，超宽屏上限 `max-w-[480px]`）；footer「取消 / 保存」，主操作在右。
+5. 保存走 Supabase RPC / 数据操作，成功后 `toast.success` + 刷新列表；失败 `toast.error(error.message)`。
+6. 枚举展示用 `Badge variant="outline"` + `src/lib/dictionaries.ts` 中的配色类名，禁止散落硬编码。
+7. **移动端（<1024px）列表渲染为卡片**：整卡是 `button`（键盘可达），标题行 = 主字段 + 角色 Badge，详情行 label 左 / value 右，间距 12px；静态态细边框 + 微投影，hover/focus 边框变主色。点击卡片打开右侧 Sheet（同第 4 条，与桌面一致）。
 
 ## 5. 布局细则
 
@@ -63,3 +68,19 @@
 - 角色集中判读：`src/lib/dictionaries.ts`（标签与配色）；菜单过滤在 `app-sidebar.tsx`，页面级角色校验在对应 Server Component。
 - 文案：全中文，技术术语保留英文；按钮名其动作、错误名其问题与恢复路径。
 - 可达性：可点元素必须有键盘路径；图标按钮必须有 `aria-label`。
+
+## 7. 现状差距（v2.2 登记，v2.3 已全部对齐）
+
+7 项差距已在 2026-10-04 逐项收口，本表保留为完成记录：
+
+| # | 位置 | 完成内容 |
+|---|---|---|
+| 1 | `src/app/globals.css` + §1 token 表 | §1 token 表已改记实现值（#0e8335），品牌绿注明「仅图表/装饰」 |
+| 2 | `users-table.tsx` 编辑 Sheet | 删 isMobile 分叉，统一 `side="right"` |
+| 3 | `users-table.tsx` 编辑 Sheet | 宽度改 `w-[35vw] min-w-[320px] max-w-[480px]` |
+| 4 | `users-table.tsx` 桌面表格 | 删「操作」列，`TableRow` 加 onClick + cursor-pointer，整行可点 |
+| 5 | `app-sidebar.tsx` | `collapsible="offcanvas"` 改 `collapsible="icon"`（折叠为图标，tooltip 生效） |
+| 6 | `users-table.tsx` 工具栏/分页/输入 | `<1024px` 统一 `h-11`，搜索输入 `text-base`（防 iOS 缩放），桌面维持原密度 |
+| 7 | `users-table.tsx` 错误态 | 错误接入 `translateErrorMessage` + 重试按钮 |
+
+验证：`tsc --noEmit` 通过、`npm run build` 通过、`impeccable detect --json src` 0 findings。
