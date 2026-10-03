@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { BoxesIcon, LayoutDashboardIcon, UsersIcon } from "lucide-react";
+import {
+  BoxesIcon,
+  BriefcaseIcon,
+  Building2Icon,
+  LayoutDashboardIcon,
+  UsersIcon,
+} from "lucide-react";
 
 import { NavMain, type NavItem } from "@/components/nav-main";
 import { NavUser, type SidebarUser } from "@/components/nav-user";
@@ -28,6 +34,16 @@ export function AppSidebar({
   ];
 
   if (user.role === "admin") {
+    navItems.push({
+      title: "部门管理",
+      url: "/org/departments",
+      icon: <Building2Icon />,
+    });
+    navItems.push({
+      title: "岗位管理",
+      url: "/org/positions",
+      icon: <BriefcaseIcon />,
+    });
     navItems.push({
       title: "用户管理",
       url: "/settings/users",

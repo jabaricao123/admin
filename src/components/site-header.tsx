@@ -9,6 +9,8 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 const PAGE_TITLES: Record<string, string> = {
   "/": "工作台",
   "/settings/users": "用户管理",
+  "/org/departments": "部门管理",
+  "/org/positions": "岗位管理",
 };
 
 export function SiteHeader() {

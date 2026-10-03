@@ -72,3 +72,66 @@ export const PROFILE_STATUS_BADGE_CLASSES: Record<ProfileStatus, string> = {
 export const PROFILE_STATUS_OPTIONS = (
   Object.keys(PROFILE_STATUS_LABELS) as ProfileStatus[]
 ).map((value) => ({ value, label: PROFILE_STATUS_LABELS[value] }));
+
+/** 组织管理 · 部门状态（departments.status，deleted 为逻辑删除终态） */
+export type DepartmentStatus = "active" | "disabled" | "deleted";
+
+export const DEPARTMENT_STATUS_LABELS: Record<DepartmentStatus, string> = {
+  active: "启用",
+  disabled: "停用",
+  deleted: "已删除",
+};
+
+export const DEPARTMENT_STATUS_BADGE_CLASSES: Record<DepartmentStatus, string> = {
+  active:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  disabled:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+  deleted:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+};
+
+/**
+ * org 模块 RPC 的业务拒绝信息本身是中文且带动态数量（如「该部门下仍有 3 名在职人员，无法停用」），
+ * 原文透传；其余错误走通用映射。
+ */
+export function translateOrgErrorMessage(message: string): string {
+  const isBusinessRule =
+    /^该部门下仍有 \d+ (名在职人员|个子部门)，无法(停用|删除)$/.test(message) ||
+    /^不能将部门移动到/.test(message);
+  return isBusinessRule ? message : translateErrorMessage(message);
+}
+
+/** 组织管理 · 岗位状态（positions.status） */
+export type PositionStatus = "active" | "disabled";
+
+export const POSITION_STATUS_LABELS: Record<PositionStatus, string> = {
+  active: "启用",
+  disabled: "停用",
+};
+
+export const POSITION_STATUS_BADGE_CLASSES: Record<PositionStatus, string> = {
+  active:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  disabled:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+export const POSITION_STATUS_OPTIONS = (
+  Object.keys(POSITION_STATUS_LABELS) as PositionStatus[]
+).map((value) => ({ value, label: POSITION_STATUS_LABELS[value] }));
+
+/** 组织管理 · 岗位 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
+export function translatePositionErrorMessage(message: string): string {
+  const isBusinessRule =
+    [
+      "岗位名称不能为空",
+      "岗位编码不能为空",
+      "编制数不能为负数",
+    ].includes(message) ||
+    /^(岗位编码已存在|岗位状态不合法|所属部门不存在或已删除|岗位不存在)：/.test(
+      message,
+    ) ||
+    /^该岗位仍有 \d+ 名在职人员（按所属部门统计），无法删除$/.test(message);
+  return isBusinessRule ? message : translateErrorMessage(message);
+}
