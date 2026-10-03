@@ -12,6 +12,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/org/positions": "岗位管理",
   "/access/roles": "角色管理",
   "/access/permissions": "菜单权限",
+  "/access/data-scopes": "数据权限",
   "/message/inbox": "站内信",
   "/org/users": "用户管理",
   "/org/chart": "组织架构",

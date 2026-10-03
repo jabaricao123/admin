@@ -205,6 +205,38 @@ export function translatePermissionErrorMessage(message: string): string {
   return isBusinessRule ? message : translateErrorMessage(message);
 }
 
+/** 权限管理 · 数据范围（role_data_scopes.scope，四档） */
+export type DataScope = "self" | "dept" | "dept_tree" | "all";
+
+export const DATA_SCOPE_LABELS: Record<DataScope, string> = {
+  self: "仅本人",
+  dept: "本部门",
+  dept_tree: "本部门及以下",
+  all: "全部",
+};
+
+export const DATA_SCOPE_DESCRIPTIONS: Record<DataScope, string> = {
+  self: "只能看到与本人相关的数据",
+  dept: "可以看到本部门成员相关的数据",
+  dept_tree: "可以看到本部门及下属部门成员相关的数据",
+  all: "可以看到全部数据（仅管理员角色可配置）",
+};
+
+export const DATA_SCOPE_OPTIONS = (
+  Object.keys(DATA_SCOPE_LABELS) as DataScope[]
+).map((value) => ({ value, label: DATA_SCOPE_LABELS[value] }));
+
+/** 权限管理 · 数据范围 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
+export function translateDataScopeErrorMessage(message: string): string {
+  const isBusinessRule =
+    /^(角色不存在|非法数据范围)：/.test(message) ||
+    [
+      "仅管理员可执行此操作",
+      "仅系统管理员角色可配置「全部」数据范围",
+    ].includes(message);
+  return isBusinessRule ? message : translateErrorMessage(message);
+}
+
 /** 消息中心 RPC 错误：属主校验等业务拒绝信息已中文，原文透传；其余走通用映射 */
 export function translateMessageErrorMessage(message: string): string {
   const isBusinessRule = message === "消息不存在或无权操作";
