@@ -200,17 +200,32 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
 
     setSaving(true);
     const supabase = createClient();
+
+    // 角色写入单通道（INDEX 规则 7）：角色变更调 access 的 assign_role
+    if (form.role !== editing.role) {
+      const { error: roleError } = await supabase.rpc("assign_role", {
+        p_target_user: editing.id,
+        p_new_role: form.role,
+      });
+      if (roleError) {
+        setSaving(false);
+        toast.error(translateErrorMessage(roleError.message));
+        return;
+      }
+    }
+
+    // admin_update_profile 仅负责姓名/部门/状态（兼容期已收窄，不再传 p_role）
     const { error: saveError } = await supabase.rpc("admin_update_profile", {
       p_user_id: editing.id,
       p_full_name: form.full_name.trim() || undefined,
       p_department: form.department.trim() || undefined,
-      p_role: form.role,
       p_status: form.status,
     });
     setSaving(false);
 
     if (saveError) {
       toast.error(translateErrorMessage(saveError.message));
+      void load();
       return;
     }
 
