@@ -197,8 +197,50 @@ export function translateRoleErrorMessage(message: string): string {
   return isBusinessRule ? message : translateErrorMessage(message);
 }
 
+/** 权限管理 · 菜单授权 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
+export function translatePermissionErrorMessage(message: string): string {
+  const isBusinessRule =
+    /^(角色不存在|菜单项不存在)：/.test(message) ||
+    message === "仅管理员可执行此操作";
+  return isBusinessRule ? message : translateErrorMessage(message);
+}
+
 /** 消息中心 RPC 错误：属主校验等业务拒绝信息已中文，原文透传；其余走通用映射 */
 export function translateMessageErrorMessage(message: string): string {
   const isBusinessRule = message === "消息不存在或无权操作";
+  return isBusinessRule ? message : translateErrorMessage(message);
+}
+
+/** 系统管理 · 服务配置验证状态（system_services.verify_status，草稿可存状态机） */
+export type ServiceVerifyStatus = "unverified" | "verified" | "failed";
+
+export const SERVICE_VERIFY_STATUS_LABELS: Record<ServiceVerifyStatus, string> = {
+  unverified: "待验证",
+  verified: "已验证",
+  failed: "验证失败",
+};
+
+export const SERVICE_VERIFY_STATUS_BADGE_CLASSES: Record<
+  ServiceVerifyStatus,
+  string
+> = {
+  verified:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  unverified:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+  failed:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+};
+
+/** 数据库 verify_status 收敛到已知状态；未知值按「待验证」展示（fail-safe） */
+export function asServiceVerifyStatus(value: string): ServiceVerifyStatus {
+  return value === "verified" || value === "failed" ? value : "unverified";
+}
+
+/** 系统管理 RPC 错误：业务拒绝信息已中文，原文透传；其余走通用映射 */
+export function translateSystemErrorMessage(message: string): string {
+  const isBusinessRule =
+    message === "测试收件邮箱不能为空" ||
+    message === "邮件配置不存在，请先保存配置";
   return isBusinessRule ? message : translateErrorMessage(message);
 }

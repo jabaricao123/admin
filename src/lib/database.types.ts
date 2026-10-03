@@ -482,6 +482,36 @@ export type Database = {
         }
         Relationships: []
       }
+      system_services: {
+        Row: {
+          config: NonNullable<Json>
+          credentials: string | null
+          service: string
+          updated_at: string
+          updated_by: string | null
+          verified_at: string | null
+          verify_status: string
+        }
+        Insert: {
+          config?: NonNullable<Json>
+          credentials?: string | null
+          service: string
+          updated_at?: string
+          updated_by?: string | null
+          verified_at?: string | null
+          verify_status?: string
+        }
+        Update: {
+          config?: NonNullable<Json>
+          credentials?: string | null
+          service?: string
+          updated_at?: string
+          updated_by?: string | null
+          verified_at?: string | null
+          verify_status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       audit_denied_v: {
@@ -872,6 +902,18 @@ export type Database = {
           user_count: number
         }[]
       }
+      get_service_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          config: Json
+          credentials_masked: string
+          service: string
+          updated_at: string
+          updated_by: string
+          verified_at: string
+          verify_status: string
+        }[]
+      }
       grant_menu: {
         Args: { p_menu_key: string; p_role_id: string }
         Returns: {
@@ -931,6 +973,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      mark_service_verified: {
+        Args: { p_note: string; p_ok: boolean; p_service: string }
+        Returns: Json
       }
       position_headcount: { Args: { p_position_id: string }; Returns: number }
       recent_notifications: {
@@ -994,6 +1040,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      test_mail_config: {
+        Args: { p_to: string }
+        Returns: Json
       }
       toggle_notification_star: {
         Args: { p_id: number }
@@ -1101,6 +1151,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      upsert_service_config: {
+        Args: { p_config: Json; p_credentials: string; p_service: string }
+        Returns: Json
       }
       validate_department_move: {
         Args: { p_new_parent: string; p_node: string }

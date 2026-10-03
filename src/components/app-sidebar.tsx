@@ -5,8 +5,11 @@ import {
   BoxesIcon,
   BriefcaseIcon,
   Building2Icon,
+  KeyRoundIcon,
   LayoutDashboardIcon,
   MailIcon,
+  MailPlusIcon,
+  NetworkIcon,
   ShieldCheckIcon,
   UsersIcon,
 } from "lucide-react";
@@ -41,6 +44,13 @@ export function AppSidebar({
     icon: <MailIcon />,
   });
 
+  // 组织架构图对全体登录用户开放（只读）
+  navItems.push({
+    title: "组织架构图",
+    url: "/org/chart",
+    icon: <NetworkIcon />,
+  });
+
   if (user.role === "admin") {
     navItems.push({
       title: "部门管理",
@@ -58,9 +68,20 @@ export function AppSidebar({
       icon: <ShieldCheckIcon />,
     });
     navItems.push({
+      title: "菜单权限",
+      url: "/access/permissions",
+      icon: <KeyRoundIcon />,
+    });
+    navItems.push({
       title: "用户管理",
       url: "/org/users",
       icon: <UsersIcon />,
+    });
+    // 系统管理菜单项（分组化改造归 access/008 统一处理）
+    navItems.push({
+      title: "邮件服务",
+      url: "/system/services/mail",
+      icon: <MailPlusIcon />,
     });
   }
 
