@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e5]:
+    - generic [ref=e6]: PLM-CJTcable
+    - generic [ref=e7]:
+      - heading "登录" [level=3] [ref=e11]
+      - generic [ref=e13]:
+        - generic [ref=e15]:
+          - generic "邮箱" [ref=e17]
+          - textbox "邮箱" [ref=e21]
+        - generic [ref=e23]:
+          - generic "密码" [ref=e25]
+          - textbox "密码" [ref=e29]:
+            - /placeholder: ●●●●●●●●
+        - button "登 录" [ref=e35] [cursor=pointer]
+  - alert [ref=e37]

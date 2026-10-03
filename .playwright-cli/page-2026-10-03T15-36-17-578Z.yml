@@ -1,0 +1,56 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e66]:
+      - banner [ref=e67]:
+        - button "导航菜单" [ref=e134] [cursor=pointer]:
+          - img "menu" [ref=e136]
+        - generic [ref=e68]:
+          - switch "🌛 🔆" [ref=e70] [cursor=pointer]:
+            - generic [ref=e72]:
+              - generic: 🌛
+              - generic: 🔆
+          - button [ref=e139] [cursor=pointer]:
+            - img "logout" [ref=e76]
+      - main [ref=e80]:
+        - generic [ref=e82]:
+          - heading "工作台" [level=4] [ref=e140]
+          - generic [ref=e84]: 欢迎回来，系统管理员
+          - generic [ref=e85]:
+            - generic [ref=e87]:
+              - generic [ref=e88]: 物料与产品
+              - generic [ref=e91]: 主数据模块将在第二期上线
+            - generic [ref=e93]:
+              - generic [ref=e94]: BOM 与工艺
+              - generic [ref=e97]: 第二期上线
+            - generic [ref=e99]:
+              - generic [ref=e100]: 变更管理
+              - generic [ref=e103]: 第二期上线
+    - generic [ref=e104]:
+      - button [ref=e105] [cursor=pointer]:
+        - button "Element Selector" [ref=e114]
+      - generic:
+        - iframe
+  - generic [ref=e119] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e120]
+    - generic [ref=e124]:
+      - button "Open issues overlay" [ref=e125]:
+        - generic [ref=e126]:
+          - generic [aria-hidden] [ref=e127]: "1"
+          - generic [ref=e128]: "2"
+        - generic [ref=e129]:
+          - text: Issue
+          - generic [aria-hidden] [ref=e130]: s
+      - button "Collapse issues badge" [ref=e131]
+  - alert [ref=e37]
+  - dialog "PLM-CJTcable" [ref=e142]:
+    - generic [ref=e144]:
+      - button "关闭" [ref=e145] [cursor=pointer]:
+        - img "close" [ref=e146]
+      - generic [ref=e149]: PLM-CJTcable
+    - menu [ref=e151]:
+      - menuitem "dashboard 工作台" [ref=e152] [cursor=pointer]:
+        - img "dashboard" [ref=e153]
+        - generic [ref=e156]: 工作台
+      - menuitem "setting 系统管理" [ref=e157] [cursor=pointer]:
+        - img "setting" [ref=e158]
+        - generic [ref=e161]: 系统管理

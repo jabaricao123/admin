@@ -1,0 +1,60 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e38]:
+      - complementary [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]: PLM-CJTcable
+          - menu [ref=e44]:
+            - menuitem [ref=e45] [cursor=pointer]:
+              - img "dashboard" [ref=e46]
+              - link "工作台" [ref=e50]:
+                - /url: /
+            - menuitem "setting 系统管理" [ref=e51] [cursor=pointer]:
+              - img "setting" [ref=e52]
+              - generic [ref=e55]: 系统管理
+            - menuitem "logout 退出登录" [ref=e56] [cursor=pointer]:
+              - img "logout" [ref=e57]
+              - generic [ref=e60]: 退出登录
+        - button [ref=e62] [cursor=pointer]:
+          - img "left" [ref=e63]
+      - generic [ref=e66]:
+        - banner [ref=e67]:
+          - generic [ref=e68]:
+            - switch "🌛 🔆" [ref=e70] [cursor=pointer]:
+              - generic [ref=e72]:
+                - generic: 🌛
+                - generic: 🔆
+            - button "logout 退出" [ref=e74] [cursor=pointer]:
+              - img "logout" [ref=e76]
+              - generic [ref=e79]: 退出
+        - main [ref=e80]:
+          - generic [ref=e82]:
+            - heading "工作台" [level=3] [ref=e83]
+            - generic [ref=e84]: 欢迎使用 PLM-CJTcable
+            - generic [ref=e85]:
+              - generic [ref=e87]:
+                - generic [ref=e88]: 物料与产品
+                - generic [ref=e91]: 主数据模块将在第二期上线
+              - generic [ref=e93]:
+                - generic [ref=e94]: BOM 与工艺
+                - generic [ref=e97]: 第二期上线
+              - generic [ref=e99]:
+                - generic [ref=e100]: 变更管理
+                - generic [ref=e103]: 第二期上线
+    - generic [ref=e104]:
+      - button [ref=e105] [cursor=pointer]:
+        - button "Element Selector" [ref=e114]
+      - generic:
+        - iframe
+  - generic [ref=e119] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e120]
+    - generic [ref=e124]:
+      - button "Open issues overlay" [ref=e125]:
+        - generic [ref=e126]:
+          - generic [aria-hidden] [ref=e127]: "1"
+          - generic [ref=e128]: "2"
+        - generic [ref=e129]:
+          - text: Issue
+          - generic [aria-hidden] [ref=e130]: s
+      - button "Collapse issues badge" [ref=e131]
+  - alert [ref=e37]

@@ -1,0 +1,617 @@
+"use client";
+
+import * as React from "react";
+import {
+  Loader2Icon,
+  PencilIcon,
+  RefreshCwIcon,
+  SearchIcon,
+  UserRoundXIcon,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { createClient } from "@/lib/supabase/client";
+import {
+  PROFILE_STATUS_BADGE_CLASSES,
+  PROFILE_STATUS_LABELS,
+  PROFILE_STATUS_OPTIONS,
+  ROLE_BADGE_CLASSES,
+  ROLE_LABELS,
+  ROLE_OPTIONS,
+  translateErrorMessage,
+  type Profile,
+  type ProfileStatus,
+  type UserRole,
+} from "@/lib/dictionaries";
+
+const PAGE_SIZE = 20;
+const ALL = "all";
+
+const formatDateTime = (value: string) =>
+  new Date(value).toLocaleString("zh-CN", { hour12: false });
+
+type EditForm = {
+  full_name: string;
+  department: string;
+  role: UserRole;
+  status: ProfileStatus;
+};
+
+const EMPTY_FORM: EditForm = {
+  full_name: "",
+  department: "",
+  role: "engineer",
+  status: "active",
+};
+
+export function UsersTable({ currentUserId }: { currentUserId: string }) {
+  const isMobile = useIsMobile();
+  const [rows, setRows] = React.useState<Profile[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [search, setSearch] = React.useState("");
+  const [roleFilter, setRoleFilter] = React.useState(ALL);
+  const [statusFilter, setStatusFilter] = React.useState(ALL);
+  const [page, setPage] = React.useState(1);
+  const [editing, setEditing] = React.useState<Profile | null>(null);
+  const [form, setForm] = React.useState<EditForm>(EMPTY_FORM);
+  const [saving, setSaving] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const supabase = createClient();
+    const { data, error: loadError } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (loadError) {
+      setError(loadError.message);
+      setRows([]);
+    } else {
+      setRows((data ?? []) as Profile[]);
+    }
+    setLoading(false);
+  }, []);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  /** updated_by UUID → 展示名（优先姓名，回退邮箱前缀） */
+  const editorNames = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of rows) {
+      if (row.updated_by) {
+        map.set(
+          row.updated_by,
+          row.full_name ?? row.email?.split("@")[0] ?? "未知用户",
+        );
+      }
+    }
+    // 当前登录者也可能出现在 updated_by 里但不在列表中（如被过滤）
+    map.set(currentUserId, map.get(currentUserId) ?? "我");
+    return map;
+  }, [rows, currentUserId]);
+
+  const filtered = React.useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (roleFilter !== ALL && row.role !== roleFilter) {
+        return false;
+      }
+      if (statusFilter !== ALL && row.status !== statusFilter) {
+        return false;
+      }
+      if (keyword) {
+        const haystack = `${row.full_name ?? ""} ${
+          row.email ?? ""
+        }`.toLowerCase();
+        if (!haystack.includes(keyword)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [rows, search, roleFilter, statusFilter]);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [search, roleFilter, statusFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const hasActiveFilters =
+    search.trim() !== "" || roleFilter !== ALL || statusFilter !== ALL;
+  const pagedRows = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  const openEdit = (row: Profile) => {
+    setEditing(row);
+    setForm({
+      full_name: row.full_name ?? "",
+      department: row.department ?? "",
+      role: row.role,
+      status: row.status,
+    });
+  };
+
+  const closeEdit = () => {
+    setEditing(null);
+    setForm(EMPTY_FORM);
+  };
+
+  const handleSave = async () => {
+    if (!editing) {
+      return;
+    }
+
+    // 停用确认：状态从启用改为停用时先确认
+    if (editing.status === "active" && form.status === "inactive") {
+      const confirmed = window.confirm(
+        `确定停用「${editing.full_name ?? editing.email ?? ""}」？停用后该账号将无法登录系统。`,
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setSaving(true);
+    const supabase = createClient();
+    const { error: saveError } = await supabase.rpc("admin_update_profile", {
+      p_user_id: editing.id,
+      p_full_name: form.full_name.trim() || undefined,
+      p_department: form.department.trim() || undefined,
+      p_role: form.role,
+      p_status: form.status,
+    });
+    setSaving(false);
+
+    if (saveError) {
+      toast.error(translateErrorMessage(saveError.message));
+      return;
+    }
+
+    toast.success("已保存");
+    closeEdit();
+    void load();
+  };
+
+  const isSelf = editing?.id === currentUserId;
+
+  return (
+    <div className="flex flex-col p-0 md:gap-6 md:p-6">
+      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+        <CardHeader>
+          <CardTitle>用户管理</CardTitle>
+          <CardDescription>维护账号的角色与启停用状态</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 p-4 md:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative flex-1 sm:max-w-xs">
+              <SearchIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="搜索姓名 / 邮箱"
+                className="pl-8"
+                aria-label="搜索姓名或邮箱"
+              />
+            </div>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger
+                className="w-full sm:w-36"
+                aria-label="按角色筛选"
+              >
+                <SelectValue placeholder="全部角色" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>全部角色</SelectItem>
+                {ROLE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger
+                className="w-full sm:w-32"
+                aria-label="按状态筛选"
+              >
+                <SelectValue placeholder="全部状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>全部状态</SelectItem>
+                {PROFILE_STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => void load()}
+              disabled={loading}
+              aria-label="刷新用户列表"
+            >
+              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <Skeleton key={index} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : error ? (
+            <p className="py-8 text-center text-sm text-destructive">
+              加载失败：{error}
+            </p>
+          ) : pagedRows.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-12 text-sm text-muted-foreground">
+              <UserRoundXIcon className="size-8 opacity-60" />
+              {hasActiveFilters ? (
+                <>
+                  <span>未找到匹配的用户</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSearch("");
+                      setRoleFilter(ALL);
+                      setStatusFilter(ALL);
+                    }}
+                  >
+                    清除筛选
+                  </Button>
+                </>
+              ) : (
+                <span>暂无用户</span>
+              )}
+            </div>
+          ) : isMobile ? (
+            <div className="-mx-4 flex flex-col gap-2 px-4 md:mx-0 md:gap-3 md:px-0">
+              {pagedRows.map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  data-slot="user-card"
+                  onClick={() => openEdit(row)}
+                  className="flex w-full flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">
+                        {row.full_name ?? row.email ?? "-"}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {row.email}
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={ROLE_BADGE_CLASSES[row.role]}
+                    >
+                      {ROLE_LABELS[row.role]}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-col gap-1.5 text-sm">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">部门</span>
+                      <span>{row.department ?? "-"}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">状态</span>
+                      <Badge
+                        variant="outline"
+                        className={PROFILE_STATUS_BADGE_CLASSES[row.status]}
+                      >
+                        {PROFILE_STATUS_LABELS[row.status]}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">更新时间</span>
+                      <span className="tabular-nums">
+                        {formatDateTime(row.updated_at)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">最近修改人</span>
+                      <span>
+                        {row.updated_by
+                          ? (editorNames.get(row.updated_by) ?? "已离职用户")
+                          : "—"}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-center">姓名</TableHead>
+                    <TableHead className="text-center">部门</TableHead>
+                    <TableHead className="text-center">角色</TableHead>
+                    <TableHead className="text-center">状态</TableHead>
+                    <TableHead className="text-center">更新时间</TableHead>
+                    <TableHead className="text-center">最近修改人</TableHead>
+                    <TableHead className="text-center">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pagedRows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="text-center">
+                        <div className="font-medium">
+                          {row.full_name ?? row.email ?? "-"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {row.email}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {row.department ?? "-"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant="outline"
+                          className={ROLE_BADGE_CLASSES[row.role]}
+                        >
+                          {ROLE_LABELS[row.role]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant="outline"
+                          className={PROFILE_STATUS_BADGE_CLASSES[row.status]}
+                        >
+                          {PROFILE_STATUS_LABELS[row.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center text-muted-foreground">
+                        {formatDateTime(row.updated_at)}
+                      </TableCell>
+                      <TableCell className="text-center text-muted-foreground">
+                        {row.updated_by
+                          ? (editorNames.get(row.updated_by) ?? "已离职用户")
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEdit(row)}
+                        >
+                          <PencilIcon data-icon="inline-start" />
+                          编辑
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {!loading && !error && filtered.length > 0 ? (
+            <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+              <span>
+                {hasActiveFilters
+                  ? `匹配 ${filtered.length} 条（共 ${rows.length} 条）· 第 ${currentPage} / ${pageCount} 页`
+                  : `共 ${filtered.length} 条 · 第 ${currentPage} / ${pageCount} 页`}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage(currentPage - 1)}
+                >
+                  上一页
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= pageCount}
+                  onClick={() => setPage(currentPage + 1)}
+                >
+                  下一页
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Sheet
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeEdit();
+          }
+        }}
+      >
+        <SheetContent
+          side={isMobile ? "bottom" : "right"}
+          className={
+            isMobile ? "max-h-[85svh] rounded-t-2xl" : "w-full sm:max-w-md"
+          }
+        >
+          <SheetHeader>
+            <SheetTitle>编辑用户</SheetTitle>
+            <SheetDescription className="flex flex-col gap-1">
+              <span className="font-medium text-foreground">
+                {editing?.full_name ?? "未命名用户"}
+              </span>
+              {editing?.email ? (
+                <span className="font-mono text-xs">{editing.email}</span>
+              ) : null}
+              {editing ? (
+                <span className="flex items-center gap-1.5 text-xs">
+                  当前：
+                  <Badge
+                    variant="outline"
+                    className={ROLE_BADGE_CLASSES[editing.role]}
+                  >
+                    {ROLE_LABELS[editing.role]}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={PROFILE_STATUS_BADGE_CLASSES[editing.status]}
+                  >
+                    {PROFILE_STATUS_LABELS[editing.status]}
+                  </Badge>
+                </span>
+              ) : null}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4">
+            <Field>
+              <FieldLabel htmlFor="user-full-name">姓名</FieldLabel>
+              <Input
+                id="user-full-name"
+                value={form.full_name}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    full_name: event.target.value,
+                  }))
+                }
+                placeholder="姓名"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="user-department">部门</FieldLabel>
+              <Input
+                id="user-department"
+                value={form.department}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    department: event.target.value,
+                  }))
+                }
+                placeholder="部门"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="user-role">角色</FieldLabel>
+              <Select
+                value={form.role}
+                onValueChange={(value) =>
+                  setForm((prev) => ({ ...prev, role: value as UserRole }))
+                }
+                disabled={isSelf}
+              >
+                <SelectTrigger id="user-role" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isSelf ? (
+                <FieldDescription>不能修改自己的角色</FieldDescription>
+              ) : null}
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="user-status">状态</FieldLabel>
+              <Select
+                value={form.status}
+                onValueChange={(value) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    status: value as ProfileStatus,
+                  }))
+                }
+                disabled={isSelf}
+              >
+                <SelectTrigger id="user-status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROFILE_STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isSelf ? (
+                <FieldDescription>不能停用自己的账号</FieldDescription>
+              ) : null}
+            </Field>
+          </div>
+          <SheetFooter className="flex-row justify-end gap-2">
+            <Button variant="outline" onClick={closeEdit}>
+              取消
+            </Button>
+            <Button onClick={() => void handleSave()} disabled={saving}>
+              {saving ? (
+                <Loader2Icon
+                  className="animate-spin"
+                  data-icon="inline-start"
+                />
+              ) : null}
+              保存
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
