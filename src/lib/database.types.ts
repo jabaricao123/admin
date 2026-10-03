@@ -323,9 +323,11 @@ export type Database = {
         Row: {
           created_at: string
           department: string | null
+          department_id: string | null
           email: string | null
           full_name: string | null
           id: string
+          position_id: string | null
           role: Database["public"]["Enums"]["user_role"]
           role_id: string | null
           status: Database["public"]["Enums"]["profile_status"]
@@ -335,9 +337,11 @@ export type Database = {
         Insert: {
           created_at?: string
           department?: string | null
+          department_id?: string | null
           email?: string | null
           full_name?: string | null
           id: string
+          position_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           role_id?: string | null
           status?: Database["public"]["Enums"]["profile_status"]
@@ -347,9 +351,11 @@ export type Database = {
         Update: {
           created_at?: string
           department?: string | null
+          department_id?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
+          position_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           role_id?: string | null
           status?: Database["public"]["Enums"]["profile_status"]
@@ -357,6 +363,27 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions_v"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_role_id_fkey"
             columns: ["role_id"]
@@ -579,9 +606,11 @@ export type Database = {
         Returns: {
           created_at: string
           department: string | null
+          department_id: string | null
           email: string | null
           full_name: string | null
           id: string
+          position_id: string | null
           role: Database["public"]["Enums"]["user_role"]
           role_id: string | null
           status: Database["public"]["Enums"]["profile_status"]
@@ -600,9 +629,11 @@ export type Database = {
         Returns: {
           created_at: string
           department: string | null
+          department_id: string | null
           email: string | null
           full_name: string | null
           id: string
+          position_id: string | null
           role: Database["public"]["Enums"]["user_role"]
           role_id: string | null
           status: Database["public"]["Enums"]["profile_status"]
@@ -831,6 +862,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_role_user_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          role_code: string
+          role_id: string
+          user_count: number
+        }[]
+      }
       grant_menu: {
         Args: { p_menu_key: string; p_role_id: string }
         Returns: {
@@ -848,6 +887,28 @@ export type Database = {
       }
       mark_all_read: { Args: Record<PropertyKey, never>; Returns: number }
       mark_notification_read: {
+        Args: { p_id: number }
+        Returns: {
+          body: string
+          created_at: string
+          event_key: string
+          id: number
+          read_at: string | null
+          recipient_id: string
+          ref_id: string | null
+          ref_type: string | null
+          source_module: string | null
+          starred: boolean
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_notification_unread: {
         Args: { p_id: number }
         Returns: {
           body: string

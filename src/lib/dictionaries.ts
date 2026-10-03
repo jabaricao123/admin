@@ -135,3 +135,59 @@ export function translatePositionErrorMessage(message: string): string {
     /^该岗位仍有 \d+ 名在职人员（按所属部门统计），无法删除$/.test(message);
   return isBusinessRule ? message : translateErrorMessage(message);
 }
+
+/** 权限管理 · 角色状态（roles.status，写经 disable_role/enable_role） */
+export type RoleStatus = "active" | "disabled";
+
+export const ROLE_STATUS_LABELS: Record<RoleStatus, string> = {
+  active: "启用",
+  disabled: "停用",
+};
+
+export const ROLE_STATUS_BADGE_CLASSES: Record<RoleStatus, string> = {
+  active:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  disabled:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+export const ROLE_STATUS_OPTIONS = (
+  Object.keys(ROLE_STATUS_LABELS) as RoleStatus[]
+).map((value) => ({ value, label: ROLE_STATUS_LABELS[value] }));
+
+/** 权限管理 · 角色类型（内置角色受 DB 兜底保护，自定义角色可编辑/删除） */
+export type RoleKind = "builtin" | "custom";
+
+export const ROLE_KIND_LABELS: Record<RoleKind, string> = {
+  builtin: "内置",
+  custom: "自定义",
+};
+
+export const ROLE_KIND_BADGE_CLASSES: Record<RoleKind, string> = {
+  builtin:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+  custom:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+/** 权限管理 · 角色 RPC 错误：业务拒绝信息已中文（部分带动态人数），原文透传；其余走通用映射 */
+export function translateRoleErrorMessage(message: string): string {
+  const isBusinessRule =
+    /^该角色下仍有 \d+ 名用户，无法(停用|删除)$/.test(message) ||
+    [
+      "角色名称不能为空",
+      "角色标识不能为空",
+      "内置角色仅可修改说明",
+      "系统管理员角色不可停用",
+    ].includes(message) ||
+    /^(角色标识已存在|内置角色不可删除|内置角色不可修改标识|非法状态|角色不存在)：/.test(
+      message,
+    );
+  return isBusinessRule ? message : translateErrorMessage(message);
+}
+
+/** 消息中心 RPC 错误：属主校验等业务拒绝信息已中文，原文透传；其余走通用映射 */
+export function translateMessageErrorMessage(message: string): string {
+  const isBusinessRule = message === "消息不存在或无权操作";
+  return isBusinessRule ? message : translateErrorMessage(message);
+}

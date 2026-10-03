@@ -1,11 +1,13 @@
--- 组织管理 · positions（org/004 表 + org/005 RLS/RPC）pgTAP 测试
+-- 组织管理 · positions（org/004 表 + org/005 RLS/RPC + org/007 在岗统计改 id 口径）pgTAP 测试
 -- 运行：supabase db reset && supabase test db
 -- 覆盖：结构存在性 / code 唯一 / 非 admin 写拒 / RLS 读范围 /
---       在岗统计（部门文本兜底）/ 停用允许引用且幂等 / 删除被引用岗位拒绝
+--       在岗统计（org/007 起按 profiles.position_id 精确统计）/ 停用允许引用且幂等 /
+--       删除被引用岗位拒绝（position_id 计数 + FK restrict 兜底）
+-- 说明：position_id 由 org/007 引入，页面写入在 org/009；本测试以 postgres 直写模拟。
 
 begin;
 
-select plan(53);
+select plan(55);
 
 -- ===========================================================================
 -- 1. 结构存在性（19）
@@ -272,7 +274,7 @@ select is(
 );
 
 -- ===========================================================================
--- 7. 在岗统计：profiles.department 文本 = 岗位所属部门名（org/007 前兜底）
+-- 7. 在岗统计：org/007 起按 profiles.position_id 精确统计（文本兜底口径退役）
 -- ===========================================================================
 -- 44
 select is(
@@ -281,24 +283,45 @@ select is(
   '测试-岗位部A',
   '装置：engineer 挂到测试-岗位部A'
 );
--- 45
+-- 45：position_id 全 NULL 过渡期，文本口径退役后恒为 0
 select is(
   (select app.position_headcount('55555555-5555-4555-8555-555555550001')),
-  1::bigint,
-  '在岗统计按部门名文本匹配（兜底口径）'
+  0::bigint,
+  'position_id 全 NULL 期在岗统计为 0（文本兜底口径退役）'
 );
 -- 46
 select is(
   (select staff_count from public.positions_v
     where id = '55555555-5555-4555-8555-555555550001'),
+  0::bigint,
+  'positions_v.staff_count 与在岗统计一致（0）'
+);
+-- 46b：直写 position_id（org/009 前无页面入口，测试用 postgres 模拟）
+reset role;
+update public.profiles
+   set position_id = '55555555-5555-4555-8555-555555550001',
+       department  = null
+ where id = '22222222-2222-2222-2222-222222220001';
+set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+set local role authenticated;
+
+select is(
+  (select app.position_headcount('55555555-5555-4555-8555-555555550001')),
   1::bigint,
-  'positions_v.staff_count 与在岗统计一致'
+  '按 position_id 精确统计：绑定岗位后为 1（部门文本已清空，证明非文本口径）'
+);
+-- 46c
+select is(
+  (select staff_count from public.positions_v
+    where id = '55555555-5555-4555-8555-555555550001'),
+  1::bigint,
+  'positions_v.staff_count 按 position_id 统计（1）'
 );
 -- 47
 select throws_ok(
   $$ select public.delete_position('55555555-5555-4555-8555-555555550001') $$,
   '22023', '该岗位仍有 1 名在职人员（按所属部门统计），无法删除',
-  '删除被引用岗位（部门有在职人员）被拒'
+  '删除被 position_id 引用的岗位被拒（FK 前友好提示）'
 );
 -- 47b：被引用时停用允许（仅新编辑下拉过滤）
 select is(
@@ -318,7 +341,7 @@ select throws_ok(
 );
 -- 49
 update public.profiles
-   set department = null
+   set position_id = null
  where id = '22222222-2222-2222-2222-222222220001';
 
 -- ===========================================================================

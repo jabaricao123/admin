@@ -6,6 +6,8 @@ import {
   BriefcaseIcon,
   Building2Icon,
   LayoutDashboardIcon,
+  MailIcon,
+  ShieldCheckIcon,
   UsersIcon,
 } from "lucide-react";
 
@@ -33,6 +35,12 @@ export function AppSidebar({
     },
   ];
 
+  navItems.push({
+    title: "站内信",
+    url: "/message/inbox",
+    icon: <MailIcon />,
+  });
+
   if (user.role === "admin") {
     navItems.push({
       title: "部门管理",
@@ -43,6 +51,11 @@ export function AppSidebar({
       title: "岗位管理",
       url: "/org/positions",
       icon: <BriefcaseIcon />,
+    });
+    navItems.push({
+      title: "角色管理",
+      url: "/access/roles",
+      icon: <ShieldCheckIcon />,
     });
     navItems.push({
       title: "用户管理",

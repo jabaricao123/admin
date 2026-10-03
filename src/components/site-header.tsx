@@ -11,6 +11,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/settings/users": "用户管理",
   "/org/departments": "部门管理",
   "/org/positions": "岗位管理",
+  "/access/roles": "角色管理",
+  "/message/inbox": "站内信",
 };
 
 export function SiteHeader() {
