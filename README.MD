@@ -43,7 +43,7 @@ npm run dev
 ```text
 src/
 ├── app/
-│   ├── (admin)/          # 后台（需登录）：工作台、/settings/users 用户管理
+│   ├── (admin)/          # 后台（需登录）：工作台、/org/users 用户管理
 │   ├── login/            # 登录页
 │   ├── layout.tsx        # 根布局：Geist 字体 / 主题 / Toaster
 │   └── globals.css       # Tailwind 4 + CJT 品牌主题 token

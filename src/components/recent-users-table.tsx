@@ -37,7 +37,7 @@ export function RecentUsersTable({ users }: { users: Profile[] }) {
         <CardDescription>最新维护的账号档案</CardDescription>
         <CardAction>
           <Button variant="outline" size="sm" asChild>
-            <Link href="/settings/users">查看全部</Link>
+            <Link href="/org/users">查看全部</Link>
           </Button>
         </CardAction>
       </CardHeader>
@@ -97,7 +97,7 @@ export function RecentUsersTable({ users }: { users: Profile[] }) {
               {users.map((user) => (
                 <Link
                   key={user.id}
-                  href="/settings/users"
+                  href="/org/users"
                   className="flex items-center justify-between gap-3 border-b py-3 transition-colors last:border-b-0 hover:bg-muted/40"
                 >
                   <div className="min-w-0">

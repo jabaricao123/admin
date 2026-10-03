@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "用户管理",
 };
 
-export default async function UsersSettingsPage() {
+export default async function OrgUsersPage() {
   const supabase = await createClient();
   const {
     data: { user },

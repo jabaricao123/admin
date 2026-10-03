@@ -255,7 +255,8 @@ select ok(
      join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.proname = 'admin_update_profile'
-      and p.pronargs = 5),
+      -- org/009 起签名追加 p_department_id/p_position_id（5 → 7 参），p_role 语义不变
+      and p.pronargs = 7),
   'admin_update_profile 保留 p_role 并 raise warning（pgTAP 无 warning 断言语，查函数源）'
 );
 

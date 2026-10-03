@@ -49,6 +49,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
+import type { Database } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/client";
 import {
   PROFILE_STATUS_BADGE_CLASSES,
@@ -58,27 +59,55 @@ import {
   ROLE_LABELS,
   ROLE_OPTIONS,
   translateErrorMessage,
+  translateUserErrorMessage,
   type Profile,
   type ProfileStatus,
+  type PositionStatus,
   type UserRole,
 } from "@/lib/dictionaries";
 
 const PAGE_SIZE = 20;
 const ALL = "all";
+const NONE = "__none__";
 
 const formatDateTime = (value: string) =>
   new Date(value).toLocaleString("zh-CN", { hour12: false });
 
+type DepartmentRow = Pick<
+  Database["public"]["Views"]["departments_v"]["Row"],
+  "id" | "name" | "depth" | "status"
+>;
+type PositionRow = Pick<
+  Database["public"]["Views"]["positions_v"]["Row"],
+  "id" | "name" | "department_id" | "status"
+>;
+
+type DepartmentOption = {
+  id: string;
+  name: string;
+  depth: number;
+  status: "active" | "disabled";
+};
+
+type PositionOption = {
+  id: string;
+  name: string;
+  departmentId: string | null;
+  status: PositionStatus;
+};
+
 type EditForm = {
   full_name: string;
-  department: string;
+  departmentId: string;
+  positionId: string;
   role: UserRole;
   status: ProfileStatus;
 };
 
 const EMPTY_FORM: EditForm = {
   full_name: "",
-  department: "",
+  departmentId: NONE,
+  positionId: NONE,
   role: "engineer",
   status: "active",
 };
@@ -95,22 +124,57 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
   const [editing, setEditing] = React.useState<Profile | null>(null);
   const [form, setForm] = React.useState<EditForm>(EMPTY_FORM);
   const [saving, setSaving] = React.useState(false);
+  const [departments, setDepartments] = React.useState<DepartmentOption[]>([]);
+  const [positions, setPositions] = React.useState<PositionOption[]>([]);
 
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     const supabase = createClient();
-    const { data, error: loadError } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [profileRes, departmentRes, positionRes] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("departments_v")
+        .select("id, name, depth, status")
+        .order("path"),
+      supabase
+        .from("positions_v")
+        .select("id, name, department_id, status")
+        .order("created_at", { ascending: false }),
+    ]);
 
-    if (loadError) {
-      setError(loadError.message);
+    if (profileRes.error) {
+      setError(profileRes.error.message);
       setRows([]);
     } else {
-      setRows((data ?? []) as Profile[]);
+      setRows((profileRes.data ?? []) as Profile[]);
     }
+
+    if (!departmentRes.error) {
+      setDepartments(
+        (departmentRes.data ?? []).map((row: DepartmentRow) => ({
+          id: row.id ?? "",
+          name: row.name ?? "",
+          depth: row.depth ?? 1,
+          status: row.status === "disabled" ? "disabled" : "active",
+        })),
+      );
+    }
+
+    if (!positionRes.error) {
+      setPositions(
+        (positionRes.data ?? []).map((row: PositionRow) => ({
+          id: row.id ?? "",
+          name: row.name ?? "",
+          departmentId: row.department_id,
+          status: row.status === "disabled" ? "disabled" : "active",
+        })),
+      );
+    }
+
     setLoading(false);
   }, []);
 
@@ -172,7 +236,8 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
     setEditing(row);
     setForm({
       full_name: row.full_name ?? "",
-      department: row.department ?? "",
+      departmentId: row.department_id ?? NONE,
+      positionId: row.position_id ?? NONE,
       role: row.role,
       status: row.status,
     });
@@ -181,6 +246,82 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
   const closeEdit = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
+  };
+
+  /**
+   * 部门下拉（org/009）：仅 active 部门可按层级缩进选择；
+   * 编辑中的存量归属若为停用/已删除部门，补临时选项避免回显空白。
+   */
+  const departmentOptions = React.useMemo(() => {
+    const active = departments
+      .filter((item) => item.status === "active")
+      .map((item) => ({
+        id: item.id,
+        label: `${"\u3000".repeat(Math.max(0, item.depth - 1))}${item.name}`,
+      }));
+
+    const currentId = editing?.department_id;
+    if (currentId && !active.some((item) => item.id === currentId)) {
+      const known = departments.find((item) => item.id === currentId);
+      const label = known
+        ? `${known.name}（已停用）`
+        : `${editing?.department?.trim() || "原部门"}（已删除）`;
+      return [{ id: currentId, label }, ...active];
+    }
+
+    return active;
+  }, [departments, editing]);
+
+  /**
+   * 岗位下拉（org/009）：active 岗位按所选部门过滤；
+   * 未指定部门的通用岗位始终可选；编辑中的存量岗位不在过滤集内时补临时选项。
+   */
+  const positionOptions = React.useMemo(() => {
+    const selected = form.departmentId;
+    const filtered = positions
+      .filter(
+        (item) =>
+          item.status === "active" &&
+          (selected === NONE ||
+            item.departmentId === null ||
+            item.departmentId === selected),
+      )
+      .map((item) => ({ id: item.id, label: item.name }));
+
+    if (
+      form.positionId !== NONE &&
+      !filtered.some((item) => item.id === form.positionId)
+    ) {
+      const current = positions.find((item) => item.id === form.positionId);
+      if (current) {
+        const suffix =
+          current.status === "disabled" ? "（已停用）" : "（其他部门）";
+        return [
+          { id: current.id, label: `${current.name}${suffix}` },
+          ...filtered,
+        ];
+      }
+    }
+
+    return filtered;
+  }, [positions, form.departmentId, form.positionId]);
+
+  /** 部门切换时，所选岗位不属于新部门（且非通用岗位）则清空岗位选择 */
+  const handleDepartmentChange = (value: string) => {
+    setForm((prev) => {
+      const current = positions.find((item) => item.id === prev.positionId);
+      const keepPosition =
+        prev.positionId === NONE ||
+        value === NONE ||
+        current === undefined ||
+        current.departmentId === null ||
+        current.departmentId === value;
+      return {
+        ...prev,
+        departmentId: value,
+        positionId: keepPosition ? prev.positionId : NONE,
+      };
+    });
   };
 
   const handleSave = async () => {
@@ -209,22 +350,31 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
       });
       if (roleError) {
         setSaving(false);
-        toast.error(translateErrorMessage(roleError.message));
+        toast.error(translateUserErrorMessage(roleError.message));
         return;
       }
     }
 
-    // admin_update_profile 仅负责姓名/部门/状态（兼容期已收窄，不再传 p_role）
+    // admin_update_profile 负责姓名/部门/岗位/状态（角色已收窄，不再传 p_role）；
+    // org/009：部门/岗位走 id 参数（触发器回写部门文本），仅在变更时传参
+    const departmentChanged =
+      form.departmentId !== (editing.department_id ?? NONE);
+    const positionChanged = form.positionId !== (editing.position_id ?? NONE);
     const { error: saveError } = await supabase.rpc("admin_update_profile", {
       p_user_id: editing.id,
       p_full_name: form.full_name.trim() || undefined,
-      p_department: form.department.trim() || undefined,
       p_status: form.status,
+      ...(departmentChanged && form.departmentId !== NONE
+        ? { p_department_id: form.departmentId }
+        : {}),
+      ...(positionChanged && form.positionId !== NONE
+        ? { p_position_id: form.positionId }
+        : {}),
     });
     setSaving(false);
 
     if (saveError) {
-      toast.error(translateErrorMessage(saveError.message));
+      toast.error(translateUserErrorMessage(saveError.message));
       void load();
       return;
     }
@@ -543,17 +693,44 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
             </Field>
             <Field>
               <FieldLabel htmlFor="user-department">部门</FieldLabel>
-              <Input
-                id="user-department"
-                value={form.department}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    department: event.target.value,
-                  }))
+              <Select
+                value={form.departmentId}
+                onValueChange={handleDepartmentChange}
+              >
+                <SelectTrigger id="user-department" className="w-full">
+                  <SelectValue placeholder="未指定" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departmentOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="user-position">岗位</FieldLabel>
+              <Select
+                value={form.positionId}
+                onValueChange={(value) =>
+                  setForm((prev) => ({ ...prev, positionId: value }))
                 }
-                placeholder="部门"
-              />
+              >
+                <SelectTrigger id="user-position" className="w-full">
+                  <SelectValue placeholder="未指定" />
+                </SelectTrigger>
+                <SelectContent>
+                  {positionOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldDescription>
+                按所选部门过滤；未指定部门的通用岗位始终可选
+              </FieldDescription>
             </Field>
             <Field>
               <FieldLabel htmlFor="user-role">角色</FieldLabel>

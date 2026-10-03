@@ -59,7 +59,7 @@ export function AppSidebar({
     });
     navItems.push({
       title: "用户管理",
-      url: "/settings/users",
+      url: "/org/users",
       icon: <UsersIcon />,
     });
   }

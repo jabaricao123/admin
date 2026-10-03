@@ -598,7 +598,9 @@ export type Database = {
       admin_update_profile: {
         Args: {
           p_department?: string
+          p_department_id?: string
           p_full_name?: string
+          p_position_id?: string
           p_role?: Database["public"]["Enums"]["user_role"]
           p_status?: Database["public"]["Enums"]["profile_status"]
           p_user_id: string

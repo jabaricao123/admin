@@ -25,6 +25,17 @@ export function translateErrorMessage(message: string): string {
   );
 }
 
+/**
+ * 用户管理 RPC 错误：组织/角色业务拒绝信息已中文且部分带参数（如
+ * 「部门不存在或已删除：<id>」），原文透传；其余走通用映射。
+ */
+export function translateUserErrorMessage(message: string): string {
+  const isBusinessRule =
+    /^(部门不存在或已删除|岗位不存在|用户不存在|角色不存在)：/.test(message) ||
+    /^角色(已停用，无法分配|不可分配（兼容期仅支持内置角色）)：/.test(message);
+  return isBusinessRule ? message : translateErrorMessage(message);
+}
+
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "管理员",
   engineer: "工程师",

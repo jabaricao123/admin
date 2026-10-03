@@ -2,8 +2,8 @@
 
 | 项 | 值 |
 |---|---|
-| 路由 | /org/users（现为 /settings/users，立项时迁移并 301） |
-| 状态 | ✅ 已上线，待路径迁移 |
+| 路由 | /org/users（旧路径 /settings/users 已 301，org/008） |
+| 状态 | ✅ 已上线 |
 | 模块 | [org](../README.md#2-组织管理-orgp0) |
 
 ## 目的
