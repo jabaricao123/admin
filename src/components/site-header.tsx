@@ -25,6 +25,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/audit/logins": "登录日志",
   "/sync/sources": "数据源配置",
   "/sync/tasks": "同步任务",
+  "/report/builtin": "预置报表",
 };
 
 export function SiteHeader() {

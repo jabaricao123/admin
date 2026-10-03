@@ -865,6 +865,103 @@ export type Database = {
           },
         ]
       }
+      report_allowed_views: {
+        Row: {
+          allowed_columns: NonNullable<Json>
+          created_at: string
+          registered_by: string | null
+          view_name: string
+        }
+        Insert: {
+          allowed_columns: NonNullable<Json>
+          created_at?: string
+          registered_by?: string | null
+          view_name: string
+        }
+        Update: {
+          allowed_columns?: NonNullable<Json>
+          created_at?: string
+          registered_by?: string | null
+          view_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_allowed_views_registered_by_fkey"
+            columns: ["registered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_definitions: {
+        Row: {
+          config: NonNullable<Json>
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          owner_id: string
+          source_view: string
+          updated_at: string
+          updated_by: string | null
+          visibility: string
+        }
+        Insert: {
+          config?: NonNullable<Json>
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          source_view: string
+          updated_at?: string
+          updated_by?: string | null
+          visibility?: string
+        }
+        Update: {
+          config?: NonNullable<Json>
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          source_view?: string
+          updated_at?: string
+          updated_by?: string | null
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definitions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_definitions_source_view_fkey"
+            columns: ["source_view"]
+            isOneToOne: false
+            referencedRelation: "report_allowed_views"
+            referencedColumns: ["view_name"]
+          },
+          {
+            foreignKeyName: "report_definitions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_data_scopes: {
         Row: {
           role_id: string
@@ -1146,6 +1243,63 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_deliveries: {
+        Row: {
+          attempt_no: number
+          attempted_at: string
+          duration_ms: number | null
+          error: string | null
+          event_id: number
+          finished_at: string | null
+          http_status: number | null
+          id: number
+          request_id: number | null
+          status: string
+          webhook_id: string
+        }
+        Insert: {
+          attempt_no?: number
+          attempted_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          event_id: number
+          finished_at?: string | null
+          http_status?: number | null
+          id?: never
+          request_id?: number | null
+          status?: string
+          webhook_id: string
+        }
+        Update: {
+          attempt_no?: number
+          attempted_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          event_id?: number
+          finished_at?: string | null
+          http_status?: number | null
+          id?: never
+          request_id?: number | null
+          status?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "integration_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_deliveries_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhooks: {
         Row: {
           created_at: string
@@ -1360,6 +1514,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      api_departments: {
+        Args: { p_token: string }
+        Returns: {
+          created_at: string | null
+          created_by: string | null
+          depth: number | null
+          id: string | null
+          leader_id: string | null
+          name: string | null
+          parent_id: string | null
+          path: string | null
+          sort_order: number | null
+          status: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "departments_v"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       assign_role: {
         Args: { p_new_role: string; p_target_user: string }
         Returns: {
@@ -1439,6 +1616,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      delete_report_definition: {
+        Args: { p_def_id: string }
+        Returns: undefined
       }
       delete_role: {
         Args: { p_id: string }
@@ -1730,6 +1911,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      issue_api_token: { Args: { p_key: string }; Returns: Json }
       mark_all_read: { Args: Record<PropertyKey, never>; Returns: number }
       mark_cc_read: { Args: { p_instance_id: string }; Returns: string }
       mark_notification_read: {
@@ -1846,6 +2028,27 @@ export type Database = {
       }
       position_headcount: { Args: { p_position_id: string }; Returns: number }
       preview_scope: { Args: { p_user_id: string }; Returns: Json }
+      publish_report_definition: {
+        Args: { p_def_id: string }
+        Returns: {
+          config: NonNullable<Json>
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          owner_id: string
+          source_view: string
+          updated_at: string
+          updated_by: string | null
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "report_definitions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       recent_notifications: {
         Args: { p_limit?: number }
         Returns: {
@@ -1871,6 +2074,21 @@ export type Database = {
       record_login_attempt: {
         Args: { p_email: string; p_fail_reason?: string; p_success: boolean }
         Returns: number
+      }
+      register_allowed_view: {
+        Args: { p_allowed_columns: Json; p_view_name: string }
+        Returns: {
+          allowed_columns: NonNullable<Json>
+          created_at: string
+          registered_by: string | null
+          view_name: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "report_allowed_views"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       register_menu_item: {
         Args: {
@@ -1919,6 +2137,33 @@ export type Database = {
         }
       }
       rollback_sync_task: { Args: { p_task_id: string }; Returns: Json }
+      run_report: { Args: { p_def_id: string }; Returns: Json }
+      save_report_definition: {
+        Args: {
+          p_config: Json
+          p_id: string
+          p_name: string
+          p_source_view: string
+        }
+        Returns: {
+          config: NonNullable<Json>
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          owner_id: string
+          source_view: string
+          updated_at: string
+          updated_by: string | null
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "report_definitions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_instance: {
         Args: {
           p_form_data: Json
@@ -1932,6 +2177,7 @@ export type Database = {
       test_mail_config: { Args: { p_to: string }; Returns: Json }
       test_storage_config: { Args: Record<PropertyKey, never>; Returns: Json }
       test_sync_source: { Args: { p_id: string }; Returns: Json }
+      test_webhook: { Args: { p_webhook_id: string }; Returns: Json }
       toggle_notification_star: {
         Args: { p_id: number }
         Returns: {
@@ -2185,12 +2431,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2212,12 +2458,13 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2236,12 +2483,13 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2260,12 +2508,13 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2278,11 +2527,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
