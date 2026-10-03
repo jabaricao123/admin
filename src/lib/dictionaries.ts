@@ -273,6 +273,7 @@ export function asServiceVerifyStatus(value: string): ServiceVerifyStatus {
 export function translateSystemErrorMessage(message: string): string {
   const isBusinessRule =
     message === "测试收件邮箱不能为空" ||
-    message === "邮件配置不存在，请先保存配置";
+    message === "邮件配置不存在，请先保存配置" ||
+    message === "对象存储配置不存在，请先保存配置";
   return isBusinessRule ? message : translateErrorMessage(message);
 }

@@ -17,6 +17,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/org/users": "用户管理",
   "/org/chart": "组织架构",
   "/system/services/mail": "邮件服务",
+  "/system/services/storage": "对象存储",
 };
 
 export function SiteHeader() {

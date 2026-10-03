@@ -950,6 +950,14 @@ export type Database = {
           verify_status: string
         }[]
       }
+      get_storage_usage: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          bucket_id: string
+          object_count: number
+          total_bytes: number
+        }[]
+      }
       grant_menu: {
         Args: { p_menu_key: string; p_role_id: string }
         Returns: {
@@ -1079,6 +1087,7 @@ export type Database = {
         }
       }
       test_mail_config: { Args: { p_to: string }; Returns: Json }
+      test_storage_config: { Args: Record<PropertyKey, never>; Returns: Json }
       toggle_notification_star: {
         Args: { p_id: number }
         Returns: {
