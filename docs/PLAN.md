@@ -11,33 +11,30 @@
 
 ### 1.1 背景
 
-产品数据（物料、产品、BOM、工艺、文档、变更记录）目前分散在 Excel 和纸质文件中，且不同业务线、不同产品类型的数据结构差异大。本系统目标是建立统一、受控、可追溯的通用产品数据平台：核心模型行业无关，通过可配置字典与自定义属性适配各类产品；同时打通外部协同（供应商填报、客户查询）。
+企业内部管理数据目前分散在 Excel 和纸质文件中。本系统目标是建立统一、受控、可追溯的通用企业管理平台，模块按业务优先级逐个接入；权限由数据库层（RLS）强制，变更全流程留痕。
 
 ### 1.2 目标
 
-1. 产品主数据统一：物料、产品、BOM、工艺路线、技术文档集中管理。
-2. 通用可配置：字典 + 自定义属性适配不同行业与业务线，新业务类型不改代码。
-3. 变更受控：ECN 变更单全流程留痕，审批通过后自动发布新版本。
-4. 内外协同：供应商维护供货信息，客户查询产品资料。
-5. 合规可审计：所有数据操作有审计日志，权限由数据库层强制。
+1. 数据统一：组织、用户及后续业务数据集中管理。
+2. 权限受控：角色矩阵 + RLS 数据库层强制，前端不可信。
+3. 可追溯：操作留痕、版本化、不物理删除。
+4. 合规可审计：数据操作有审计日志。
 
-### 1.3 范围（v1）
+### 1.3 范围（当前）
 
-| 纳入 | 不纳入（后续版本） |
+| 纳入 | 不纳入 |
 |---|---|
-| 物料 / 产品 / BOM / 工艺 / 文档 / 变更审批 | ERP、MES 深度集成 |
-| 字典与自定义属性配置 | 报价与成本核算、排产 |
-| 内部后台 + 对外门户 | 移动端原生 App（先做响应式） |
+| 登录认证、后台守卫 | ERP、MES 深度集成 |
+| 工作台（统计/趋势/最近更新） | 报价核算、排产 |
+| 用户管理（列表/搜索/角色分配/启停用） | 移动端原生 App（响应式 H5 覆盖） |
 | 用户、角色、审计日志 | 多语言（先简体中文） |
-| Excel 批量导入（物料、BOM） | 工作流引擎自定义（v1 固定审批模板） |
+
+后续模块（主数据、变更审批、对外门户等）另行立项时更新本章。
 
 ### 1.4 成功标准
 
-- 首批 3 种产品类型、200 条物料、10 套 BOM 完成录入并通过评审。
-- 新增一个产品类型时，仅通过字典与属性配置完成，无需改代码。
-- 一条变更单从发起到发布 ≤ 3 天（含审批），全程线上可查。
-- 供应商可在门户自助维护供货信息，无需邮件往返。
 - RLS 测试覆盖率 100%（每张表每条策略均有 pgTAP 用例）。
+- 非管理员无法访问用户管理页面与数据（服务端二次校验 + RLS 双保险）。
 
 ---
 
@@ -52,7 +49,7 @@
 | 本地开发 | Supabase CLI + Docker（本机已装 Docker 26） | `supabase start` 一键起全套 |
 | 类型 | supabase gen types（TypeScript） | 数据库 schema → 前端类型，单一事实来源 |
 | 校验 | Zod | 表单校验 + 共享 schema |
-| 测试 | pgTAP（RLS/SQL）、Vitest（前端单测）、Playwright（E2E） | 见第 10 章 |
+| 测试 | pgTAP（RLS/SQL）、Playwright（E2E） | 见第 10 章 |
 | 部署 | 前端 Vercel 或 Docker+Nginx；后端 Supabase Cloud（备选自托管） | 见第 11 章 |
 
 环境核查（2026-10-03）：
@@ -62,7 +59,7 @@
 | Node.js | 24.21.0 已装 |
 | npm | 11.19.0 已装 |
 | Docker | 26.1.5 已装 |
-| Supabase CLI | 未安装（Phase 0 第一步） |
+| Supabase CLI | 未安装（本地栈为备用方案） |
 | 本地 Supabase 栈 | 未运行 |
 
 ---
@@ -73,40 +70,34 @@
 flowchart LR
   subgraph Client["前端 Next.js 单应用"]
     A1["(admin) 内部后台<br/>shadcn/ui + 客户端交互"]
-    A2["(portal) 对外门户<br/>SSR 页面"]
   end
-  subgraph Supabase["Supabase 本地 / 云端"]
+  subgraph Supabase["Supabase 云端"]
     B1["Auth 认证"]
     B2["PostgREST / RPC"]
     B3["Postgres + RLS"]
-    B4["Storage 文档"]
-    B5["Edge Functions 邮件/定时"]
   end
-  A1 --> B1 & B2 & B4
-  A2 --> B1 & B2
+  A1 --> B1 & B2
   B2 --> B3
-  B5 --> B3
-  B4 --> B3
 ```
 
 ### 3.1 部署形态
 
-单体单仓、单 Supabase 项目、单 Next.js 应用，用 Next.js 路由组隔离两类用户：
+单体单仓、单 Supabase 项目、单 Next.js 应用：
 
 | 路由组 | 用户 | 渲染策略 | 框架 |
 |---|---|---|---|
 | `app/(admin)/*` | 内部员工 | 服务端页面 + 客户端交互组件 | Next.js + shadcn/ui |
-| `app/(portal)/*` | 供应商 / 客户 | Server Components + 客户端表单 | Next.js + shadcn/ui |
 | `app/login/*` | 全员 | 客户端 | — |
+
+> `(portal)` 门户路由组为预留设计，模块立项时启用。
 
 ### 3.2 关键决策与理由
 
 | 决策 | 理由 | 备选方案 |
 |---|---|---|
 | 单应用双路由组 | 共享类型、组件、Supabase 客户端，维护成本最低 | 双应用（Vite 后台 + Next 门户），隔离更强但同步成本高 |
-| RLS 兜底权限 | 前端不可信；门户用户直接连数据库 API | 仅服务端 API 鉴权（无法覆盖 PostgREST 直连） |
-| 核心字段 + 自定义属性 | 通用性要求行业无关：通用字段固定，行业字段配置化 | 全 EAV（查询/表单复杂）或全固定字段（无法通用） |
-| 版本化 BOM | 变更发布生成新版本，历史可追溯 | 原地覆盖（不可追溯，否决） |
+| RLS 兜底权限 | 前端不可信；用户直接连数据库 API | 仅服务端 API 鉴权（无法覆盖 PostgREST 直连） |
+| 变更留痕、版本化 | 历史可追溯 | 原地覆盖（不可追溯，否决） |
 
 ---
 
@@ -115,22 +106,14 @@ flowchart LR
 ### 4.1 设计约定
 
 - 表名、字段 snake_case，复数表名；主键统一 `id uuid default gen_random_uuid()`。
-- 所有表含 `created_at`、`updated_at`（触发器维护）；主数据含 `status`，不物理删除。
+- 所有表含 `created_at`、`updated_at`（触发器维护）；含 `status`，不物理删除。
 - 外键 `xxx_id`；编码类字段唯一约束；枚举用 Postgres enum。
-- 行业相关字段不进固定表结构：用 `attribute_definitions` 定义、`attributes jsonb` 存储。
-- 多态关联（文档、审批、审计、属性值）只存 `entity_type + entity_id`，不建 FK，用应用层 + 触发器保证。
 
 ### 4.2 枚举
 
 | 枚举 | 取值 |
 |---|---|
 | user_role | admin, engineer, planner, buyer, quality, supplier, customer |
-| lifecycle_status | draft, in_review, approved, released, superseded, obsolete |
-| change_type | new_product, material_change, structure_change, process_change, corrective, other |
-| change_status | draft, submitted, reviewing, approved, implementing, closed, rejected |
-| approval_status | pending, approved, rejected, returned |
-| doc_type | drawing, spec, process_card, standard, other |
-| attribute_data_type | text, number, boolean, date, select, multi_select |
 | org_type | supplier, customer |
 
 ### 4.3 核心表
@@ -139,22 +122,6 @@ flowchart LR
 |---|---|---|
 | organizations | 外部组织（供应商/客户） | name, org_type, credit_code, contact_name, contact_phone |
 | profiles | 用户档案（1:1 auth.users） | id(=auth.uid), full_name, department, role, organization_id, status |
-| material_categories | 物料分类树 | name, parent_id, sort |
-| dictionaries | 通用数据字典（工序、单位、标准等） | type, code, label, sort, status |
-| attribute_definitions | 自定义属性定义（按实体类型） | entity_type, code, label, data_type, options jsonb, required, sort, status |
-| materials | 物料主数据 | code, name, category_id, spec, unit, reference_price, status, attributes jsonb |
-| supplier_materials | 供应商-物料供货关系 | supplier_id, material_id, price, lead_time_days, status |
-| product_families | 产品系列/分类 | code, name, category_id, sort |
-| products | 产品（行业无关） | code, name, family_id, model, unit, status, version, attributes jsonb |
-| boms | BOM 头（版本化） | product_id, version, status, effective_date, note |
-| bom_items | BOM 明细（树形） | bom_id, parent_item_id, material_id, qty_per, unit, loss_rate, seq |
-| routings | 工艺路线头 | product_id, version, status |
-| routing_steps | 工序 | routing_id, seq, process_id（字典）, equipment, man_hours |
-| documents | 文档元数据（多态） | entity_type, entity_id, doc_type, title, file_path, version, status |
-| change_requests | 变更单 ECN | code, title, change_type, reason, product_id, status, requester_id, due_date |
-| change_items | 变更明细 | change_id, object_type, object_id, action（add/modify/remove）, before jsonb, after jsonb |
-| approvals | 审批实例 | entity_type, entity_id, status, flow jsonb, current_step |
-| approval_steps | 审批步骤 | approval_id, seq, approver_role, status, actor_id, comment, acted_at |
 | audit_logs | 审计日志 | table_name, record_id, action, changes jsonb, actor_id, created_at |
 
 ### 4.4 关系图
@@ -162,66 +129,19 @@ flowchart LR
 ```mermaid
 erDiagram
   organizations ||--o{ profiles : "外部用户归属"
-  organizations ||--o{ supplier_materials : "供货"
-  material_categories ||--o{ materials : "分类"
-  materials ||--o{ supplier_materials : "被供货"
-  product_families ||--o{ products : "系列"
-  products ||--o{ boms : "多版本"
-  boms ||--o{ bom_items : "明细"
-  materials ||--o{ bom_items : "引用"
-  products ||--o{ routings : "多版本"
-  routings ||--o{ routing_steps : "工序"
-  products ||--o{ change_requests : "变更对象"
-  change_requests ||--o{ change_items : "明细"
-  change_requests ||--o{ approvals : "审批（多态）"
-  approvals ||--o{ approval_steps : "步骤"
 ```
 
-> documents、audit_logs、attribute_definitions 为多态/配置关联，图中省略连线。
+> audit_logs 为多态关联，图中省略连线。
 
 ### 4.5 状态机
 
-产品 / BOM 生命周期：
-
-```mermaid
-stateDiagram-v2
-  [*] --> draft
-  draft --> in_review : 提交审批
-  in_review --> approved : 审批通过
-  in_review --> draft : 退回
-  approved --> released : 发布（旧版转 superseded）
-  released --> superseded : 新版本发布
-  released --> obsolete : 停产
-  superseded --> obsolete : 归档
-```
-
-变更单（ECN）：
-
-```mermaid
-stateDiagram-v2
-  [*] --> draft
-  draft --> submitted : 提交
-  submitted --> reviewing : 受理
-  reviewing --> approved : 审批通过
-  reviewing --> rejected : 驳回
-  approved --> implementing : 执行变更
-  implementing --> closed : 验证关闭
-  rejected --> draft : 修改重提
-```
-
-v1 审批流程固定 3 步（可配置留到 v2）：部门主管 → 工艺/质量 → 技术负责人。步骤以 `approval_steps` 行落地，`approvals.flow` 存 JSONB 快照，后续可平滑扩展。
+用户账号状态：`active`（在职）↔ `inactive`（停用）。不物理删除。
 
 ### 4.6 数据库函数（RPC）
 
 | 函数 | 作用 | 调用方 |
 |---|---|---|
-| fn_gen_code(prefix) | 编码生成（前缀+年份+序列） | 插入前触发器 |
-| fn_bom_explode(bom_id) | 递归展开 BOM 到末级 | 前端树形视图 |
-| fn_bom_rollup(bom_id) | 汇总材料用量（含损耗率） | 成本/采购参考 |
-| fn_validate_attributes(entity_type, attributes) | 校验自定义属性是否符合定义 | 插入前触发器 |
-| fn_submit_for_approval(entity_type, entity_id) | 创建审批实例，状态转 in_review/reviewing | 后端 |
-| fn_act_on_step(step_id, decision, comment) | 审批动作，推进状态机 | 前端审批按钮 |
-| fn_release_bom(bom_id) | 发布 BOM，旧版本转 superseded | 前端发布按钮 |
+| admin_update_profile | 管理员修改用户档案（含角色），带自保护约束 | 前端用户管理 |
 | fn_audit_row() | 通用审计触发器函数 | 所有业务表 |
 | fn_current_role() / fn_is_internal() | RLS 辅助（读取 profiles） | 所有策略 |
 | fn_set_updated_at() | 维护 updated_at | 所有表 |
@@ -232,8 +152,7 @@ v1 审批流程固定 3 步（可配置留到 v2）：部门主管 → 工艺/�
 
 1. 内部角色按角色矩阵读写；外部角色只能访问与自身组织关联的数据。
 2. 所有策略用 `security definer` 辅助函数判断，避免策略内联子查询导致性能问题与循环。
-3. 已发布（released）数据对全内部角色只读，仅 admin 可回退。
-4. 外部用户默认无任何表权限，逐一开放所需视图/表。
+3. 外部用户默认无任何表权限，逐一开放所需视图/表。
 
 示例策略：
 
@@ -243,38 +162,14 @@ create or replace function public.current_role() returns public.user_role
 language sql stable security definer set search_path = public as $$
   select role from public.profiles where id = auth.uid() and status = 'active'
 $$;
-
--- 内部员工可读物料主数据
-create policy materials_select_internal on public.materials for select
-using (public.current_role() in ('admin','engineer','planner','buyer','quality'));
-
--- 供应商只能看到自己被邀请供货的物料
-create policy supplier_materials_select on public.supplier_materials for select
-using (
-  public.current_role() = 'supplier'
-  and supplier_id = (select organization_id from public.profiles where id = auth.uid())
-);
-
--- 已发布 BOM 内部只读，草稿仅创建人/管理员可改
-create policy boms_update on public.boms for update
-using (
-  public.current_role() = 'admin'
-  or (public.current_role() = 'engineer' and status = 'draft' and created_by = auth.uid())
-);
 ```
 
-角色权限矩阵（v1）：
+角色权限矩阵（当前）：
 
-| 资源 | admin | engineer | planner | buyer | quality | supplier | customer |
-|---|---|---|---|---|---|---|---|
-| 物料主数据 | 增删改查 | 增改查 | 读 | 读 | 读 | 仅关联 | — |
-| 产品 | 增删改查 | 增改查 | 读 | 读 | 读 | — | 仅发布 |
-| BOM | 增删改查 | 增改查 | 读 | 读 | 读 | — | — |
-| 变更单 | 全流程 | 发起/执行 | 参与 | 参与 | 审批 | 反馈 | — |
-| 工艺路线 | 增删改查 | 增改查 | 读 | — | 读 | — | — |
-| 文档 | 增删改查 | 增改查 | 读 | 读 | 读 | 关联下载 | 发布下载 |
-| 字典/属性定义 | 增删改查 | 读 | 读 | 读 | 读 | — | — |
-| 用户/组织 | 增删改查 | — | — | — | — | — | — |
+| 资源 | admin | engineer / planner / buyer / quality | supplier / customer |
+|---|---|---|---|
+| 用户/组织 | 增删改查 | 仅读本人档案 | 仅读本人档案 |
+| 其他业务表 | 按模块立项时定义 | 按模块立项时定义 | 按模块立项时定义 |
 
 ---
 
@@ -292,17 +187,11 @@ admin/
 │   │   ├── (admin)/
 │   │   │   ├── layout.tsx             # Sidebar + Header + 会话/角色校验
 │   │   │   ├── page.tsx               # 工作台
-│   │   │   ├── settings/users/        # 用户管理（已完成）
-│   │   │   ├── materials/             # 规划：list / create / edit / show
-│   │   │   ├── products/              # 规划：自定义属性表单、BOM 页签
-│   │   │   ├── boms/[id]/             # 规划：BOM 树
-│   │   │   └── changes/ documents/ partners/
-│   │   └── (portal)/                  # 规划：供应商 / 客户门户
+│   │   │   └── settings/users/        # 用户管理（已完成）
 │   ├── components/
 │   │   ├── ui/                        # shadcn/ui 组件（npx shadcn add 维护）
 │   │   ├── app-sidebar.tsx            # 侧边导航（按角色过滤）
-│   │   ├── users/users-table.tsx      # 用户管理表格 + 编辑抽屉
-│   │   └── ...                        # 工作台卡片 / 图表 / 登录表单
+│   │   └── users/users-table.tsx      # 用户管理表格 + 编辑抽屉
 │   ├── hooks/
 │   ├── lib/
 │   │   ├── supabase/client.ts         # 浏览器客户端
@@ -314,58 +203,29 @@ admin/
 ├── supabase/
 │   ├── config.toml
 │   ├── migrations/
-│   ├── seed.sql
-│   └── functions/                     # Edge Functions（规划）
-├── tests/                             # 规划：e2e（Playwright）+ unit（Vitest）
+│   └── seed.sql
 ├── docs/
 └── .env.local
 ```
 
 ### 5.2 导航与路由结构
 
-菜单集中在 `src/components/app-sidebar.tsx`，按 `profiles.role` 过滤（如「用户管理」仅管理员可见）；页面级权限在各自 Server Component 中二次校验。未来模块按同一约定扩展：
-
-| 资源 | 路由前缀 | 状态 |
-|---|---|---|
-| users | /settings/users | 已完成 |
-| materials | /materials | 规划 |
-| products | /products | 规划（自定义属性表单、BOM 页签） |
-| boms | /boms | 规划（树形编辑） |
-| changes | /changes | 规划（审批时间线、diff） |
-| documents | /documents | 规划 |
-| partners | /partners | 规划 |
+菜单集中在 `src/components/app-sidebar.tsx`，按 `profiles.role` 过滤（如「用户管理」仅管理员可见）；页面级权限在各自 Server Component 中二次校验。未来模块按同一约定扩展。
 
 ### 5.3 页面清单
 
-| 路由 | 页面 | 优先级 | 要点 |
-|---|---|---|---|
-| /dashboard | 概览 | P0 | 待办审批、最近变更、统计卡片 |
-| /materials | 物料 CRUD | P0 | 分类筛选、编码自动生成、批量导入 |
-| /products | 产品 CRUD | P0 | 通用字段 + 自定义属性动态表单 |
-| /products/show/:id | 产品详情 | P0 | 属性、版本、关联 BOM/工艺/文档页签 |
-| /boms/show/:id | BOM 树 | P0 | 树形编辑、用量汇总、版本对比 |
-| /changes | 变更列表 | P0 | 状态筛选、我的待办 |
-| /changes/create | 新建变更 | P0 | 选择对象、填写前后值、附件 |
-| /changes/show/:id | 变更详情 | P0 | 审批时间线、diff 视图、审批操作 |
-| /documents | 文档库 | P1 | 上传/下载、关联实体、版本 |
-| /partners | 供应商/客户 | P1 | 组织 CRUD、关联账号 |
-| /settings/users | 用户管理 | P1 | 邀请、角色分配、停用 |
-| /settings/dictionaries | 字典与属性定义 | P1 | 物料分类、工序、单位、自定义属性维护 |
-| /portal | 门户首页 | P0 | 按角色渲染入口 |
-| /portal/supplier | 供货维护 | P0 | 价格、交期、状态 |
-| /portal/customer | 产品目录 | P1 | 只读查询已发布产品 |
-| /portal/profile | 账号信息 | P1 | 改密、联系方式 |
+| 路由 | 页面 | 状态 |
+|---|---|---|
+| /dashboard | 概览（统计卡片、注册趋势、最近更新） | 已完成 |
+| /settings/users | 用户管理（列表/搜索/筛选/角色分配/启停用） | 已完成 |
 
 ### 5.4 关键组件
 
 | 组件 | 说明 |
 |---|---|
-| BomTree | 树形结构 + 可编辑表格，支持拖拽排序、层级增删 |
-| DynamicAttrForm | 按 attribute_definitions 渲染动态表单，Zod 动态校验 |
-| ApprovalTimeline | 审批步骤时间线，含状态、意见、时间 |
-| ChangeDiff | before/after JSONB 对比渲染，字段级高亮 |
-| ExcelImport | 上传 → 模板校验 → 预览 → 入库，含错误报告 |
-| FileUpload | 对接 Supabase Storage，多态实体关联 |
+| AppSidebar | 侧边导航，按 `profiles.role` 过滤菜单 |
+| UsersTable | 用户管理表格 + 编辑抽屉 |
+| 工作台卡片/图表 | 统计卡片、注册趋势（recharts）、最近更新 |
 
 ### 5.5 前端约定
 
@@ -392,40 +252,19 @@ admin/
 
 | 序号 | 迁移 | 内容 |
 |---|---|---|
-| 001 | init_enums_profiles | 枚举、profiles、organizations、辅助函数 |
-| 002 | master_data | material_categories、dictionaries、attribute_definitions、materials、供应商关系 |
-| 003 | products | product_families、products、routings、routing_steps、属性校验函数 |
-| 004 | boms | boms、bom_items、BOM 函数 |
-| 005 | changes | change_requests、change_items、approvals、approval_steps |
-| 006 | documents_audit | documents、audit_logs、审计触发器 |
-| 007 | rls_policies | 全表 RLS 与策略 |
-| 008 | seed_helpers | 编码生成、导入辅助函数 |
+| 001 | init_enums_profiles | 枚举、profiles、organizations、辅助函数、RLS 策略 |
 
 ### 6.2 Edge Functions
 
-| 函数 | 触发 | 作用 |
-|---|---|---|
-| invite-user | 前端调用（admin） | 创建 auth 用户 + profiles + 发送邀请邮件 |
-| notify-approval | 数据库 webhook | 审批提交/通过/驳回邮件通知 |
-| scheduled-reminders | Cron（每日 8:00） | 变更单超期、文档到期提醒 |
-| import-excel | 前端调用 | 服务端解析大文件（备选，小文件前端直解） |
-| erp-sync | v2 预留 | 与 ERP 同步物料/产品 |
+暂无。后续模块需要时（邀请邮件、定时提醒、Excel 解析）再立项。
 
 ### 6.3 Storage
 
-| Bucket | 内容 | 访问策略 |
-|---|---|---|
-| drawings | 图纸、规格书 | 内部读；门户仅 released 关联文档 |
-| attachments | 变更单附件 | 变更参与人读写 |
-| imports | Excel 导入临时文件 | 上传者 24h 后清理 |
-
-文件命名：`{entity_type}/{entity_id}/{uuid}-{原文件名}`。所有访问经 RLS/签名 URL，bucket 不公开。
+暂无 bucket。后续文档/附件模块需要时再立项，届时所有访问经 RLS/签名 URL，bucket 不公开。
 
 ### 6.4 Seed 数据（本地）
 
-- 字典与分类：工序字典（示例值）、单位、材料分类树、自定义属性示例。
 - 每角色 1 个测试账号（密码统一，本地关闭邮箱确认）。
-- 示例物料 20 条、产品 3 个（跨 2 种产品类型）、BOM 2 套、变更单 2 条（不同状态）。
 - `supabase/seed.sql` 幂等可重放，不依赖生产数据。
 
 ---
@@ -517,29 +356,12 @@ npm run dev
 
 ## 9. 里程碑计划
 
-> 估算基于 1 名全栈开发；若前后端各 1 人并行，总周期约缩短 40%。
-
-| 阶段 | 内容 | 交付物 | 预估 |
+| 阶段 | 内容 | 交付物 | 状态 |
 |---|---|---|---|
-| Phase 0 环境与骨架 | CLI、脚手架、shadcn 布局与登录、双路由组、CI 雏形 | 可登录的空系统 | 3 人日 |
-| Phase 1 主数据 | 物料、分类、字典、自定义属性、供应商/客户、用户与角色 | 主数据 CRUD 可用 + RLS 策略 + pgTAP | 5 人日 |
-| Phase 2 产品与 BOM | 产品、自定义属性、BOM 树、工艺路线、文档、导入 | 主数据与 BOM 可用，BOM 汇总正确 | 8 人日 |
-| Phase 3 变更与审批 | ECN、审批流、状态机、通知、审计日志 | 变更全流程线上闭环 | 8 人日 |
-| Phase 4 对外门户 | 门户布局、供应商维护、客户查询、账号 | 门户上线，外部用户可自助 | 5 人日 |
-| Phase 5 测试与上线 | E2E、性能、staging、数据迁移演练、上线 | 生产可用 | 5 人日 |
+| Phase 0 环境与骨架 | CLI、脚手架、shadcn 布局与登录、双路由组 | 可登录的系统 | 已完成 |
+| Phase 1 用户与组织管理 | profiles、角色、RLS、工作台、用户管理 | 用户管理可用 + RLS 策略 | 已完成 |
 
-合计约 34 人日，含缓冲按 8 周排期。
-
-### 各阶段验收标准
-
-| 阶段 | 验收 |
-|---|---|
-| Phase 0 | 本地 `supabase start` + 前端登录成功；类型生成流程跑通 |
-| Phase 1 | 200 条物料导入成功；新建自定义属性并在表单生效；越权访问被 RLS 拒绝（pgTAP 证明） |
-| Phase 2 | BOM 展开/汇总与人工核算一致；图纸可上传关联下载 |
-| Phase 3 | 一条 ECN 走完 3 级审批并发布新 BOM 版本；旧版本转 superseded |
-| Phase 4 | 供应商账号只能看到自己的供货数据；客户只能看已发布产品 |
-| Phase 5 | 5 条 E2E 全绿；staging 演练一次数据迁移与回滚 |
+后续模块（主数据、变更审批、对外门户等）按业务优先级另行立项，不再预排计划。
 
 ---
 
@@ -547,12 +369,11 @@ npm run dev
 
 | 层 | 工具 | 覆盖 |
 |---|---|---|
-| 数据库 | pgTAP | 每张表每条 RLS 策略至少 1 允许 + 1 拒绝用例；状态机函数用例 |
-| 单元 | Vitest | 编码生成、BOM 汇总计算、diff 渲染、Zod schema |
-| E2E | Playwright | 登录跳转、物料 CRUD、发起变更、审批、门户权限隔离 |
-| 数据 | seed + 工厂函数 | 各角色测试账号、典型产品/BOM 数据集 |
+| 数据库 | pgTAP | 每张表每条 RLS 策略至少 1 允许 + 1 拒绝用例 |
+| E2E | Playwright | 登录跳转、用户管理、权限隔离 |
+| 数据 | seed | 各角色测试账号 |
 
-CI（GitHub Actions）流水线：lint → typecheck → vitest → `supabase db reset && supabase test db` →（可选）Playwright。
+CI（GitHub Actions）流水线：lint → typecheck → `supabase db reset && supabase test db` →（可选）Playwright。
 
 ---
 
@@ -588,13 +409,9 @@ CI（GitHub Actions）流水线：lint → typecheck → vitest → `supabase db
 
 | 风险 | 影响 | 对策 |
 |---|---|---|
-| 过度配置化：属性/字典太灵活导致录入体验差 | 用户弃用、数据质量低 | 控制 v1 配置范围（仅属性与字典），核心字段固定；提供必填校验与录入模板 |
-| 历史 Excel 数据质量差 | 导入失败、脏数据 | 先模板化 + 校验脚本 + 预览入库，分批迁移 |
-| RLS 策略疏漏导致数据泄露 | 严重（门户用户互见数据） | pgTAP 全覆盖 + 上线前多角色审计 + 双人审查 |
+| RLS 策略疏漏导致数据泄露 | 严重 | pgTAP 全覆盖 + 上线前多角色审计 + 双人审查 |
 | 重 UI 框架的兼容与升级维护成本 | 升级阻塞、生态锁定 | shadcn/ui 为源码级组件（`components/ui` 入库），无第三方重 UI 框架锁定 |
-| 审批流程需求变化 | 状态机重构 | flow 存 JSONB 快照，v1 固定流程，v2 引入流程模板表 |
-| 通用型定位导致需求蔓延 | 范围失控 | 以"首批 3 种产品类型"为边界，超出进 v2 列表 |
-| 单人开发进度风险 | 延期 | 按阶段验收，Phase 2 后可先内部试用主数据模块 |
+| 通用型定位导致需求蔓延 | 范围失控 | 模块按业务优先级逐个立项，不预排大计划 |
 
 ---
 
@@ -608,10 +425,8 @@ next react react-dom typescript
 shadcn radix-ui lucide-react cn tailwindcss @tailwindcss/postcss
 next-themes sonner recharts
 @supabase/supabase-js @supabase/ssr
-zod react-hook-form @hookform/resolvers
-dayjs
 # 开发
-vitest @testing-library/react @playwright/test
+@playwright/test
 supabase（全局 CLI）
 ```
 
@@ -633,6 +448,6 @@ supabase（全局 CLI）
 | ADR-001 | 采用 Supabase 作为后端与本地一致性方案 | 已定 |
 | ADR-002 | 前端单应用双路由组（Next.js + shadcn/ui） | 已定 |
 | ADR-003 | 权限以 RLS 为最终边界，前端仅做菜单隐藏 | 已定 |
-| ADR-004 | BOM 版本化，发布即冻结 | 已定 |
+| ADR-004 | 变更留痕、版本化、不物理删除 | 已定 |
 | ADR-005 | 部署后端优先 Supabase Cloud，合规受限时自托管 | 待评审 |
 | ADR-006 | 通用模型：核心字段固定 + 字典/自定义属性扩展 | 已定 |
