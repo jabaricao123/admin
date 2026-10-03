@@ -1,7 +1,7 @@
 # org · 代理执行卡
 
 ## 模块状态
-- 状态：P0 待立项（users 已上线，departments/positions/chart 待开发）
+- 状态：开发中（001-002 已合入 f2f6ffe）
 - 认领 agent：—
 - 最后更新：2026-10-04
 
