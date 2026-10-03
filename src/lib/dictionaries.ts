@@ -370,3 +370,143 @@ export function translateApprovalErrorMessage(message: string): string {
     ].includes(message);
   return isBusinessRule ? message : translateErrorMessage(message);
 }
+
+// ---------------------------------------------------------------------------
+// 第三方数据同步（sync）：数据源 / 任务 / 映射白名单（镜像数据库约束，写入仍由服务端把关）
+// ---------------------------------------------------------------------------
+
+/** 数据源类型（sync_sources.type） */
+export type SyncSourceType = "api" | "db" | "excel";
+
+export const SYNC_SOURCE_TYPE_LABELS: Record<SyncSourceType, string> = {
+  api: "REST API",
+  db: "外部数据库",
+  excel: "Excel 模板",
+};
+
+export const SYNC_SOURCE_TYPE_BADGE_CLASSES: Record<SyncSourceType, string> = {
+  api: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
+  db: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/60 dark:text-violet-300",
+  excel:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+};
+
+export function asSyncSourceType(value: string): SyncSourceType {
+  return value === "db" || value === "excel" ? value : "api";
+}
+
+/** 启停状态（sync_sources.status / sync_tasks.status） */
+export type SyncStatus = "active" | "disabled";
+
+export const SYNC_STATUS_LABELS: Record<SyncStatus, string> = {
+  active: "启用",
+  disabled: "停用",
+};
+
+export const SYNC_STATUS_BADGE_CLASSES: Record<SyncStatus, string> = {
+  active:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  disabled:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+export function asSyncStatus(value: string): SyncStatus {
+  return value === "disabled" ? "disabled" : "active";
+}
+
+/** 目标表白名单（sync_tasks.target_table，硬编码于 app.validate_sync_mapping） */
+export type SyncTargetTable = "departments" | "positions" | "profiles";
+
+export const SYNC_TARGET_TABLE_LABELS: Record<SyncTargetTable, string> = {
+  departments: "部门",
+  positions: "岗位",
+  profiles: "用户档案",
+};
+
+export const SYNC_TARGET_TABLE_OPTIONS = (
+  ["departments", "positions", "profiles"] as SyncTargetTable[]
+).map((value) => ({ value, label: SYNC_TARGET_TABLE_LABELS[value] }));
+
+export function asSyncTargetTable(value: string): SyncTargetTable {
+  return value === "positions" || value === "profiles" ? value : "departments";
+}
+
+/**
+ * 目标字段白名单（页面下拉镜像 app.validate_sync_mapping 的硬编码数组）。
+ * profiles 显式不含 role/status（INDEX 规则 7：角色走 access 单通道、启停用走 org RPC）。
+ */
+export const SYNC_TARGET_FIELD_OPTIONS: Record<
+  SyncTargetTable,
+  { value: string; label: string }[]
+> = {
+  departments: [
+    { value: "name", label: "名称" },
+    { value: "parent_name", label: "上级部门名称" },
+    { value: "leader_email", label: "负责人邮箱" },
+    { value: "sort_order", label: "排序号" },
+  ],
+  positions: [
+    { value: "name", label: "岗位名称" },
+    { value: "code", label: "岗位编码" },
+    { value: "department_name", label: "所属部门名称" },
+    { value: "headcount", label: "编制数" },
+    { value: "description", label: "职责描述" },
+  ],
+  profiles: [
+    { value: "full_name", label: "姓名" },
+    { value: "department_name", label: "部门名称" },
+    { value: "position_code", label: "岗位编码" },
+    { value: "email", label: "邮箱（匹配键）" },
+  ],
+};
+
+/** 同步方向（sync_tasks.direction） */
+export type SyncDirection = "pull" | "push";
+
+export const SYNC_DIRECTION_LABELS: Record<SyncDirection, string> = {
+  pull: "拉取（源 → 目标表）",
+  push: "推送（目标表 → 外部，只推送）",
+};
+
+export const SYNC_DIRECTION_OPTIONS = (
+  ["pull", "push"] as SyncDirection[]
+).map((value) => ({ value, label: SYNC_DIRECTION_LABELS[value] }));
+
+export function asSyncDirection(value: string): SyncDirection {
+  return value === "push" ? "push" : "pull";
+}
+
+/** 冲突策略（sync_tasks.conflict_policy） */
+export type SyncConflictPolicy = "skip" | "overwrite" | "manual";
+
+export const SYNC_CONFLICT_POLICY_LABELS: Record<SyncConflictPolicy, string> = {
+  skip: "跳过",
+  overwrite: "覆盖",
+  manual: "标记人工处理",
+};
+
+export const SYNC_CONFLICT_POLICY_DESCRIPTIONS: Record<
+  SyncConflictPolicy,
+  string
+> = {
+  skip: "匹配键已存在时保留目标现状，仅新增未匹配行",
+  overwrite: "匹配键已存在时用源数据更新目标行",
+  manual: "匹配键已存在时计入冲突，留给人工裁决",
+};
+
+export const SYNC_CONFLICT_POLICY_OPTIONS = (
+  ["skip", "overwrite", "manual"] as SyncConflictPolicy[]
+).map((value) => ({ value, label: SYNC_CONFLICT_POLICY_LABELS[value] }));
+
+export function asSyncConflictPolicy(value: string): SyncConflictPolicy {
+  return value === "overwrite" || value === "manual" ? value : "skip";
+}
+
+/** 同步 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
+export function translateSyncErrorMessage(message: string): string {
+  const isBusinessRule =
+    /^(数据源|同步任务|目标表|目标字段|字段映射|映射项|样本|profiles|没有可回滚)/.test(
+      message,
+    );
+  return isBusinessRule ? message : translateErrorMessage(message);
+}

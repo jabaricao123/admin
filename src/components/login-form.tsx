@@ -19,8 +19,9 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { createClient } from "@/lib/supabase/client";
+import { classifyLoginFailure } from "@/lib/audit";
 import { translateErrorMessage } from "@/lib/dictionaries";
+import { createClient } from "@/lib/supabase/client";
 
 const ERROR_MESSAGES: Record<string, string> = {
   "Invalid login credentials": "邮箱或密码错误",
@@ -51,10 +52,22 @@ export function LoginForm() {
     });
 
     if (signInError) {
+      // 登录失败留痕（audit/005，ADR-002）：匿名通道仅记失败；失败不阻断登录交互
+      await supabase.rpc("record_login_attempt", {
+        p_email: email.trim(),
+        p_success: false,
+        p_fail_reason: classifyLoginFailure(signInError.message),
+      });
       setError(translate(signInError.message));
       setLoading(false);
       return;
     }
+
+    // 登录成功留痕：此时会话已建立，RPC 以本人身份写入（服务端以会话邮箱归档）
+    await supabase.rpc("record_login_attempt", {
+      p_email: email.trim(),
+      p_success: true,
+    });
 
     router.replace("/");
     router.refresh();

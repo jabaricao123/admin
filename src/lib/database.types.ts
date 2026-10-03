@@ -34,6 +34,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          scopes: NonNullable<Json>
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          scopes?: NonNullable<Json>
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          scopes?: NonNullable<Json>
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       approval_ccs: {
         Row: {
           cc_user_id: string
@@ -283,6 +328,39 @@ export type Database = {
           },
         ]
       }
+      audit_logins: {
+        Row: {
+          created_at: string
+          email: string | null
+          fail_reason: string | null
+          id: number
+          ip: unknown
+          success: boolean
+          ua: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          fail_reason?: string | null
+          id?: never
+          ip?: unknown
+          success: boolean
+          ua?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          fail_reason?: string | null
+          id?: never
+          ip?: unknown
+          success?: boolean
+          ua?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       audit_operations: {
         Row: {
           action: string
@@ -430,6 +508,90 @@ export type Database = {
           },
         ]
       }
+      export_jobs: {
+        Row: {
+          config: NonNullable<Json>
+          content: string | null
+          created_at: string
+          error: string | null
+          file_path: string | null
+          finished_at: string | null
+          id: string
+          requested_by: string
+          size_bytes: number | null
+          source: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          config?: NonNullable<Json>
+          content?: string | null
+          created_at?: string
+          error?: string | null
+          file_path?: string | null
+          finished_at?: string | null
+          id?: string
+          requested_by: string
+          size_bytes?: number | null
+          source: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          config?: NonNullable<Json>
+          content?: string | null
+          created_at?: string
+          error?: string | null
+          file_path?: string | null
+          finished_at?: string | null
+          id?: string
+          requested_by?: string
+          size_bytes?: number | null
+          source?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "export_jobs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "export_jobs_source_fkey"
+            columns: ["source"]
+            isOneToOne: false
+            referencedRelation: "export_sources"
+            referencedColumns: ["source"]
+          },
+        ]
+      }
+      export_sources: {
+        Row: {
+          config_schema: NonNullable<Json>
+          created_at: string
+          enabled: boolean
+          owner_module: string
+          source: string
+        }
+        Insert: {
+          config_schema?: NonNullable<Json>
+          created_at?: string
+          enabled?: boolean
+          owner_module: string
+          source: string
+        }
+        Update: {
+          config_schema?: NonNullable<Json>
+          created_at?: string
+          enabled?: boolean
+          owner_module?: string
+          source?: string
+        }
+        Relationships: []
+      }
       form_renderers: {
         Row: {
           created_at: string
@@ -451,6 +613,36 @@ export type Database = {
           ref_type?: string
           renderer_key?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      integration_events: {
+        Row: {
+          attempts: number
+          created_at: string
+          event: string
+          id: number
+          next_retry_at: string
+          payload: NonNullable<Json>
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          event: string
+          id?: never
+          next_retry_at?: string
+          payload?: NonNullable<Json>
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          event?: string
+          id?: never
+          next_retry_at?: string
+          payload?: NonNullable<Json>
+          status?: string
         }
         Relationships: []
       }
@@ -791,6 +983,139 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_sources: {
+        Row: {
+          config: NonNullable<Json>
+          created_at: string
+          created_by: string | null
+          credentials: string | null
+          id: string
+          last_verified_at: string | null
+          name: string
+          status: string
+          type: string
+          updated_at: string
+          updated_by: string | null
+          verify_status: string
+        }
+        Insert: {
+          config?: NonNullable<Json>
+          created_at?: string
+          created_by?: string | null
+          credentials?: string | null
+          id?: string
+          last_verified_at?: string | null
+          name: string
+          status?: string
+          type: string
+          updated_at?: string
+          updated_by?: string | null
+          verify_status?: string
+        }
+        Update: {
+          config?: NonNullable<Json>
+          created_at?: string
+          created_by?: string | null
+          credentials?: string | null
+          id?: string
+          last_verified_at?: string | null
+          name?: string
+          status?: string
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+          verify_status?: string
+        }
+        Relationships: []
+      }
+      sync_task_versions: {
+        Row: {
+          config: NonNullable<Json>
+          created_at: string
+          created_by: string | null
+          task_id: string
+          version: number
+        }
+        Insert: {
+          config: NonNullable<Json>
+          created_at?: string
+          created_by?: string | null
+          task_id: string
+          version: number
+        }
+        Update: {
+          config?: NonNullable<Json>
+          created_at?: string
+          created_by?: string | null
+          task_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_task_versions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "sync_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_tasks: {
+        Row: {
+          config_version: number
+          conflict_policy: string
+          created_at: string
+          created_by: string | null
+          direction: string
+          field_mapping: NonNullable<Json>
+          id: string
+          name: string
+          source_id: string
+          status: string
+          target_table: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config_version?: number
+          conflict_policy?: string
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          field_mapping: NonNullable<Json>
+          id?: string
+          name: string
+          source_id: string
+          status?: string
+          target_table: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config_version?: number
+          conflict_policy?: string
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          field_mapping?: NonNullable<Json>
+          id?: string
+          name?: string
+          source_id?: string
+          status?: string
+          target_table?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_tasks_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sync_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_services: {
         Row: {
           config: NonNullable<Json>
@@ -818,6 +1143,51 @@ export type Database = {
           updated_by?: string | null
           verified_at?: string | null
           verify_status?: string
+        }
+        Relationships: []
+      }
+      webhooks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          events: string[]
+          headers_enc: string | null
+          id: string
+          name: string
+          retry_policy: NonNullable<Json>
+          secret_enc: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          events: string[]
+          headers_enc?: string | null
+          id?: string
+          name: string
+          retry_policy?: NonNullable<Json>
+          secret_enc: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          events?: string[]
+          headers_enc?: string | null
+          id?: string
+          name?: string
+          retry_policy?: NonNullable<Json>
+          secret_enc?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          url?: string
         }
         Relationships: []
       }
@@ -1013,6 +1383,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_api_key: {
+        Args: { p_expires_at: string; p_name: string; p_scopes: Json }
+        Returns: Json
+      }
+      create_webhook: {
+        Args: {
+          p_events: string[]
+          p_headers?: Json
+          p_name: string
+          p_retry_policy?: Json
+          p_url: string
+        }
+        Returns: Json
+      }
       delete_department: {
         Args: { p_id: string }
         Returns: {
@@ -1164,6 +1548,13 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      disable_sync_source: { Args: { p_id: string }; Returns: Json }
+      disable_webhook: { Args: { p_id: string }; Returns: Json }
+      download_export: { Args: { p_job_id: string }; Returns: string }
+      dry_run_sync_task: {
+        Args: { p_sample: Json; p_task_id: string }
+        Returns: Json
+      }
       enable_department: {
         Args: { p_id: string }
         Returns: {
@@ -1256,6 +1647,54 @@ export type Database = {
           total_bytes: number
         }[]
       }
+      get_sync_sources: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          config: Json
+          created_at: string
+          created_by: string
+          credentials_masked: string
+          id: string
+          last_verified_at: string
+          name: string
+          status: string
+          type: string
+          updated_at: string
+          updated_by: string
+          verify_status: string
+        }[]
+      }
+      get_sync_task_versions: {
+        Args: { p_task_id: string }
+        Returns: {
+          config: Json
+          created_at: string
+          created_by: string
+          version: number
+        }[]
+      }
+      get_sync_tasks: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          config_version: number
+          conflict_policy: string
+          created_at: string
+          created_by: string
+          direction: string
+          field_mapping: Json
+          id: string
+          name: string
+          source_id: string
+          source_name: string
+          source_status: string
+          source_type: string
+          source_verify_status: string
+          status: string
+          target_table: string
+          updated_at: string
+          updated_by: string
+        }[]
+      }
       grant_menu: {
         Args: { p_menu_key: string; p_role_id: string }
         Returns: {
@@ -1278,13 +1717,13 @@ export type Database = {
           current_seq: number
           form_data: Json
           initiator_id: string
-          initiator_name: string | null
+          initiator_name: string
           instance_id: string
           instance_status: string
-          last_urged_at: string | null
+          last_urged_at: string
           module: string
-          ref_id: string | null
-          ref_type: string | null
+          ref_id: string
+          ref_type: string
           schema: Json
           tasks: Json
           title: string
@@ -1345,20 +1784,20 @@ export type Database = {
         Args: { p_unread?: boolean }
         Returns: {
           cc_created_at: string
-          cc_read_at: string | null
-          current_assignee_id: string | null
-          current_assignee_name: string | null
+          cc_read_at: string
+          current_assignee_id: string
+          current_assignee_name: string
           current_seq: number
-          current_task_id: string | null
-          current_task_status: string | null
+          current_task_id: string
+          current_task_status: string
           form_data: Json
           initiator_id: string
-          initiator_name: string | null
+          initiator_name: string
           instance_id: string
           instance_status: string
           module: string
-          ref_id: string | null
-          ref_type: string | null
+          ref_id: string
+          ref_type: string
           title: string
         }[]
       }
@@ -1366,20 +1805,20 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: {
           created_at: string
-          current_acted_at: string | null
-          current_assignee_id: string | null
-          current_assignee_name: string | null
-          current_comment: string | null
+          current_acted_at: string
+          current_assignee_id: string
+          current_assignee_name: string
+          current_comment: string
           current_seq: number
-          current_task_id: string | null
-          current_task_status: string | null
+          current_task_id: string
+          current_task_status: string
           form_data: Json
           instance_id: string
           instance_status: string
-          last_urged_at: string | null
+          last_urged_at: string
           module: string
-          ref_id: string | null
-          ref_type: string | null
+          ref_id: string
+          ref_type: string
           title: string
           updated_at: string
         }[]
@@ -1387,18 +1826,18 @@ export type Database = {
       my_todos: {
         Args: { p_limit?: number; p_pending?: boolean }
         Returns: {
-          acted_at: string | null
-          comment: string | null
+          acted_at: string
+          comment: string
           created_at: string
           current_seq: number
           form_data: Json
           initiator_id: string
-          initiator_name: string | null
+          initiator_name: string
           instance_id: string
           instance_status: string
           module: string
-          ref_id: string | null
-          ref_type: string | null
+          ref_id: string
+          ref_type: string
           seq: number
           task_id: string
           task_status: string
@@ -1429,6 +1868,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      record_login_attempt: {
+        Args: { p_email: string; p_fail_reason?: string; p_success: boolean }
+        Returns: number
+      }
       register_menu_item: {
         Args: {
           p_key: string
@@ -1454,6 +1897,12 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      request_export: {
+        Args: { p_config?: Json; p_source: string }
+        Returns: string
+      }
+      retry_export: { Args: { p_job_id: string }; Returns: string }
+      revoke_api_key: { Args: { p_id: string }; Returns: Json }
       revoke_menu: {
         Args: { p_menu_key: string; p_role_id: string }
         Returns: {
@@ -1469,6 +1918,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rollback_sync_task: { Args: { p_task_id: string }; Returns: Json }
       submit_instance: {
         Args: {
           p_form_data: Json
@@ -1481,6 +1931,7 @@ export type Database = {
       }
       test_mail_config: { Args: { p_to: string }; Returns: Json }
       test_storage_config: { Args: Record<PropertyKey, never>; Returns: Json }
+      test_sync_source: { Args: { p_id: string }; Returns: Json }
       toggle_notification_star: {
         Args: { p_id: number }
         Returns: {
@@ -1504,6 +1955,17 @@ export type Database = {
         }
       }
       unread_count: { Args: Record<PropertyKey, never>; Returns: number }
+      update_webhook: {
+        Args: {
+          p_events: string[]
+          p_headers?: Json
+          p_id: string
+          p_name: string
+          p_retry_policy?: Json
+          p_url: string
+        }
+        Returns: Json
+      }
       upsert_data_scope: {
         Args: { p_role_id: string; p_scope: string }
         Returns: {
@@ -1607,6 +2069,30 @@ export type Database = {
         Args: { p_config: Json; p_credentials: string; p_service: string }
         Returns: Json
       }
+      upsert_sync_source: {
+        Args: {
+          p_config: Json
+          p_credentials: string
+          p_id: string
+          p_name: string
+          p_status?: string
+          p_type: string
+        }
+        Returns: Json
+      }
+      upsert_sync_task: {
+        Args: {
+          p_conflict_policy: string
+          p_direction: string
+          p_field_mapping: Json
+          p_id: string
+          p_name: string
+          p_source_id: string
+          p_status?: string
+          p_target_table: string
+        }
+        Returns: Json
+      }
       urge_instance: {
         Args: { p_instance_id: string }
         Returns: {
@@ -1699,12 +2185,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1726,13 +2212,12 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1751,13 +2236,12 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1776,13 +2260,12 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1795,11 +2278,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

@@ -1,7 +1,7 @@
 # audit · 代理执行卡
 
 ## 模块状态
-- 状态：开发中（001/002/006 M0 已合入 f2f6ffe）
+- 状态：开发中（001-006 已合入；007/008 待排期）
 - 认领 agent：—
 - 最后更新：2026-10-04
 
@@ -33,6 +33,7 @@
 ## 常见陷阱
 - audit_log 是唯一写入入口（5 参签名：module/action/object_type/object_id/diff，与 INDEX 规则 2 一致）
 - denied 留痕：RLS 静默拒绝不会自动写日志，需应用层捕获 42501 调 audit_log('denied')
+- 登录日志写入路径见 docs/adr/002-audit-login-path.md（服务端打点主路径，Auth hook 调研未达预期、退出条件已触发；app.audit_login 不 GRANT，公开包装 record_login_attempt 限流 10 条/分钟/邮箱）
 - 触发器定义随各表迁移（org/011 等），audit 只拥有快照表与查询面
 - INSERT 首版 version=1（非仅 UPDATE/DELETE）
 

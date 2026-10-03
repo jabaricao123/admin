@@ -21,6 +21,10 @@ const PAGE_TITLES: Record<string, string> = {
   "/approval/todo": "我的待办",
   "/approval/mine": "我发起的",
   "/approval/cc": "抄送我的",
+  "/audit/operations": "操作日志",
+  "/audit/logins": "登录日志",
+  "/sync/sources": "数据源配置",
+  "/sync/tasks": "同步任务",
 };
 
 export function SiteHeader() {
