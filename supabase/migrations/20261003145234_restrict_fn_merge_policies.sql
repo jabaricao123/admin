@@ -3,7 +3,17 @@
 --    它只作为事件触发器使用，撤销 API 角色的 EXECUTE 不影响自动启用 RLS 的机制
 -- 2) 合并 profiles 的两个 SELECT 策略，减少每行策略评估（linter 0006）
 
-revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+-- revoke 仅在函数存在时执行（云平台自带，本地 CLI 镜像无此函数）
+do $$
+begin
+  if exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'rls_auto_enable'
+  ) then
+    revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+  end if;
+end $$;
 
 drop policy profiles_select_self on public.profiles;
 drop policy profiles_select_internal on public.profiles;

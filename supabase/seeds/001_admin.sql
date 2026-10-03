@@ -63,3 +63,9 @@ where not exists (
   where user_id = '11111111-1111-1111-1111-111111111111'
     and provider = 'email'
 );
+
+-- 3) handle_new_user 触发器默认 role=engineer，显式回写 admin
+update public.profiles
+   set role = 'admin'::public.user_role
+ where id = '11111111-1111-1111-1111-111111111111'
+   and role <> 'admin'::public.user_role;
