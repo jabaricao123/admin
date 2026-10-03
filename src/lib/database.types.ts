@@ -34,6 +34,255 @@ export type Database = {
   }
   public: {
     Tables: {
+      approval_ccs: {
+        Row: {
+          cc_user_id: string
+          created_at: string
+          instance_id: string
+          read_at: string | null
+        }
+        Insert: {
+          cc_user_id: string
+          created_at?: string
+          instance_id: string
+          read_at?: string | null
+        }
+        Update: {
+          cc_user_id?: string
+          created_at?: string
+          instance_id?: string
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_ccs_cc_user_id_fkey"
+            columns: ["cc_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_ccs_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "approval_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_flows: {
+        Row: {
+          branches: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          nodes: NonNullable<Json>
+          status: string
+          template_id: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          branches?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          nodes: NonNullable<Json>
+          status?: string
+          template_id: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          branches?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          nodes?: NonNullable<Json>
+          status?: string
+          template_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_flows_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "approval_form_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_form_templates: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          module: string
+          name: string
+          schema: NonNullable<Json>
+          status: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          module: string
+          name: string
+          schema: NonNullable<Json>
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          module?: string
+          name?: string
+          schema?: NonNullable<Json>
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
+      approval_instances: {
+        Row: {
+          created_at: string
+          current_seq: number
+          flow_version_id: string
+          form_data: NonNullable<Json>
+          id: string
+          initiator_id: string
+          last_urged_at: string | null
+          module: string
+          ref_id: string | null
+          ref_type: string | null
+          status: string
+          template_version_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_seq?: number
+          flow_version_id: string
+          form_data: NonNullable<Json>
+          id?: string
+          initiator_id: string
+          last_urged_at?: string | null
+          module: string
+          ref_id?: string | null
+          ref_type?: string | null
+          status?: string
+          template_version_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_seq?: number
+          flow_version_id?: string
+          form_data?: NonNullable<Json>
+          id?: string
+          initiator_id?: string
+          last_urged_at?: string | null
+          module?: string
+          ref_id?: string | null
+          ref_type?: string | null
+          status?: string
+          template_version_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_instances_flow_version_id_fkey"
+            columns: ["flow_version_id"]
+            isOneToOne: false
+            referencedRelation: "approval_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_instances_initiator_id_fkey"
+            columns: ["initiator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_instances_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "approval_form_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_tasks: {
+        Row: {
+          acted_at: string | null
+          assignee_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          instance_id: string
+          seq: number
+          status: string
+        }
+        Insert: {
+          acted_at?: string | null
+          assignee_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          instance_id: string
+          seq: number
+          status?: string
+        }
+        Update: {
+          acted_at?: string | null
+          assignee_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          instance_id?: string
+          seq?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_tasks_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_tasks_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "approval_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_operations: {
         Row: {
           action: string
@@ -180,6 +429,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      form_renderers: {
+        Row: {
+          created_at: string
+          module: string
+          ref_type: string
+          renderer_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          module: string
+          ref_type: string
+          renderer_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          module?: string
+          ref_type?: string
+          renderer_key?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       menu_items: {
         Row: {
@@ -661,6 +934,31 @@ export type Database = {
       }
     }
     Functions: {
+      act_task: {
+        Args: { p_action: string; p_comment: string; p_task_id: string }
+        Returns: {
+          created_at: string
+          current_seq: number
+          flow_version_id: string
+          form_data: NonNullable<Json>
+          id: string
+          initiator_id: string
+          last_urged_at: string | null
+          module: string
+          ref_id: string | null
+          ref_type: string | null
+          status: string
+          template_version_id: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "approval_instances"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_update_profile: {
         Args: {
           p_department?: string
@@ -973,7 +1271,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      instance_detail: {
+        Args: { p_instance_id: string }
+        Returns: {
+          created_at: string
+          current_seq: number
+          form_data: Json
+          initiator_id: string
+          initiator_name: string | null
+          instance_id: string
+          instance_status: string
+          last_urged_at: string | null
+          module: string
+          ref_id: string | null
+          ref_type: string | null
+          schema: Json
+          tasks: Json
+          title: string
+          updated_at: string
+        }[]
+      }
       mark_all_read: { Args: Record<PropertyKey, never>; Returns: number }
+      mark_cc_read: { Args: { p_instance_id: string }; Returns: string }
       mark_notification_read: {
         Args: { p_id: number }
         Returns: {
@@ -1021,6 +1340,70 @@ export type Database = {
       mark_service_verified: {
         Args: { p_note: string; p_ok: boolean; p_service: string }
         Returns: Json
+      }
+      my_ccs: {
+        Args: { p_unread?: boolean }
+        Returns: {
+          cc_created_at: string
+          cc_read_at: string | null
+          current_assignee_id: string | null
+          current_assignee_name: string | null
+          current_seq: number
+          current_task_id: string | null
+          current_task_status: string | null
+          form_data: Json
+          initiator_id: string
+          initiator_name: string | null
+          instance_id: string
+          instance_status: string
+          module: string
+          ref_id: string | null
+          ref_type: string | null
+          title: string
+        }[]
+      }
+      my_instances: {
+        Args: { p_limit?: number }
+        Returns: {
+          created_at: string
+          current_acted_at: string | null
+          current_assignee_id: string | null
+          current_assignee_name: string | null
+          current_comment: string | null
+          current_seq: number
+          current_task_id: string | null
+          current_task_status: string | null
+          form_data: Json
+          instance_id: string
+          instance_status: string
+          last_urged_at: string | null
+          module: string
+          ref_id: string | null
+          ref_type: string | null
+          title: string
+          updated_at: string
+        }[]
+      }
+      my_todos: {
+        Args: { p_limit?: number; p_pending?: boolean }
+        Returns: {
+          acted_at: string | null
+          comment: string | null
+          created_at: string
+          current_seq: number
+          form_data: Json
+          initiator_id: string
+          initiator_name: string | null
+          instance_id: string
+          instance_status: string
+          module: string
+          ref_id: string | null
+          ref_type: string | null
+          seq: number
+          task_id: string
+          task_status: string
+          title: string
+        }[]
       }
       position_headcount: { Args: { p_position_id: string }; Returns: number }
       preview_scope: { Args: { p_user_id: string }; Returns: Json }
@@ -1085,6 +1468,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      submit_instance: {
+        Args: {
+          p_form_data: Json
+          p_module: string
+          p_ref_id: string
+          p_ref_type: string
+          p_template_code: string
+        }
+        Returns: string
       }
       test_mail_config: { Args: { p_to: string }; Returns: Json }
       test_storage_config: { Args: Record<PropertyKey, never>; Returns: Json }
@@ -1214,6 +1607,31 @@ export type Database = {
         Args: { p_config: Json; p_credentials: string; p_service: string }
         Returns: Json
       }
+      urge_instance: {
+        Args: { p_instance_id: string }
+        Returns: {
+          created_at: string
+          current_seq: number
+          flow_version_id: string
+          form_data: NonNullable<Json>
+          id: string
+          initiator_id: string
+          last_urged_at: string | null
+          module: string
+          ref_id: string | null
+          ref_type: string | null
+          status: string
+          template_version_id: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "approval_instances"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       validate_department_move: {
         Args: { p_new_parent: string; p_node: string }
         Returns: undefined
@@ -1229,6 +1647,31 @@ export type Database = {
           route: string
           sort_order: number
         }[]
+      }
+      withdraw_instance: {
+        Args: { p_instance_id: string }
+        Returns: {
+          created_at: string
+          current_seq: number
+          flow_version_id: string
+          form_data: NonNullable<Json>
+          id: string
+          initiator_id: string
+          last_urged_at: string | null
+          module: string
+          ref_id: string | null
+          ref_type: string | null
+          status: string
+          template_version_id: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "approval_instances"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {

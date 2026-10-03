@@ -18,6 +18,9 @@ const PAGE_TITLES: Record<string, string> = {
   "/org/chart": "组织架构",
   "/system/services/mail": "邮件服务",
   "/system/services/storage": "对象存储",
+  "/approval/todo": "我的待办",
+  "/approval/mine": "我发起的",
+  "/approval/cc": "抄送我的",
 };
 
 export function SiteHeader() {

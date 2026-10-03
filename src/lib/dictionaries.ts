@@ -277,3 +277,96 @@ export function translateSystemErrorMessage(message: string): string {
     message === "对象存储配置不存在，请先保存配置";
   return isBusinessRule ? message : translateErrorMessage(message);
 }
+
+/** 审批中心 · 实例状态（approval_instances.status，状态机见 engine.md） */
+export type ApprovalInstanceStatus =
+  | "running"
+  | "approved"
+  | "rejected"
+  | "withdrawn";
+
+export const APPROVAL_INSTANCE_STATUS_LABELS: Record<
+  ApprovalInstanceStatus,
+  string
+> = {
+  running: "进行中",
+  approved: "已通过",
+  rejected: "已驳回",
+  withdrawn: "已撤回",
+};
+
+/** mine.md：进行中蓝 / 通过绿 / 驳回红 / 撤回灰 */
+export const APPROVAL_INSTANCE_STATUS_BADGE_CLASSES: Record<
+  ApprovalInstanceStatus,
+  string
+> = {
+  running:
+    "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
+  approved:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  rejected:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+  withdrawn:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+/** 数据库 string 收敛到已知实例状态；未知值按「进行中」展示（fail-safe） */
+export function asApprovalInstanceStatus(
+  value: string,
+): ApprovalInstanceStatus {
+  return value === "approved" || value === "rejected" || value === "withdrawn"
+    ? value
+    : "running";
+}
+
+export const APPROVAL_INSTANCE_STATUS_OPTIONS = (
+  Object.keys(APPROVAL_INSTANCE_STATUS_LABELS) as ApprovalInstanceStatus[]
+).map((value) => ({ value, label: APPROVAL_INSTANCE_STATUS_LABELS[value] }));
+
+/** 审批中心 · 任务状态（approval_tasks.status） */
+export type ApprovalTaskStatus = "pending" | "approved" | "rejected" | "skipped";
+
+export const APPROVAL_TASK_STATUS_LABELS: Record<ApprovalTaskStatus, string> = {
+  pending: "待处理",
+  approved: "已通过",
+  rejected: "已驳回",
+  skipped: "已跳过",
+};
+
+export const APPROVAL_TASK_STATUS_BADGE_CLASSES: Record<
+  ApprovalTaskStatus,
+  string
+> = {
+  pending:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+  approved:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  rejected:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+  skipped:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+/** 数据库 string 收敛到已知任务状态；未知值按「待处理」展示（fail-safe） */
+export function asApprovalTaskStatus(value: string): ApprovalTaskStatus {
+  return value === "approved" ||
+    value === "rejected" ||
+    value === "skipped"
+    ? value
+    : "pending";
+}
+
+/** 审批中心 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
+export function translateApprovalErrorMessage(message: string): string {
+  const isBusinessRule =
+    /^(催办过于频繁|审批实例不存在：|审批实例已结束)/.test(message) ||
+    /^(仅发起人可撤回审批|仅发起人可催办)$/.test(message) ||
+    /^(当前审批任务已处理|任务已处理|该任务不是当前审批节点)/.test(message) ||
+    [
+      "驳回必须填写意见",
+      "无权处理该审批任务",
+      "审批抄送不存在或无权操作",
+      "审批实例不存在或无权查看",
+    ].includes(message);
+  return isBusinessRule ? message : translateErrorMessage(message);
+}
