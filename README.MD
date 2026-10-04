@@ -84,24 +84,50 @@ supabase/
 
 登录页「扫码登录」Tab 走当前启用厂商的 OAuth（`im_auth_configs.enabled` 部署级单选，切换即生效）：已绑定用户完成授权后由后端签发标准 Supabase session（与密码登录同一会话 / RLS / 登出链路，ADR-003）。厂商凭据解密、授权 URL 构造、code 换 token、userinfo 与绑定匹配全部在 Postgres 内完成（`im_start_auth` / `im_handle_callback` 按厂商分派）：**厂商 secret 不出库，数据面不使用 service_role**（凭据解密 / OAuth 均在 Postgres 内）；Auth Admin（会话签发 generateLink / 用户封禁 ban）属 ADR-001 例外（INDEX 规则 10 / ADR-001）。
 
+两条入口路径并存（im/007）：
+
+| 路径 | 形态 | 机制 |
+|---|---|---|
+| PC 扫码（真二维码） | 桌面浏览器登录页内嵌二维码，手机 IM App 扫码确认，PC 自动登录 | 一次性 ticket（`im_qr_tickets`，5 分钟）+ 轮询 + 一次性换取 session |
+| 同浏览器授权 | 移动端 H5 免登（IM 内嵌 WebView）、桌面一键登录（「无法扫码」链接） | 一次性 state + httpOnly cookie（5 分钟，读后作废，im/002） |
+
 - 飞书（im/002）：PC 扫码；App 内 H5 免登见 im/003。
-- 企业微信（im/004）：PC 扫码（`wwopen/sso/qrConnect`）与 App 内免登（`oauth2/authorize`，`scope=snsapi_privateinfo`）。
+- 企业微信（im/004）：PC 扫码（`wwopen/sso/qrConnect`，登录页以内嵌 iframe 呈现）与 App 内免登（`oauth2/authorize`，`scope=snsapi_privateinfo`）。
 - 钉钉（im/005）：PC 扫码与端内 WebView 免登共用 `login.dingtalk.com/oauth2/auth`（`scope=openid`、`prompt=consent`）；绑定键取 `unionId`（见下）。
+
+### PC 扫码真二维码（im/007）
+
+扫码 Tab 不再跳转按钮，而是直接渲染二维码（内容为「厂商授权 URL + state=ticket」），并按厂商选择呈现方式：
+
+| 厂商 | 呈现 | 说明 |
+|---|---|---|
+| 飞书 | `qrcode.react` 生成授权 URL 二维码 | 手机飞书扫码打开 `accounts.feishu.cn` 授权页并确认 |
+| 企业微信 | 官方托管页 `wwopen/sso/qrConnect` 内嵌 `<iframe>` | 手机企业微信扫页面内二维码并确认；页面加载失败时提供「新窗口打开」兜底 |
+| 钉钉 | `qrcode.react` 生成授权 URL 二维码 | 手机钉钉扫码打开 `login.dingtalk.com` 授权页并确认 |
+
+链路（防代扫设计见 ADR-003 §4）：
+
+1. PC 调 `im_start_qr_login` 生成一次性 ticket（`qr.` 前缀 + 256 位随机，5 分钟过期）并渲染二维码；
+2. PC 每 1 秒调 `im_poll_qr_login`（只回 `pending` / `logged_in` / `consumed` / `expired` 与失败原因，不泄露身份）；
+3. 手机扫码确认 → 厂商回调 `/auth/callback/<provider>?state=<ticket>`（无需 cookie）→ `im_qr_complete_login` 在 Postgres 内换 code / 取 userid / 绑定匹配 → ticket 置 `logged_in`（未绑定 / 停用即作废并记录原因）；
+4. PC 轮询到 `logged_in` → 整页跳 `/auth/qr/exchange?ticket=…` → `im_exchange_qr_ticket` 一次性消费 → Auth admin `generateLink` + `verifyOtp` 签发标准 session → 工作台（实测手机确认后 < 2s）。
+
+ticket 与既有 state cookie 路径通过 state 前缀分流：ticket 以 `qr.` 开头，state cookie 值（base64url 随机段，不含点）不可能出现该前缀，两条路径无歧义。
 
 ### 部署硬前提
 
 | 项 | 要求 |
 |---|---|
 | `NEXT_PUBLIC_IM_CALLBACK_BASE` | 公网可达的 HTTPS 域名（如 `https://admin.example.com`），回调地址为 `<base>/auth/callback/<provider>`（`feishu` / `wecom` / `dingtalk`） |
-| `IM_BACKEND_JWT` | role=`im_backend` 的最小角色 JWT（仅可执行两个 IM 包装 RPC），签发方式见下节 |
+| `IM_BACKEND_JWT` | role=`im_backend` 的最小角色 JWT（可执行 4 个 IM RPC：`im_start_auth` / `im_handle_callback` / `im_qr_complete_login` / `im_exchange_qr_ticket`），签发方式见下节 |
 | 飞书开发者后台 | 该回调地址需登记在「安全设置 → 重定向 URL」白名单中（精确匹配） |
 | 企业微信管理后台 | 「企业微信授权登录 → Web 网页」授权回调域 + 「网页授权及 JS-SDK」可信域名均需包含 `NEXT_PUBLIC_IM_CALLBACK_BASE` 域名（见企业微信配置步骤） |
 | 钉钉开发者后台 | 「钉钉登录与分享 → 回调域名」需包含 `<NEXT_PUBLIC_IM_CALLBACK_BASE>/auth/callback/dingtalk`（见钉钉配置步骤） |
-| 多实例部署 | state 落 httpOnly cookie（无 Redis）；多副本共享同一域名时需 sticky session，或后续升级为 Redis 存储 |
+| 多实例部署 | 同浏览器路径的 state 落 httpOnly cookie（无 Redis）；PC 扫码 ticket 落 Postgres（`im_qr_tickets`），多副本无 sticky 要求。同浏览器路径多副本共享同一域名时需 sticky session，或后续升级为 Redis 存储 |
 
 ### IM 后端最小角色（im_backend）
 
-两个包装 RPC 仅授权给数据库最小角色 `im_backend`（nologin、非 BYPASSRLS、无任何表权限）；部署方用项目 JWT secret **离线签发**该角色 JWT：
+IM 登录 RPC 仅授权给数据库最小角色 `im_backend`（nologin、非 BYPASSRLS、无任何表权限）：既有 `im_start_auth` / `im_handle_callback`，以及 im/007 的 `im_qr_complete_login` / `im_exchange_qr_ticket`；ticket 生成 / 轮询（`im_start_qr_login` / `im_poll_qr_login`）为登录页匿名入口。部署方用项目 JWT secret **离线签发**该角色 JWT：
 
 ```bash
 SUPABASE_JWT_SECRET=<Dashboard → Project Settings → API → JWT secret> \
@@ -200,7 +226,7 @@ select public.im_admin_set_userid(
 
 | 场景 | 端点 | 说明 |
 |---|---|---|
-| PC 扫码 | `open.work.weixin.qq.com/wwopen/sso/qrConnect` | `appid=corpid`、`agentid`、`redirect_uri`、`state` |
+| PC 扫码 | `open.work.weixin.qq.com/wwopen/sso/qrConnect` | `appid=corpid`、`agentid`、`redirect_uri`、`state`；im/007 起登录页以内嵌 `<iframe>` 呈现（加载失败可「新窗口打开」） |
 | App 内免登 | `open.weixin.qq.com/connect/oauth2/authorize` | `scope=snsapi_privateinfo` + `agentid` + `#wechat_redirect`；由 start 路由按 UA（含 `wxwork`）自动选择 |
 | access_token | `qyapi.weixin.qq.com/cgi-bin/gettoken` | 按 `corp_id:sha256(secret)` 加密缓存 7200s，避免每次登录都换 token |
 | code → userid | `qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo` | 返回 `userid`（旧版 `user/getuserinfo` 的 `UserId` 同样兼容） |
@@ -261,4 +287,4 @@ SUPABASE_JWT_SECRET=<JWT_SECRET> \
   npm run im:backend-token   # 输出写入 .env.local 的 IM_BACKEND_JWT
 ```
 
-- 登录页扫码开始前由服务端下发一次性 state（httpOnly cookie，5 分钟有效，读后作废）；登录成功 / 未绑定拒绝均落 `audit_logins`（`via='im_feishu'`，见 `/audit/logins`）。
+- 同浏览器授权路径：开始前由服务端下发一次性 state（httpOnly cookie，5 分钟有效，读后作废）；PC 扫码路径：登录页生成一次性 ticket（Postgres，5 分钟，轮询 + 一次性换取 session）。两条路径的登录成功 / 未绑定拒绝均落 `audit_logins`（`via='im_feishu'` 等，见 `/audit/logins`）。
