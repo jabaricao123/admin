@@ -134,6 +134,24 @@ select public.im_admin_set_userid(
 );
 ```
 
+### 飞书工作台应用（移动端免登）
+
+飞书 App 内打开的 H5 链接（工作台 / 群聊 / 消息卡片）由 `src/proxy.ts` 按 UA（含 `Lark` / `Feishu`）识别为内嵌 WebView：未登录时自动跳 `/auth/im/feishu/start`，飞书已登录用户被静默授权后直接进入系统，不出现登录页。免登失败（未绑定 / 取消授权等）降级 `/login?error=im_*&_im_fallback=1` 并展示原因；连续两次失败后（30 分钟内）不再自动重试，成功登录后失败计数清除。Safari / Chrome 等外部浏览器 UA 不含 Lark / Feishu，不受影响，仍走密码 / 扫码登录。
+
+把系统挂到飞书工作台，需在「企业自建应用」上补充以下配置（飞书开放平台 / 管理后台操作，非代码配置）：
+
+| 配置项 | 位置 | 值 |
+|---|---|---|
+| 网页应用（H5）能力 | 开放平台 → 应用详情 → 添加应用能力 | 开启「网页应用」 |
+| 应用首页 URL | 开放平台 → 网页应用 → 移动端 / 桌面端首页 | `<NEXT_PUBLIC_IM_CALLBACK_BASE>/` |
+| 重定向 URL | 安全设置 → 重定向 URL | `<NEXT_PUBLIC_IM_CALLBACK_BASE>/auth/callback/feishu`（精确匹配，与扫码共用） |
+| H5 可信域名 | 安全设置 → H5 可信域名 | `<NEXT_PUBLIC_IM_CALLBACK_BASE>` 的域名（不带协议与路径） |
+| IP 白名单 | 安全设置 → IP 白名单 | 如开启：加入**数据库出口 IP**（code 换 token / userinfo 出站发生在 Postgres 内，见 ADR-004） |
+| 工作台入口 | 管理后台 → 工作台 → 应用管理（或发布版本时勾选工作台） | 将应用添加到目标成员的工作台 |
+
+> 免登不改变账号匹配规则（仍按 `profiles.feishu_userid` 预绑定，ADR-003 §1），未绑定用户不会被自动建号；上述配置项截图需在真实飞书后台操作时补充。
+> 本地 / 预览环境验证：Chrome DevTools → Network conditions 把 UA 改成带 `Lark/7.x` 的值，或直接用 curl `-A`，观察受保护页面 302 到 `/auth/im/feishu/start`。
+
 ### 本地联调
 
 - 飞书要求回调公网可达：本地起 `cloudflared tunnel --url http://localhost:3000`（或 ngrok），把得到的 HTTPS 域名写入 `.env.local` 的 `NEXT_PUBLIC_IM_CALLBACK_BASE`，并在飞书后台登记回调地址。
