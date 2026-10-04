@@ -55,3 +55,31 @@ service_role key 仅用于 Auth Admin（getUserById / generateLink），不再�
 - pgTAP 覆盖：角色属性（nologin / 非 bypassrls）、GRANT 面（service_role/anon/authenticated
   零路径，im_backend 仅两函数）、URL 无 secret、响应解析与错误映射；
 - 真实出站成功路径由本地 mock 全链路验证（docs/evidence/im-002/README.md）。
+
+## 全局签出实现（im/006）
+
+ADR-003 §5 写的是「调用 Supabase Auth admin 全局签出」。im/006 落地时核实：GoTrue / Supabase
+Auth Admin API **没有「全部用户签出」端点**——`admin.signOut` 只接受单个用户的 JWT，一次吊销一个
+会话；遍历全部用户逐个调用既需要 service_role（ADR-001 禁令），也有执行期间新会话漏网的窗口。
+实际实现改为在数据库内一次性删除会话表：
+
+- `public.im_switch_provider`（`SECURITY DEFINER`，仅 GRANT `authenticated`，函数内再校验 admin）
+  在原子切换 `im_auth_configs` 后执行 `delete from auth.sessions where true`；删除以函数 owner
+  （迁移执行角色）身份完成，调用链上**不引入 service_role**（ADR-001 禁令不变）；
+- 动作由既有审计通道留痕：`switch_provider`（配置变更）与 `force_logout`
+  （`scope=all_users`、`trigger=switch_provider`、`sessions_revoked=<被删行数>`），两条均可在
+  `/audit` 按对象 `im_auth_config` 查到；
+- 生效机制：GoTrue 对 access token 的 `session_id` claim 做存在性校验；会话行删除后，持旧 token
+  的下一请求返回 403 `session_not_found`，SSR 随即视为未登录并跳登录页。全局签出因此是一次
+  DELETE 的原子效果，无需逐用户调用；
+- 边界：只删会话、不动绑定（清空绑定是独立操作 `im_clear_all_bindings`）；停用厂商
+  （`p_provider = NULL`）与切换同样触发全局签出；目标即现状时幂等返回，不签出、不写审计噪声。
+
+| 备选 | 否决原因 |
+|---|---|
+| 遍历用户逐个调 `admin.signOut` | 需 service_role 且要枚举全部用户，O(用户数) 调用；执行期间新建会话仍会漏网 |
+| 等 GoTrue 上游补「全量签出」管理端点 | 截至 im/006 不存在该端点（本地 GoTrue v2 镜像）；等能力会阻塞要求即时生效的切换流程 |
+| Next.js 侧用 service_role 调 Auth Admin | ADR-001 禁止 service_role 进入运行时；同样存在枚举漏网窗口 |
+
+> 依赖说明：该实现直接写 GoTrue 所属 schema 的 `auth.sessions` 表。升级 GoTrue 大版本时需回归
+> `session_id` 校验行为与 `auth.sessions` 结构。

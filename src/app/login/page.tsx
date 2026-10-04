@@ -23,20 +23,26 @@ export default async function LoginPage({
   searchParams: Promise<{
     reason?: string | string[];
     error?: string | string[];
+    admin?: string | string[];
   }>;
 }) {
   const params = await searchParams;
   const reason = pickParam(params.reason);
   const error = pickParam(params.error);
+  const adminEmergency = pickParam(params.admin) === "1";
   const initialError =
     reason === "banned" ? BANNED_ACCOUNT_MESSAGE : undefined;
 
-  // 当前启用厂商（打开 IM 登录时注入登录页，Tab 仅在启用且已接入的厂商时展示；
-  // 回调错误文案也据此带上厂商展示名）
+  // 登录页选项（im/006，anon 可读）：启用厂商 / 密码登录开关 / 管理员联系方式；
+  // 回调错误文案据此带上厂商展示名（沿用 im/002 逻辑）
   const supabase = await createClient();
-  const { data: enabledProvider } = await supabase.rpc(
-    "im_get_enabled_provider",
-  );
+  const { data: options } = await supabase.rpc("im_get_login_options");
+  const optionRow = (options ?? null) as {
+    enabled_provider?: string | null;
+    password_login_enabled?: boolean;
+    admin_contact?: string | null;
+  } | null;
+  const enabledProvider = optionRow?.enabled_provider ?? null;
   const notice = imLoginErrorMessage(error, enabledProvider);
 
   return (
@@ -53,7 +59,11 @@ export default async function LoginPage({
         <LoginForm
           initialError={initialError}
           notice={notice}
-          enabledProvider={enabledProvider ?? null}
+          enabledProvider={enabledProvider}
+          passwordLoginEnabled={optionRow?.password_login_enabled !== false}
+          adminEmergency={adminEmergency}
+          adminContact={optionRow?.admin_contact ?? ""}
+          notBound={error === "im_not_bound"}
         />
       </div>
     </div>

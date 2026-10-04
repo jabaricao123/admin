@@ -3235,7 +3235,16 @@ export type Database = {
         Returns: Json
       }
       im_bind_self: { Args: { p_provider: string; p_userid: string }; Returns: Json }
+      im_clear_all_bindings: { Args: Record<PropertyKey, never>; Returns: Json }
+      im_get_config: { Args: { p_provider: string }; Returns: Json }
       im_get_enabled_provider: { Args: Record<PropertyKey, never>; Returns: string }
+      im_get_login_options: { Args: Record<PropertyKey, never>; Returns: Json }
+      im_password_login_allowed: { Args: { p_email: string }; Returns: boolean }
+      im_switch_provider: { Args: { p_provider: string }; Returns: Json }
+      im_test_config: {
+        Args: { p_credentials?: Json; p_provider: string }
+        Returns: Json
+      }
       im_unbind: { Args: { p_provider: string; p_user_id: string }; Returns: Json }
       im_upsert_config: {
         Args: { p_credentials: Json; p_enabled: boolean; p_provider: string }

@@ -2,7 +2,13 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2Icon, LogInIcon, QrCodeIcon } from "lucide-react";
+import {
+  CopyIcon,
+  Loader2Icon,
+  LogInIcon,
+  QrCodeIcon,
+  ShieldAlertIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -40,12 +46,24 @@ export function LoginForm({
   initialError,
   notice,
   enabledProvider,
+  passwordLoginEnabled = true,
+  adminEmergency = false,
+  adminContact = "",
+  notBound = false,
 }: {
   initialError?: string;
   /** IM 回调错误（/login?error=im_*），toast 提示一次（工单 im/002） */
   notice?: string | null;
   /** 当前启用 IM 厂商；仅在已接入（有展示名）时出现「扫码登录」Tab */
   enabledProvider?: string | null;
+  /** 密码登录全局开关（im/006）；关闭后普通访问不显示密码 Tab */
+  passwordLoginEnabled?: boolean;
+  /** 管理员应急登录（im/006）：/login?admin=1 时显示密码 Tab，仅应急名单放行 */
+  adminEmergency?: boolean;
+  /** 管理员联系方式（im/006）：im_not_bound 时展示 + 一键复制 */
+  adminContact?: string;
+  /** 当前错误是否为 im_not_bound（决定是否展示联系方式区块） */
+  notBound?: boolean;
 }) {
   const router = useRouter();
   const [email, setEmail] = React.useState("");
@@ -56,6 +74,8 @@ export function LoginForm({
   const providerLabel = enabledProvider
     ? IM_PROVIDER_LABELS[enabledProvider]
     : undefined;
+  const showScan = Boolean(providerLabel);
+  const showPassword = passwordLoginEnabled || adminEmergency;
 
   React.useEffect(() => {
     if (notice) {
@@ -63,6 +83,15 @@ export function LoginForm({
       toast.error(notice, { id: "im-login-notice" });
     }
   }, [notice]);
+
+  const copyContact = async () => {
+    try {
+      await navigator.clipboard.writeText(adminContact);
+      toast.success("管理员联系方式已复制");
+    } catch {
+      toast.error("复制失败，请手动选择复制");
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -85,6 +114,21 @@ export function LoginForm({
       setError(translate(signInError.message));
       setLoading(false);
       return;
+    }
+
+    // im/006：密码登录关闭时仅应急管理员放行（服务端校验名单 + role/status），
+    // 非放行账号立即签出，避免绕过登录页 UI 用 API 直接换到会话。
+    if (!passwordLoginEnabled) {
+      const { data: allowed, error: allowedError } = await supabase.rpc(
+        "im_password_login_allowed",
+        { p_email: email.trim() },
+      );
+      if (allowedError || allowed !== true) {
+        await supabase.auth.signOut();
+        setError("密码登录已关闭，请使用扫码登录或联系管理员");
+        setLoading(false);
+        return;
+      }
     }
 
     // 登录成功留痕：此时会话已建立，RPC 以本人身份写入（服务端以会话邮箱归档）
@@ -126,6 +170,12 @@ export function LoginForm({
           />
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
+        {!passwordLoginEnabled && adminEmergency ? (
+          <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <ShieldAlertIcon className="mt-0.5 size-3.5 shrink-0" />
+            管理员应急登录：仅配置在应急名单内的管理员邮箱可登录。
+          </p>
+        ) : null}
         <Field>
           <Button type="submit" disabled={loading}>
             {loading ? (
@@ -160,32 +210,97 @@ export function LoginForm({
     </div>
   );
 
+  // im/006：im_not_bound 时展示管理员联系方式 + 一键复制（联系方式在配置页维护）
+  const notBoundBanner = notBound ? (
+    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-200">
+      <ShieldAlertIcon className="mt-0.5 size-4 shrink-0" />
+      <div className="flex flex-col gap-1.5">
+        <p>
+          未绑定{providerLabel ?? "IM"}账号，暂时无法扫码登录。请联系管理员为你录入绑定。
+        </p>
+        {adminContact ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-xs break-all">
+              {adminContact}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-11 lg:h-8"
+              onClick={() => void copyContact()}
+            >
+              <CopyIcon data-icon="inline-start" />
+              复制联系方式
+            </Button>
+          </div>
+        ) : (
+          <p className="text-xs">管理员尚未配置联系方式，可在系统「身份认证」页设置。</p>
+        )}
+      </div>
+    </div>
+  ) : null;
+
+  const closedPanel = (
+    <div className="flex flex-col items-center gap-3 py-2 text-center">
+      <div className="flex size-16 items-center justify-center rounded-2xl border bg-muted">
+        <ShieldAlertIcon className="size-8 text-muted-foreground" />
+      </div>
+      <p className="text-sm text-muted-foreground">
+        当前未启用任何登录方式，请联系管理员。
+      </p>
+    </div>
+  );
+
+  let body: React.ReactNode;
+  if (showScan && showPassword) {
+    body = (
+      <Tabs defaultValue="password">
+        <TabsList className="w-full">
+          <TabsTrigger value="password">密码登录</TabsTrigger>
+          <TabsTrigger value="im">扫码登录</TabsTrigger>
+        </TabsList>
+        <TabsContent value="password" className="pt-2">
+          {notBoundBanner}
+          {passwordForm}
+        </TabsContent>
+        <TabsContent value="im" className="pt-2">
+          {notBoundBanner}
+          {scanPanel}
+        </TabsContent>
+      </Tabs>
+    );
+  } else if (showScan) {
+    body = (
+      <div className="flex flex-col gap-3">
+        {notBoundBanner}
+        {scanPanel}
+      </div>
+    );
+  } else if (showPassword) {
+    body = (
+      <div className="flex flex-col gap-3">
+        {notBoundBanner}
+        {passwordForm}
+      </div>
+    );
+  } else {
+    body = closedPanel;
+  }
+
+  const description = showScan
+    ? showPassword
+      ? "使用工作邮箱或扫码登录"
+      : `使用${providerLabel}扫码登录`
+    : "使用工作邮箱登录系统";
+
   return (
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-xl">登录</CardTitle>
-        <CardDescription>
-          {providerLabel ? "使用工作邮箱或扫码登录" : "使用工作邮箱登录系统"}
-        </CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        {providerLabel ? (
-          <Tabs defaultValue="password">
-            <TabsList className="w-full">
-              <TabsTrigger value="password">密码登录</TabsTrigger>
-              <TabsTrigger value="im">扫码登录</TabsTrigger>
-            </TabsList>
-            <TabsContent value="password" className="pt-2">
-              {passwordForm}
-            </TabsContent>
-            <TabsContent value="im" className="pt-2">
-              {scanPanel}
-            </TabsContent>
-          </Tabs>
-        ) : (
-          passwordForm
-        )}
-      </CardContent>
+      <CardContent>{body}</CardContent>
     </Card>
   );
 }

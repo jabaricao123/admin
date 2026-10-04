@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
@@ -67,6 +68,27 @@ import {
 const PAGE_SIZE = 20;
 const ALL = "all";
 const NONE = "__none__";
+
+/**
+ * IM 账号绑定字段（im/006）：三家多槽位展示，当前启用厂商高亮；
+ * 写入走 im_admin_set_userid / im_unbind（admin，写 audit），不直接改表。
+ */
+const IM_BINDING_FIELDS = [
+  { provider: "feishu", key: "feishu_userid", label: "飞书 userid" },
+  { provider: "wecom", key: "wecom_userid", label: "企业微信 userid" },
+  { provider: "dingtalk", key: "dingtalk_userid", label: "钉钉 userid" },
+] as const;
+
+const IM_PROVIDER_LABELS: Record<string, string> = {
+  feishu: "飞书",
+  wecom: "企业微信",
+  dingtalk: "钉钉",
+};
+
+type ImBindingProvider = (typeof IM_BINDING_FIELDS)[number]["provider"];
+type ImForm = Record<ImBindingProvider, string>;
+
+const EMPTY_IM_FORM: ImForm = { feishu: "", wecom: "", dingtalk: "" };
 
 const formatDateTime = (value: string) =>
   new Date(value).toLocaleString("zh-CN", { hour12: false });
@@ -122,6 +144,12 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
   const [page, setPage] = React.useState(1);
   const [editing, setEditing] = React.useState<Profile | null>(null);
   const [form, setForm] = React.useState<EditForm>(EMPTY_FORM);
+  const [imForm, setImForm] = React.useState<ImForm>(EMPTY_IM_FORM);
+  const [imSaving, setImSaving] = React.useState(false);
+  const [imClearing, setImClearing] = React.useState<string | null>(null);
+  const [enabledProvider, setEnabledProvider] = React.useState<string | null>(
+    null,
+  );
   const [saving, setSaving] = React.useState(false);
   const [departments, setDepartments] = React.useState<DepartmentOption[]>([]);
   const [positions, setPositions] = React.useState<PositionOption[]>([]);
@@ -130,20 +158,27 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
     setLoading(true);
     setError(null);
     const supabase = createClient();
-    const [profileRes, departmentRes, positionRes] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("departments_v")
-        .select("id, name, depth, status")
-        .order("path"),
-      supabase
-        .from("positions_v")
-        .select("id, name, department_id, status")
-        .order("created_at", { ascending: false }),
-    ]);
+    const [profileRes, departmentRes, positionRes, providerRes] =
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("departments_v")
+          .select("id, name, depth, status")
+          .order("path"),
+        supabase
+          .from("positions_v")
+          .select("id, name, department_id, status")
+          .order("created_at", { ascending: false }),
+        // 当前启用厂商（im/006）：编辑抽屉据此高亮对应 userid 字段
+        supabase.rpc("im_get_enabled_provider"),
+      ]);
+
+    if (!providerRes.error) {
+      setEnabledProvider(providerRes.data ?? null);
+    }
 
     if (profileRes.error) {
       setError(profileRes.error.message);
@@ -246,11 +281,17 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
       role: row.role,
       status: row.status,
     });
+    setImForm({
+      feishu: row.feishu_userid ?? "",
+      wecom: row.wecom_userid ?? "",
+      dingtalk: row.dingtalk_userid ?? "",
+    });
   };
 
   const closeEdit = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
+    setImForm(EMPTY_IM_FORM);
   };
 
   /**
@@ -442,6 +483,106 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
   };
 
   const isSelf = editing?.id === currentUserId;
+
+  // ---------------------------------------------------------------------------
+  // IM 账号绑定（im/006）：admin 手工录入 / 清空，走 im_admin_set_userid / im_unbind
+  // ---------------------------------------------------------------------------
+  const imDirty = React.useMemo(() => {
+    if (!editing) {
+      return false;
+    }
+    return IM_BINDING_FIELDS.some(
+      (field) =>
+        (imForm[field.provider] ?? "").trim() !== (editing[field.key] ?? ""),
+    );
+  }, [editing, imForm]);
+
+  const handleSaveImBindings = async () => {
+    if (!editing) {
+      return;
+    }
+    const changes = IM_BINDING_FIELDS.filter(
+      (field) =>
+        (imForm[field.provider] ?? "").trim() !== (editing[field.key] ?? ""),
+    );
+    if (changes.length === 0) {
+      toast.info("IM 绑定没有变更");
+      return;
+    }
+
+    setImSaving(true);
+    const supabase = createClient();
+    for (const field of changes) {
+      const value = (imForm[field.provider] ?? "").trim();
+      const { error } =
+        value === ""
+          ? await supabase.rpc("im_unbind", {
+              p_user_id: editing.id,
+              p_provider: field.provider,
+            })
+          : await supabase.rpc("im_admin_set_userid", {
+              p_user_id: editing.id,
+              p_provider: field.provider,
+              p_userid: value,
+            });
+      if (error) {
+        setImSaving(false);
+        toast.error(
+          `${value === "" ? "清空" : "保存"}「${field.label}」失败：${translateUserErrorMessage(error.message)}`,
+        );
+        return;
+      }
+    }
+    setImSaving(false);
+    toast.success("IM 绑定已保存");
+    setEditing((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      const next = { ...prev };
+      for (const field of changes) {
+        next[field.key] = (imForm[field.provider] ?? "").trim() || null;
+      }
+      return next;
+    });
+    void load();
+  };
+
+  const handleClearImBinding = async (
+    field: (typeof IM_BINDING_FIELDS)[number],
+  ) => {
+    if (!editing) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `清空「${field.label}」绑定？该用户将无法用${
+        IM_PROVIDER_LABELS[field.provider] ?? field.provider
+      }扫码登录。`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setImClearing(field.provider);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("im_unbind", {
+      p_user_id: editing.id,
+      p_provider: field.provider,
+    });
+    setImClearing(null);
+    if (error) {
+      toast.error(
+        `清空「${field.label}」失败：${translateUserErrorMessage(error.message)}`,
+      );
+      return;
+    }
+    toast.success(`已清空「${field.label}」绑定`);
+    setImForm((prev) => ({ ...prev, [field.provider]: "" }));
+    setEditing((prev) =>
+      prev ? { ...prev, [field.key]: null } : prev,
+    );
+    void load();
+  };
 
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
@@ -854,6 +995,121 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
                 <FieldDescription>不能停用自己的账号</FieldDescription>
               ) : null}
             </Field>
+
+            <Separator />
+
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-medium">IM 账号绑定</h3>
+                {enabledProvider ? (
+                  <Badge
+                    variant="outline"
+                    className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300"
+                  >
+                    当前启用：
+                    {IM_PROVIDER_LABELS[enabledProvider] ?? enabledProvider}
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    当前未启用任何厂商
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                录入厂商 userid
+                后用户可扫码 / 免登进入系统；切换厂商不清空绑定，高亮为当前启用厂商。
+              </p>
+              {IM_BINDING_FIELDS.map((field) => {
+                const bound = editing?.[field.key] ?? null;
+                const active = enabledProvider === field.provider;
+                return (
+                  <Field
+                    key={field.provider}
+                    className={
+                      active
+                        ? "gap-2 rounded-lg border border-primary/40 bg-primary/5 p-3"
+                        : "gap-2 rounded-lg border p-3 opacity-70"
+                    }
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <FieldLabel htmlFor={`im-binding-${field.provider}`}>
+                        {field.label}
+                      </FieldLabel>
+                      <div className="flex items-center gap-1.5">
+                        {bound ? (
+                          <Badge
+                            variant="outline"
+                            className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300"
+                          >
+                            已绑定
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            未绑定
+                          </span>
+                        )}
+                        {bound ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-11 lg:h-8"
+                            disabled={imSaving || imClearing === field.provider}
+                            onClick={() => void handleClearImBinding(field)}
+                          >
+                            {imClearing === field.provider ? (
+                              <Loader2Icon
+                                className="size-3.5 animate-spin"
+                                data-icon="inline-start"
+                              />
+                            ) : null}
+                            清空
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                    <Input
+                      id={`im-binding-${field.provider}`}
+                      value={imForm[field.provider]}
+                      placeholder={bound ?? "未绑定"}
+                      className="font-mono"
+                      onChange={(event) =>
+                        setImForm((prev) => ({
+                          ...prev,
+                          [field.provider]: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                );
+              })}
+              <div className="flex items-center justify-end gap-2">
+                <span className="mr-auto text-xs text-muted-foreground">
+                  留空后保存 = 清空该厂商绑定；解绑仅管理员可操作。
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-11 lg:h-8"
+                  disabled={imSaving || !imDirty}
+                  onClick={() => void handleSaveImBindings()}
+                >
+                  {imSaving ? (
+                    <Loader2Icon
+                      className="size-3.5 animate-spin"
+                      data-icon="inline-start"
+                    />
+                  ) : (
+                    <SaveIcon
+                      className="size-3.5"
+                      data-icon="inline-start"
+                    />
+                  )}
+                  保存绑定
+                </Button>
+              </div>
+            </div>
           </div>
           <SheetFooter className="flex-row justify-end gap-2">
             <Button

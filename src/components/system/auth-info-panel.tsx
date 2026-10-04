@@ -1,11 +1,12 @@
 "use client";
 
-// 系统管理 · 身份认证只读展示（工单 system/006 页面）
+// 系统管理 · 身份认证（工单 system/006 页面 + im/006 扩展）
 //
-// 契约（docs/modules/system/services-auth.md）：纯展示 + 控制台引导，不改运行时行为；
-//   密码策略 / 会话时长 / OAuth 提供商 / 回调 URL 全部标注「外部管理」并外链 Supabase 控制台；
-//   回调 URL 以 window.location.origin 推导（复制按钮），本地/云端模式由 NEXT_PUBLIC_SUPABASE_URL 推导。
-// 本页不落库、无 RPC；Auth 配置真源在 Supabase 控制台。
+// im/006 起本页上半部分为可编辑区：IM 扫码登录（三家配置 / 启用切换 / 测试连接 / 清空绑定）
+// 与密码登录全局开关（含管理员联系方式），均由 im/006 数据面 RPC 支撑并写 audit；
+// 下半部分保持 system/006 契约：Supabase Auth 控制台项（密码策略 / 会话时长 / OAuth 提供商 /
+// 回调 URL）纯展示 + 控制台引导，标注「外部管理」。
+// 回调 URL 以 window.location.origin 推导（复制按钮），本地/云端模式由 NEXT_PUBLIC_SUPABASE_URL 推导。
 
 import * as React from "react";
 import {
@@ -38,6 +39,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+import { ImConfigPanel } from "@/components/system/im-config-panel";
+import { PasswordLoginPanel } from "@/components/system/password-login-panel";
 
 const EXTERNAL_BADGE_CLASS =
   "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300";
@@ -129,6 +133,9 @@ export function AuthInfoPanel() {
     ? [
         { label: "站点 URL", value: origin },
         { label: "OAuth 授权回调", value: `${origin}/auth/callback` },
+        { label: "IM 绑定回调（飞书）", value: `${origin}/settings/profile/bind/feishu/callback` },
+        { label: "IM 绑定回调（企业微信）", value: `${origin}/settings/profile/bind/wecom/callback` },
+        { label: "IM 绑定回调（钉钉）", value: `${origin}/settings/profile/bind/dingtalk/callback` },
         { label: "邮件确认 / 密码重置", value: `${origin}/auth/confirm` },
         { label: "开发期通配", value: `${origin}/**` },
       ]
@@ -139,8 +146,23 @@ export function AuthInfoPanel() {
       <div className="flex items-start gap-2 rounded-xl border p-4 text-sm text-muted-foreground">
         <InfoIcon className="mt-0.5 size-4 shrink-0" />
         <p>
-          本页为只读展示：Auth 配置真源在 Supabase 控制台，本页不改运行时行为，
-          避免与 Supabase 控制台双写冲突。以下所有项目均带「外部管理」标注。
+          上半部分「IM 扫码登录 / 密码登录 / 管理员联系方式」在本页直接配置并即时生效
+          （所有敏感操作写入审计）。下半部分为 Supabase Auth 控制台项的只读参考，
+          带「外部管理」标注。
+        </p>
+      </div>
+
+      {/* IM 扫码登录配置（im/006） */}
+      <ImConfigPanel />
+
+      {/* 密码登录开关（im/006） */}
+      <PasswordLoginPanel />
+
+      <div className="flex items-start gap-2 rounded-xl border p-4 text-xs text-muted-foreground">
+        <InfoIcon className="mt-0.5 size-4 shrink-0" />
+        <p>
+          以下为 Supabase Auth 控制台项只读展示：真源在控制台，本页不改这些项的运行时行为，
+          避免与 Supabase 控制台双写冲突。
         </p>
       </div>
 
@@ -348,7 +370,7 @@ export function AuthInfoPanel() {
             ))
           )}
           <p className="text-xs text-muted-foreground">
-            {`当前系统登录使用邮箱密码；以下地址供启用 OAuth / 邮件确认时在控制台登记，对应回调路由随功能上线落地。`}
+            {`IM 扫码登录使用 /auth/callback/<provider>，个人中心扫码绑定使用 /settings/profile/bind/<provider>/callback —— 两者都需在厂商后台登记（飞书为重定向 URL 精确匹配）。`}
           </p>
         </CardContent>
       </Card>
