@@ -8,21 +8,16 @@ import {
   FilePlus2Icon,
   ListTodoIcon,
   Loader2Icon,
-  RefreshCwIcon,
   SearchIcon,
   XIcon,
 } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { cn } from "cn";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -57,6 +52,7 @@ import type { Database } from "@/lib/database.types";
 import {
   APPROVAL_INSTANCE_STATUS_BADGE_CLASSES,
   APPROVAL_INSTANCE_STATUS_LABELS,
+  APPROVAL_OVERDUE_BADGE_CLASS,
   APPROVAL_TASK_STATUS_BADGE_CLASSES,
   APPROVAL_TASK_STATUS_LABELS,
   asApprovalInstanceStatus,
@@ -78,8 +74,6 @@ import {
 } from "./approval-utils";
 
 const ALL = "all";
-const OVERDUE_BADGE_CLASS =
-  "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300";
 
 type TodoRow = Database["public"]["Functions"]["my_todos"]["Returns"][number];
 type TodoTab = "pending" | "done";
@@ -130,6 +124,9 @@ export function ApprovalTodoTable() {
     reason: "",
   });
   const [submitting, setSubmitting] = React.useState(false);
+  const [highlightInstanceId, setHighlightInstanceId] = React.useState<
+    string | null
+  >(null);
   const requestIdRef = React.useRef(0);
 
   const load = React.useCallback(
@@ -256,6 +253,57 @@ export function ApprovalTodoTable() {
   const { detail, loading: detailLoading, error: detailError } =
     useApprovalDetail(detailRow?.instance_id ?? null);
 
+  // dashboard / 站内信「去处理」携带 ?highlight=<instance_id>：命中待办则自动打开详情并高亮行；
+  // 未命中（已处理 / 无权限）toast 后消费参数，避免刷新时反复提示。
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const highlight = searchParams.get("highlight");
+  const consumedHighlightRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (
+      !highlight ||
+      consumedHighlightRef.current === highlight ||
+      loading ||
+      error
+    ) {
+      return;
+    }
+    consumedHighlightRef.current = highlight;
+
+    const row = rows.find((item) => item.instance_id === highlight);
+    if (row) {
+      const index = filtered.findIndex(
+        (item) => item.instance_id === highlight,
+      );
+      if (index >= 0) {
+        setPage(Math.floor(index / APPROVAL_PAGE_SIZE) + 1);
+      }
+      setHighlightInstanceId(highlight);
+      openDetail(row);
+    } else {
+      toast.error("目标审批不存在或已处理");
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("highlight");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
+  }, [
+    highlight,
+    loading,
+    error,
+    rows,
+    filtered,
+    openDetail,
+    searchParams,
+    router,
+    pathname,
+  ]);
+
   /** 批量通过（无批量驳回：驳回需逐条填写意见，避免误伤） */
   const handleBatchApprove = async () => {
     const taskIds = Array.from(selected);
@@ -372,12 +420,6 @@ export function ApprovalTodoTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>我的待办</CardTitle>
-          <CardDescription>
-            待我处理的审批单据；批量仅支持通过，驳回需逐条填写意见
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
             <ToggleGroup
@@ -418,7 +460,7 @@ export function ApprovalTodoTable() {
             </div>
             <Select value={moduleFilter} onValueChange={setModuleFilter}>
               <SelectTrigger
-                className="h-11 w-full sm:w-36 lg:h-8"
+                className="w-full sm:w-36 min-h-11 lg:min-h-8"
                 aria-label="按来源模块筛选"
               >
                 <SelectValue placeholder="全部来源" />
@@ -437,7 +479,7 @@ export function ApprovalTodoTable() {
               onValueChange={(value) => setTimeRange(value as TimeRange)}
             >
               <SelectTrigger
-                className="h-11 w-full sm:w-32 lg:h-8"
+                className="w-full sm:w-32 min-h-11 lg:min-h-8"
                 aria-label="按提交时间筛选"
               >
                 <SelectValue placeholder="全部时间" />
@@ -450,16 +492,6 @@ export function ApprovalTodoTable() {
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新待办列表"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-            </Button>
             <div className="flex items-center gap-2 sm:ml-auto">
               <Button
                 variant="outline"
@@ -542,6 +574,7 @@ export function ApprovalTodoTable() {
                     <TodoCard
                       row={row}
                       done={false}
+                      highlighted={highlightInstanceId === row.instance_id}
                       onOpen={() => openDetail(row)}
                     />
                   </div>
@@ -550,6 +583,7 @@ export function ApprovalTodoTable() {
                     key={row.task_id}
                     row={row}
                     done={tab === "done"}
+                    highlighted={highlightInstanceId === row.instance_id}
                     onOpen={() => openDetail(row)}
                   />
                 ),
@@ -585,7 +619,11 @@ export function ApprovalTodoTable() {
                   {pagedRows.map((row) => (
                     <TableRow
                       key={row.task_id}
-                      className="cursor-pointer"
+                      className={cn(
+                        "cursor-pointer",
+                        highlightInstanceId === row.instance_id &&
+                          "border-primary bg-primary/5",
+                      )}
                       tabIndex={0}
                       onClick={() => openDetail(row)}
                       onKeyDown={(event) => {
@@ -638,7 +676,7 @@ export function ApprovalTodoTable() {
                             {isOverdue48h(row.created_at) ? (
                               <Badge
                                 variant="outline"
-                                className={OVERDUE_BADGE_CLASS}
+                                className={APPROVAL_OVERDUE_BADGE_CLASS}
                               >
                                 <AlertTriangleIcon className="size-3" />
                                 超48h
@@ -703,7 +741,7 @@ export function ApprovalTodoTable() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           {detailRow ? (
             <>
@@ -764,7 +802,7 @@ export function ApprovalTodoTable() {
       <Sheet open={submitOpen} onOpenChange={setSubmitOpen}>
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>发起 demo 审批</SheetTitle>
@@ -836,18 +874,24 @@ export function ApprovalTodoTable() {
 function TodoCard({
   row,
   done,
+  highlighted,
   onOpen,
 }: {
   row: TodoRow;
   done: boolean;
+  highlighted: boolean;
   onOpen: () => void;
 }) {
   return (
     <button
       type="button"
       data-slot="approval-todo-card"
+      data-highlighted={highlighted ? "true" : undefined}
       onClick={onOpen}
-      className="flex min-w-0 flex-1 flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+      className={cn(
+        "flex min-w-0 flex-1 flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+        highlighted && "border-primary bg-primary/5",
+      )}
     >
       <div className="flex items-start justify-between gap-3">
         <span className="min-w-0 truncate font-medium">{row.title}</span>
@@ -880,7 +924,7 @@ function TodoCard({
             <span className="inline-flex items-center gap-1.5">
               {formatWaiting(row.created_at)}
               {isOverdue48h(row.created_at) ? (
-                <Badge variant="outline" className={OVERDUE_BADGE_CLASS}>
+                <Badge variant="outline" className={APPROVAL_OVERDUE_BADGE_CLASS}>
                   <AlertTriangleIcon className="size-3" />
                   超48h
                 </Badge>

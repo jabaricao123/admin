@@ -8,7 +8,7 @@
 --       act→approval.approved 事件落库（integration/004 软依赖已生效）。
 
 begin;
-select plan(91);
+select plan(94);
 
 -- ---------------------------------------------------------------------------
 -- 夹具（as postgres；auth.users 触发器自动建档）
@@ -221,7 +221,7 @@ select throws_ok(
 );
 
 -- ===========================================================================
--- C. 流程：nodes 校验 / 发布 / 提交绑定 v1（13）
+-- C. 流程：nodes 校验 / 发布 / 提交绑定 v1（16）
 -- ===========================================================================
 select set_config(
   'request.jwt.claims',
@@ -265,6 +265,31 @@ select throws_ok(
        '[{"seq":1,"approver_rule":{"type":"role","value":"not_a_role"}}]'::jsonb) $$,
   'P0002', null, 'C6 role 值不存在被拒'
 );
+
+-- role 规则 value=roles.id（新存储）：校验 + 解析与 code 等价（helper 不可 API 直调，切回 postgres 断言）
+reset role;
+select lives_ok(
+  $$ select app.validate_flow_nodes(jsonb_build_array(
+       jsonb_build_object('seq', 1, 'approver_rule',
+         jsonb_build_object('type', 'role',
+           'value', (select id::text from public.roles where code = 'admin'))))) $$,
+  'C6b validate_flow_nodes 接受 active 角色 id'
+);
+select throws_ok(
+  $$ select app.validate_flow_nodes(
+       '[{"seq":1,"approver_rule":{"type":"role","value":"00000000-0000-4000-a000-00000000dead"}}]'::jsonb) $$,
+  'P0002', null, 'C6c 不对应任何角色的 uuid 被拒'
+);
+select is(
+  app.resolve_approver(
+    jsonb_build_object('type', 'role',
+      'value', (select id::text from public.roles where code = 'admin')),
+    '99999999-9999-4999-8999-999999999002'),
+  app.resolve_approver('{"type":"role","value":"admin"}'::jsonb,
+    '99999999-9999-4999-8999-999999999002'),
+  'C6d resolve_approver 按 id 与按 code 解析同一审批人'
+);
+set local role authenticated;
 select throws_ok(
   $$ select public.upsert_flow('用户非法',
        (select id from public.approval_form_templates where code = 'designer.main' and version = 1),

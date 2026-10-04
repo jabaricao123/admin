@@ -15,7 +15,6 @@ import {
   Loader2Icon,
   PinIcon,
   PlusIcon,
-  RefreshCwIcon,
   SaveIcon,
   SendIcon,
 } from "lucide-react";
@@ -23,14 +22,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -341,34 +333,19 @@ export function AnnouncementsTable() {
   return (
     <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <Card>
-        <CardHeader>
-          <CardTitle>公告列表（{rows.length}）</CardTitle>
-          <CardDescription>
-            草稿可编辑发布；已发布公告展示在工作台横幅，站内信通知为可选；到期自动归档
-          </CardDescription>
-          <CardAction className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void load({ silent: true })}
-              disabled={loading}
-            >
-              <RefreshCwIcon
-                className={loading ? "animate-spin" : undefined}
-                data-icon="inline-start"
-              />
-              刷新
-            </Button>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm text-muted-foreground">
+              共 {rows.length} 条
+            </span>
             <Button size="sm" onClick={openCreate}>
               <PlusIcon data-icon="inline-start" />
               新建公告
             </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
+          </div>
           {rows.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              暂无公告，点击右上角「新建公告」创建
+              暂无公告，点击「新建公告」创建
             </p>
           ) : (
             <>
@@ -484,7 +461,7 @@ export function AnnouncementsTable() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader className="border-b">
             <SheetTitle>

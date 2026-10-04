@@ -378,6 +378,10 @@ export const APPROVAL_TASK_STATUS_BADGE_CLASSES: Record<
     "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
 };
 
+/** 审批中心 · 超 48h 未处理警示色（amber，与 FALLBACK_BADGE_CLASS 同色系） */
+export const APPROVAL_OVERDUE_BADGE_CLASS =
+  "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300";
+
 /** 数据库 string 收敛到已知任务状态；未知值按「待处理」展示（fail-safe） */
 export function asApprovalTaskStatus(value: string): ApprovalTaskStatus {
   return value === "approved" ||
@@ -390,9 +394,36 @@ export function asApprovalTaskStatus(value: string): ApprovalTaskStatus {
 /** 审批中心 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
 export function translateApprovalErrorMessage(message: string): string {
   const isBusinessRule =
+    // 待办 / 抄送 / 详情 / 催办 / 撤回（approval_engine、approval_pages_rpc）
     /^(催办过于频繁|审批实例不存在：|审批实例已结束)/.test(message) ||
     /^(仅发起人可撤回审批|仅发起人可催办)$/.test(message) ||
     /^(当前审批任务已处理|任务已处理|该任务不是当前审批节点)/.test(message) ||
+    /^(非法审批动作|审批任务不存在：)/.test(message) ||
+    /^模板 .+ (不适用于来源模块|未绑定已发布流程)/.test(message) ||
+    /^字段「.+」/.test(message) ||
+    /未登录，无法(提交审批|处理审批|撤回审批|催办审批|标记抄送已读)/.test(message) ||
+    /^角色 .+ 下无可用审批人$/.test(message) ||
+    /^发起人无可用部门负责人，无法解析审批人$/.test(message) ||
+    // 模板 / 流程设计器与发布冻结（approval_designer_rpc、approval_engine 触发器）
+    /^(仅管理员可执行此操作|模板 schema 非法：|流程节点非法：)/.test(message) ||
+    /^审批人(规则非法：|角色不存在：|角色已停用：)/.test(message) ||
+    /^(指定审批人不存在或已停用：|审批角色不存在或已停用：)/.test(message) ||
+    /^该模板下已存在流程/.test(message) ||
+    /^(审批表单模板不存在.*：|审批流程不存在：|绑定模板(不存在：|已停用))/.test(
+      message,
+    ) ||
+    /^流程 .+ 节点配置非法：/.test(message) ||
+    /^(已发布(模板|流程)仅可流转为 disabled|审批(表单模板|流程) .+ 非 draft 状态)/.test(
+      message,
+    ) ||
+    /^(模板|流程) .+ (非 draft 状态|当前为 .+ 状态，仅草稿可(编辑|发布))/.test(message) ||
+    /仍有 \d+ 个进行中实例引用，不可停用$/.test(message) ||
+    /^(模板名称不能为空|模板 code 不能为空|模板 code 仅允许|模板 code 已存在|来源模块不能为空|流程名称不能为空|绑定模板不能为空|草稿版本无需复制新版本)/.test(
+      message,
+    ) ||
+    /^(module 不能为空|ref_type 不能为空|renderer_key 不能为空|form_data 必须是)/.test(
+      message,
+    ) ||
     [
       "驳回必须填写意见",
       "无权处理该审批任务",

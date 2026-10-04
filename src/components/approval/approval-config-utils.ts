@@ -227,7 +227,8 @@ export function asApproverRuleType(value: string): ApproverRuleType {
 export type FlowNodeDraft = {
   id: string;
   ruleType: ApproverRuleType;
-  roleCode: string;
+  /** 角色规则取值：roles.id（新存储）；读取存量节点时由 resolveRoleId 归一化 code → id */
+  roleId: string;
   userId: string;
   /** 原始输入：空串=未设置（可选超时） */
   timeoutHours: string;
@@ -237,11 +238,28 @@ export function newFlowNode(partial?: Partial<FlowNodeDraft>): FlowNodeDraft {
   return {
     id: nextUid("node"),
     ruleType: "role",
-    roleCode: "",
+    roleId: "",
     userId: "",
     timeoutHours: "",
     ...partial,
   };
+}
+
+/**
+ * 归一化角色规则取值：新存储为 roles.id；存量节点为 roles.code，按 code 反查为 id。
+ * 两者都不匹配时原样返回（交由校验层提示重选，不静默丢弃）。
+ */
+export function resolveRoleId(
+  value: string,
+  roles: { id: string; code: string }[],
+): string {
+  if (!value) {
+    return "";
+  }
+  if (roles.some((role) => role.id === value)) {
+    return value;
+  }
+  return roles.find((role) => role.code === value)?.id ?? value;
 }
 
 export function nodesFromJson(nodes: Json): FlowNodeDraft[] {
@@ -267,7 +285,7 @@ export function nodesFromJson(nodes: Json): FlowNodeDraft[] {
       {
         id: nextUid("node"),
         ruleType,
-        roleCode: ruleType === "role" ? value : "",
+        roleId: ruleType === "role" ? value : "",
         userId: ruleType === "user" ? value : "",
         timeoutHours: typeof timeout === "number" ? String(timeout) : "",
       },
@@ -279,7 +297,7 @@ export function nodesToJson(nodes: FlowNodeDraft[]): Json {
   const payload = nodes.map((node, index) => {
     const rule: Record<string, Json> = { type: node.ruleType };
     if (node.ruleType === "role") {
-      rule.value = node.roleCode;
+      rule.value = node.roleId;
     } else if (node.ruleType === "user") {
       rule.value = node.userId;
     }
@@ -298,7 +316,7 @@ export function nodesToJson(nodes: FlowNodeDraft[]): Json {
 /** 本地校验；返回首个错误信息，null 表示通过 */
 export function validateFlowNodes(
   nodes: FlowNodeDraft[],
-  roleCodes: string[],
+  roleIds: string[],
   userIds: string[],
 ): string | null {
   if (nodes.length === 0) {
@@ -306,7 +324,7 @@ export function validateFlowNodes(
   }
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index];
-    if (node.ruleType === "role" && !roleCodes.includes(node.roleCode)) {
+    if (node.ruleType === "role" && !roleIds.includes(node.roleId)) {
       return `节点 ${index + 1}：请选择审批角色`;
     }
     if (node.ruleType === "user" && !userIds.includes(node.userId)) {
@@ -324,7 +342,7 @@ export function validateFlowNodes(
 
 export function ruleSummary(
   node: FlowNodeDraft,
-  roles: { code: string; name: string }[],
+  roles: { id: string; code: string; name: string }[],
   profiles: { id: string; full_name: string | null }[],
 ): string {
   if (node.ruleType === "dept_leader") {
@@ -336,7 +354,9 @@ export function ruleSummary(
       ? `指定：${profile.full_name ?? profile.id.slice(0, 8)}`
       : "指定：未选择";
   }
-  const role = roles.find((item) => item.code === node.roleCode);
+  const role =
+    roles.find((item) => item.id === node.roleId) ??
+    roles.find((item) => item.code === node.roleId);
   return role ? `角色：${role.name}` : "角色：未选择";
 }
 

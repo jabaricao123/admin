@@ -18,7 +18,6 @@ import {
   EyeIcon,
   KeyRoundIcon,
   Loader2Icon,
-  RefreshCwIcon,
   RotateCcwIcon,
   SaveIcon,
   ShieldCheckIcon,
@@ -505,14 +504,6 @@ export function PermissionsMatrix() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>菜单权限{isMobile ? "" : "矩阵"}</CardTitle>
-          <CardDescription>
-            {isMobile
-              ? "按角色逐个配置：勾选即授权，保存后即时生效并写审计摘要"
-              : "行 = 角色（内置置顶），列 = 菜单（顶级分组 / 子菜单缩进）；勾选即授权，保存后即时生效并写审计摘要"}
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           {loading ? (
             <div className="flex flex-col gap-2">
@@ -561,7 +552,6 @@ export function PermissionsMatrix() {
               onToggleItem={setItem}
               onToggleGroupForAllRoles={setGroupForAllRoles}
               onToggleRow={setKeysForRole}
-              onRefresh={() => void load()}
               onReset={resetDraft}
               onSave={() => void handleSave()}
             />
@@ -595,7 +585,6 @@ type DesktopMatrixProps = {
   onToggleItem: (roleId: string, menuKey: string, checked: boolean) => void;
   onToggleGroupForAllRoles: (group: MenuGroup, checked: boolean) => void;
   onToggleRow: (roleId: string, keys: string[], checked: boolean) => void;
-  onRefresh: () => void;
   onReset: () => void;
   onSave: () => void;
 };
@@ -610,7 +599,6 @@ function DesktopMatrix({
   onToggleItem,
   onToggleGroupForAllRoles,
   onToggleRow,
-  onRefresh,
   onReset,
   onSave,
 }: DesktopMatrixProps) {
@@ -633,16 +621,6 @@ function DesktopMatrix({
               {pendingCount} 项未保存
             </Badge>
           ) : null}
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-11 w-11 lg:h-8 lg:w-8"
-            disabled={saving}
-            onClick={onRefresh}
-            aria-label="刷新菜单授权数据"
-          >
-            <RefreshCwIcon />
-          </Button>
           <Button
             variant="outline"
             className="h-11 lg:h-8"

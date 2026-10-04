@@ -16,7 +16,6 @@ import {
   Loader2Icon,
   PencilIcon,
   PlayIcon,
-  RefreshCwIcon,
   RotateCcwIcon,
   Trash2Icon,
   UsersIcon,
@@ -30,13 +29,7 @@ import {
 } from "@/components/report/report-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -525,26 +518,8 @@ export function ReportSubscriptions({
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>报表订阅</CardTitle>
-          <CardDescription>
-            按订阅计划定时生成报表快照并投递站内信；执行身份注入订阅属主（数据按属主权限过滤）。
-            邮件渠道经 message 分发降级，当前统一投递站内信。
-            {isAdmin ? "管理员可见全部订阅，普通用户仅见本人订阅。" : null}
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新订阅列表"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-            </Button>
             <Button
               onClick={openCreate}
               className="h-11 flex-1 lg:h-8 lg:flex-none"
@@ -919,17 +894,6 @@ export function ReportSubscriptions({
                   <PlayIcon data-icon="inline-start" />
                 )}
                 手动执行一次
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="刷新执行历史"
-                disabled={runsLoading}
-                onClick={() => historyFor && void loadRuns(historyFor.id)}
-              >
-                <RefreshCwIcon
-                  className={runsLoading ? "animate-spin" : undefined}
-                />
               </Button>
             </div>
 

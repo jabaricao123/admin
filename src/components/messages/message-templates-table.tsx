@@ -16,7 +16,6 @@ import {
   HistoryIcon,
   Loader2Icon,
   PlusIcon,
-  RefreshCwIcon,
   RotateCcwIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -411,32 +410,12 @@ export function MessageTemplatesTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>通知模板</CardTitle>
-          <CardDescription>
-            按事件维护站内信 / 邮件 / 推送的标题与正文文案；支持
-            {" {{变量}} "}
-            占位符、草稿保存、发布与历史版本回滚。未注册事件不可建模板。
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm text-muted-foreground">
               共 {registry.length} 个已注册事件
             </span>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => void load()}
-                disabled={loading}
-                aria-label="刷新通知模板列表"
-                className="h-11 w-11 lg:h-8 lg:w-8"
-              >
-                <RefreshCwIcon
-                  className={loading ? "animate-spin" : undefined}
-                />
-              </Button>
               <Button
                 onClick={openCreate}
                 disabled={registry.length === 0}

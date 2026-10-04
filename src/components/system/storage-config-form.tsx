@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   HardDriveIcon,
   Loader2Icon,
-  RefreshCwIcon,
   SaveIcon,
   ShieldCheckIcon,
 } from "lucide-react";
@@ -14,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -341,10 +339,6 @@ export function StorageConfigForm() {
     return (
       <div className="flex flex-col p-0 md:gap-6 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-          <CardHeader>
-            <Skeleton className="h-5 w-24" />
-            <Skeleton className="h-4 w-72 max-w-full" />
-          </CardHeader>
           <CardContent className="flex flex-col gap-4 p-4 md:p-6">
             <div className="grid gap-4 lg:grid-cols-2">
               {Array.from({ length: 8 }).map((_, index) => (
@@ -381,12 +375,6 @@ export function StorageConfigForm() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>对象存储</CardTitle>
-          <CardDescription>
-            S3 / Supabase Storage 通道配置；凭据加密存储、界面仅显示掩码，保存草稿后经测试验证生效
-          </CardDescription>
-        </CardHeader>
         <CardContent className="p-4 md:p-6">
           <form
             className="flex flex-col gap-6"
@@ -652,22 +640,6 @@ export function StorageConfigForm() {
           <CardDescription>
             storage.objects 聚合：文件数与占用字节（含空 bucket）
           </CardDescription>
-          <CardAction>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => void loadUsage()}
-              disabled={usageLoading}
-              aria-label="刷新用量"
-            >
-              <RefreshCwIcon
-                className={usageLoading ? "animate-spin" : undefined}
-                data-icon="inline-start"
-              />
-              刷新
-            </Button>
-          </CardAction>
         </CardHeader>
         <CardContent className="p-4 md:p-6">
           {usageLoading ? (

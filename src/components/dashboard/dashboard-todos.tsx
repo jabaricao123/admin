@@ -5,12 +5,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  ArrowRightIcon,
-  ListTodoIcon,
-  RefreshCwIcon,
-  ShieldCheckIcon,
-} from "lucide-react";
+import { ArrowRightIcon, ListTodoIcon, ShieldCheckIcon } from "lucide-react";
 
 import {
   formatDateTime,
@@ -20,13 +15,7 @@ import {
 } from "@/components/approval/approval-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -124,12 +113,6 @@ export function DashboardTodos() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>我的待办</CardTitle>
-          <CardDescription>
-            跨模块待办聚合，当前来源：审批中心；「去处理」前往审批工作台
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
             <ToggleGroup
@@ -158,16 +141,6 @@ export function DashboardTodos() {
               </ToggleGroupItem>
             </ToggleGroup>
             <div className="flex items-center gap-2 sm:ml-auto">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => void load()}
-                disabled={loading}
-                aria-label="刷新待办列表"
-                className="h-11 w-11 lg:h-8 lg:w-8"
-              >
-                <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-              </Button>
               <Button
                 variant="outline"
                 asChild

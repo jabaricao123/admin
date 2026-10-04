@@ -6,7 +6,6 @@ import {
   Loader2Icon,
   NetworkIcon,
   PlusIcon,
-  RefreshCwIcon,
   SearchIcon,
 } from "lucide-react";
 import { cn } from "cn";
@@ -14,13 +13,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -490,12 +483,6 @@ export function DepartmentsTree() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>部门管理</CardTitle>
-          <CardDescription>
-            维护组织架构树：层级、负责人、排序与启停用
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="relative flex-1 sm:max-w-xs">
@@ -509,16 +496,6 @@ export function DepartmentsTree() {
               />
             </div>
             <div className="flex items-center gap-2 sm:ml-auto">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => void load()}
-                disabled={loading}
-                aria-label="刷新部门列表"
-                className="h-11 w-11 lg:h-8 lg:w-8"
-              >
-                <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-              </Button>
               <Button onClick={openCreate} className="h-11 lg:h-8">
                 <PlusIcon data-icon="inline-start" />
                 新增部门
@@ -743,7 +720,7 @@ export function DepartmentsTree() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>
@@ -843,7 +820,7 @@ export function DepartmentsTree() {
               </Select>
               {leadersError ? (
                 <FieldDescription className="text-destructive">
-                  负责人名单加载失败，请关闭后点击刷新重试。
+                  负责人名单加载失败，请刷新页面重试。
                 </FieldDescription>
               ) : null}
             </Field>

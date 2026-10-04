@@ -7,7 +7,7 @@
 
 import * as React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { Building2Icon, RefreshCwIcon } from "lucide-react";
+import { Building2Icon } from "lucide-react";
 
 import {
   ReportEmptyState,
@@ -17,7 +17,6 @@ import {
   type ReportViewMode,
 } from "@/components/report/report-shared";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -300,18 +299,6 @@ export function DepartmentStatsReport() {
       <CardContent className="flex flex-col gap-4 p-4 md:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <ViewToggle value={view} onChange={setView} />
-          <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新部门分布"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-            </Button>
-          </div>
         </div>
 
         {renderContent()}

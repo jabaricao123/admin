@@ -6,30 +6,17 @@
 //       编辑与新增经 public.upsert_setting（admin，函数内类型校验 + 写历史 + 审计）。
 // 交互（DESIGN §4）：分组 Table（组标题行 + 数据行），整行可点打开右侧 Sheet 编辑；
 //       按类型渲染控件（bool Switch / number Input / string Input / json 等宽 Textarea）；
-//       Sheet 内「历史」按钮打开变更历史 Sheet；新增参数按钮在卡片头。
+//       Sheet 内「历史」按钮打开变更历史 Sheet；新增参数按钮在内容区工具栏。
 // 校验：前端与服务端一致——说明必填、值类型匹配（json 仅对象/数组，number 可解析）。
 // 移动端（<1024px）：按分组渲染卡片，整卡可点。
 
 import * as React from "react";
-import {
-  HistoryIcon,
-  Loader2Icon,
-  PlusIcon,
-  RefreshCwIcon,
-  SaveIcon,
-} from "lucide-react";
+import { HistoryIcon, Loader2Icon, PlusIcon, SaveIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -403,33 +390,13 @@ export function SettingsTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>参数配置</CardTitle>
-          <CardDescription>
-            全局键值参数：业务开关与阈值集中管理；语义归消费模块，本页只负责存取与类型校验
-          </CardDescription>
-          <CardAction className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新参数列表"
-            >
-              <RefreshCwIcon
-                className={loading ? "animate-spin" : undefined}
-                data-icon="inline-start"
-              />
-              刷新
-            </Button>
+        <CardContent className="flex flex-col gap-4 p-4 md:p-6">
+          <div className="flex items-center justify-end gap-2">
             <Button type="button" size="sm" onClick={openCreate}>
               <PlusIcon data-icon="inline-start" />
               新增参数
             </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="p-4 md:p-6">
+          </div>
           {loading ? (
             <div className="flex flex-col gap-3">
               {Array.from({ length: 6 }).map((_, index) => (
@@ -601,7 +568,7 @@ export function SettingsTable() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader className="border-b">
             <SheetTitle>
@@ -776,7 +743,7 @@ export function SettingsTable() {
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader className="border-b">
             <SheetTitle>变更历史</SheetTitle>

@@ -3,10 +3,11 @@
 -- 覆盖：表/列/约束（含两唯一约束+部分唯一索引）、函数存在与安全属性、表级权限与 RLS、
 --       审批人解析（role/dept_leader/user）、渲染注册、submit 校验与端到端、
 --       act 状态机（单节点/多节点/驳回/并发二次 act/越权）、withdraw 边界、
---       任务唯一约束、published 冻结、审计与通知落库、无关用户不可见。
+--       任务唯一约束、published 冻结、审计与通知落库、integration 事件契约
+--       （approved 仅终审 / node_approved / withdrawn）、无关用户不可见。
 
 begin;
-select plan(145);
+select plan(160);
 
 -- ---------------------------------------------------------------------------
 -- 夹具（as postgres；auth.users 触发器自动建 profiles）
@@ -186,11 +187,11 @@ select ok(
 -- ---------------------------------------------------------------------------
 select has_function('app', 'resolve_approver', array['jsonb', 'uuid'], 'app.resolve_approver 存在');
 select has_function('app', 'register_form_renderer', array['text', 'text', 'text'], 'app.register_form_renderer 存在');
-select has_function('app', 'submit_instance', array['text', 'text', 'text', 'text', 'jsonb'], 'app.submit_instance 存在');
+select has_function('app', 'submit_instance', array['text', 'text', 'text', 'text', 'jsonb', 'uuid[]'], 'app.submit_instance 存在（cc 链路扩展 6 参）');
 select has_function('app', 'act_task', array['uuid', 'text', 'text'], 'app.act_task 存在');
 select has_function('app', 'withdraw_instance', array['uuid'], 'app.withdraw_instance 存在');
 select has_function('app', 'my_todos', array['boolean', 'integer'], 'app.my_todos 存在');
-select has_function('public', 'submit_instance', array['text', 'text', 'text', 'text', 'jsonb'], 'public.submit_instance 存在');
+select has_function('public', 'submit_instance', array['text', 'text', 'text', 'text', 'jsonb', 'uuid[]'], 'public.submit_instance 存在（cc 链路扩展 6 参）');
 select has_function('public', 'act_task', array['uuid', 'text', 'text'], 'public.act_task 存在');
 select has_function('public', 'withdraw_instance', array['uuid'], 'public.withdraw_instance 存在');
 select has_function('public', 'my_todos', array['boolean', 'integer'], 'public.my_todos 存在');
@@ -214,7 +215,7 @@ select is(
      and p.proconfig = array['search_path=""']),
   4::bigint, 'public 包装层均 security definer + search_path 固定为空'
 );
-select ok(has_function_privilege('authenticated', 'public.submit_instance(text,text,text,text,jsonb)', 'EXECUTE'),
+select ok(has_function_privilege('authenticated', 'public.submit_instance(text,text,text,text,jsonb,uuid[])', 'EXECUTE'),
           'authenticated 可执行 public.submit_instance');
 select ok(has_function_privilege('authenticated', 'public.act_task(uuid,text,text)', 'EXECUTE'),
           'authenticated 可执行 public.act_task');
@@ -531,6 +532,30 @@ select is(
       and ref_id = (select id::text from public.approval_instances where title = '单节点请假')),
   1::bigint, '通过后通知发起人（approval.approved）'
 );
+select is(
+  (select count(*) from public.integration_events
+    where event = 'approval.approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '单节点请假')),
+  1::bigint, '终审通过发 approval.approved（仅一次）'
+);
+select is(
+  (select payload ->> 'is_final' from public.integration_events
+    where event = 'approval.approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '单节点请假')),
+  'true', 'approval.approved payload.is_final=true'
+);
+select is(
+  (select payload ->> 'node_seq' from public.integration_events
+    where event = 'approval.approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '单节点请假')),
+  '1', 'approval.approved payload.node_seq=1'
+);
+select is(
+  (select count(*) from public.integration_events
+    where event = 'approval.node_approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '单节点请假')),
+  0::bigint, '单节点终审不发 approval.node_approved'
+);
 
 -- my_todos 已办视角（admin）
 select set_config(
@@ -620,6 +645,30 @@ select is(
       and ref_id = (select id::text from public.approval_instances where title = '多节点出差')),
   1::bigint, 'node2 生成时通知新审批人'
 );
+select is(
+  (select count(*) from public.integration_events
+    where event = 'approval.node_approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '多节点出差')),
+  1::bigint, '中间节点通过发 approval.node_approved'
+);
+select is(
+  (select payload ->> 'node_seq' from public.integration_events
+    where event = 'approval.node_approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '多节点出差')),
+  '1', 'node_approved payload.node_seq=1'
+);
+select is(
+  (select payload ->> 'is_final' from public.integration_events
+    where event = 'approval.node_approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '多节点出差')),
+  'false', 'node_approved payload.is_final=false'
+);
+select is(
+  (select count(*) from public.integration_events
+    where event = 'approval.approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '多节点出差')),
+  0::bigint, '中间节点通过不发 approval.approved'
+);
 
 select set_config(
   'request.jwt.claims',
@@ -651,6 +700,30 @@ select is(
       and event_key = 'approval.approved'
       and ref_id = (select id::text from public.approval_instances where title = '多节点出差')),
   1::bigint, '末节点通过只通知发起人一次'
+);
+select is(
+  (select count(*) from public.integration_events
+    where event = 'approval.approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '多节点出差')),
+  1::bigint, '末节点通过发 approval.approved'
+);
+select is(
+  (select payload ->> 'is_final' from public.integration_events
+    where event = 'approval.approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '多节点出差')),
+  'true', '末节点 approval.approved payload.is_final=true'
+);
+select is(
+  (select payload ->> 'node_seq' from public.integration_events
+    where event = 'approval.approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '多节点出差')),
+  '2', '末节点 approval.approved payload.node_seq=2'
+);
+select is(
+  (select count(*) from public.integration_events
+    where event = 'approval.node_approved'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '多节点出差')),
+  1::bigint, '末节点通过不追加 node_approved'
 );
 
 -- ---------------------------------------------------------------------------
@@ -786,6 +859,24 @@ select is(
     where module = 'approval' and action = 'withdraw'
       and object_id = (select id::text from public.approval_instances where title = '撤回测试A')),
   1::bigint, 'withdraw 写审计摘要'
+);
+select is(
+  (select count(*) from public.integration_events
+    where event = 'approval.withdrawn'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '撤回测试A')),
+  1::bigint, '撤回发 approval.withdrawn 入队'
+);
+select is(
+  (select payload ->> 'title' from public.integration_events
+    where event = 'approval.withdrawn'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '撤回测试A')),
+  '撤回测试A', 'approval.withdrawn payload.title 一致'
+);
+select is(
+  (select payload ->> 'initiator_id' from public.integration_events
+    where event = 'approval.withdrawn'
+      and payload ->> 'instance_id' = (select id::text from public.approval_instances where title = '撤回测试A')),
+  '00000000-0000-4000-c000-000000000001', 'approval.withdrawn payload.initiator_id 一致'
 );
 
 -- 已审批结束的实例不可撤回

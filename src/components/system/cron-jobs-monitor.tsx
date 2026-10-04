@@ -10,12 +10,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  ClockIcon,
-  ExternalLinkIcon,
-  InfoIcon,
-  RefreshCwIcon,
-} from "lucide-react";
+import { ClockIcon, ExternalLinkIcon, InfoIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -252,11 +247,6 @@ export function CronJobsMonitor() {
     return [...names];
   }, [jobs]);
 
-  const refreshAll = () => {
-    void loadJobs({ silent: true });
-    void loadRuns(jobFilter, { silent: true });
-  };
-
   const changeJobFilter = (value: string) => {
     setJobFilter(value);
     void loadRuns(value);
@@ -306,18 +296,6 @@ export function CronJobsMonitor() {
             <TabsTrigger value="registry">任务登记</TabsTrigger>
             <TabsTrigger value="history">执行历史</TabsTrigger>
           </TabsList>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refreshAll}
-            disabled={loading || runsLoading}
-          >
-            <RefreshCwIcon
-              className={runsLoading ? "animate-spin" : undefined}
-              data-icon="inline-start"
-            />
-            刷新
-          </Button>
         </div>
 
         {/* 任务登记：registry ⨝ cron.job 聚合（全站 job 只读总览） */}

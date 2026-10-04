@@ -8,20 +8,13 @@ import * as React from "react";
 import {
   AlertTriangleIcon,
   KeyRoundIcon,
-  RefreshCwIcon,
   SearchIcon,
   ShieldAlertIcon,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -212,14 +205,6 @@ export function LoginsTable({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>{isAdmin ? "登录日志" : "我的登录记录"}</CardTitle>
-          <CardDescription>
-            {isAdmin
-              ? "全站登录成功/失败留痕；普通用户仅能看到自己的记录；同账号短窗口多 IP 失败标注警示"
-              : "查看本人账号的登录成功与失败记录；同账号短窗口多 IP 失败标注警示"}
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="relative flex-1 sm:max-w-xs">
@@ -277,16 +262,6 @@ export function LoginsTable({ isAdmin }: { isAdmin: boolean }) {
                 清除筛选
               </Button>
             ) : null}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新登录日志"
-              className="h-11 w-11 lg:ml-auto lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-            </Button>
           </div>
 
           {loading ? (

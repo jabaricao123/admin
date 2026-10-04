@@ -6,7 +6,7 @@
 
 import * as React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { DownloadIcon, Loader2Icon, RefreshCwIcon, UsersIcon } from "lucide-react";
+import { DownloadIcon, Loader2Icon, UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -222,16 +222,6 @@ export function UserStatsReport() {
         <div className="flex flex-wrap items-center gap-2">
           <ViewToggle value={view} onChange={setView} />
           <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新人员统计"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-            </Button>
             <Button
               variant="outline"
               onClick={() => void handleExport()}

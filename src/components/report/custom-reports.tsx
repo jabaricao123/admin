@@ -31,13 +31,7 @@ import {
 } from "@/components/report/report-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -444,12 +438,6 @@ export function CustomReports({
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>自定义报表</CardTitle>
-          <CardDescription>
-            选数据源（白名单视图）、配维度/度量/筛选、选图表；分享链接的数据按访问者权限过滤。
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Tabs
@@ -474,16 +462,6 @@ export function CustomReports({
               />
             </div>
             <div className="flex items-center gap-2 sm:ml-auto">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => void load()}
-                disabled={loading}
-                aria-label="刷新报表列表"
-                className="h-11 w-11 shrink-0 lg:h-8 lg:w-8"
-              >
-                <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-              </Button>
               <Button
                 onClick={() => setPanel({ mode: "create" })}
                 className="h-11 flex-1 lg:h-8 lg:flex-none"
@@ -534,7 +512,7 @@ export function CustomReports({
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>

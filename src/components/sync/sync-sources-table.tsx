@@ -7,7 +7,6 @@ import {
   GlobeIcon,
   Loader2Icon,
   PlugZapIcon,
-  RefreshCwIcon,
   SaveIcon,
   ShieldCheckIcon,
   ShieldXIcon,
@@ -16,13 +15,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Field,
   FieldDescription,
@@ -455,24 +448,8 @@ export function SyncSourcesTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>数据源配置</CardTitle>
-          <CardDescription>
-            管理 REST API / 外部数据库 / Excel 模板三类数据源；凭据加密存储、界面仅显示掩码，允许保存草稿后再测试验证
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新数据源列表"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-            </Button>
             <Button
               onClick={openCreate}
               className="h-11 flex-1 lg:h-8 lg:flex-none"

@@ -8,7 +8,6 @@ import {
   Loader2Icon,
   MailIcon,
   MailOpenIcon,
-  RefreshCwIcon,
   StarIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -16,13 +15,7 @@ import { cn } from "cn";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -314,10 +307,6 @@ export function InboxTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>站内信</CardTitle>
-          <CardDescription>系统与业务通知的统一收件视图</CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <ToggleGroup
@@ -374,16 +363,6 @@ export function InboxTable() {
               </SelectContent>
             </Select>
             <div className="flex items-center gap-2 sm:ml-auto">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => void load()}
-                disabled={loading}
-                aria-label="刷新收件箱"
-                className="h-11 w-11 lg:h-8 lg:w-8"
-              >
-                <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-              </Button>
               <Button
                 variant="outline"
                 onClick={() => void handleMarkAllRead()}
@@ -591,7 +570,7 @@ export function InboxTable() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           {detail ? (
             <>

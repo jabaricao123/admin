@@ -12,7 +12,6 @@ import {
   FileClockIcon,
   FileSearchIcon,
   Loader2Icon,
-  RefreshCwIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -271,15 +270,6 @@ export function ChangesTable() {
       }
       return [...prev, id];
     });
-  };
-
-  const handleRefresh = () => {
-    if (selectedTable) {
-      void loadRecent(selectedTable);
-    }
-    if (activeRecord) {
-      void loadVersions(activeRecord.table, activeRecord.recordId);
-    }
   };
 
   const handleToggleWhitelist = async (row: WhitelistRow, enabled: boolean) => {
@@ -642,12 +632,6 @@ export function ChangesTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>数据变更</CardTitle>
-          <CardDescription>
-            关键表字段级留痕：单条记录版本时间线与任两版本并排对比
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <form
             onSubmit={handleSearch}
@@ -679,21 +663,6 @@ export function ChangesTable() {
             <Button type="submit" className="h-11 w-full sm:w-auto lg:h-8">
               <FileSearchIcon data-icon="inline-start" />
               查看版本
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={handleRefresh}
-              disabled={recentLoading || timelineLoading}
-              aria-label="刷新"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon
-                className={
-                  recentLoading || timelineLoading ? "animate-spin" : undefined
-                }
-              />
             </Button>
           </form>
 

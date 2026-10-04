@@ -11,20 +11,13 @@ import {
   FileClockIcon,
   FileSearchIcon,
   Loader2Icon,
-  RefreshCwIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { DiffView } from "@/components/audit/diff-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -548,12 +541,6 @@ export function OperationsTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>操作日志</CardTitle>
-          <CardDescription>
-            合规留痕：谁、何时、对什么对象、做了什么、改了什么
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
             <ToggleGroup
@@ -708,16 +695,6 @@ export function OperationsTable() {
             <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
               <Button
                 variant="outline"
-                size="icon"
-                onClick={() => void load()}
-                disabled={loading}
-                aria-label="刷新操作日志"
-                className="h-11 w-11 lg:h-8 lg:w-8"
-              >
-                <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-              </Button>
-              <Button
-                variant="outline"
                 onClick={() => void handleExport()}
                 disabled={exporting}
                 className="h-11 flex-1 lg:h-8 lg:flex-none"
@@ -777,7 +754,7 @@ export function OperationsTable() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>

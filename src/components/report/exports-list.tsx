@@ -12,7 +12,6 @@ import {
   FileSpreadsheetIcon,
   Loader2Icon,
   PlusIcon,
-  RefreshCwIcon,
   RotateCwIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -24,13 +23,7 @@ import {
 } from "@/components/report/report-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Field,
   FieldDescription,
@@ -430,12 +423,6 @@ export function ExportsList({ currentUserId, isAdmin }: { currentUserId: string;
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>数据导出</CardTitle>
-          <CardDescription>
-            全站统一导出管道：发起后由 worker 每分钟排队生成 CSV，完成后 7 天内可下载。
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <p className="text-xs text-muted-foreground sm:flex-1">
@@ -443,16 +430,6 @@ export function ExportsList({ currentUserId, isAdmin }: { currentUserId: string;
               {hasActive ? " · 存在进行中任务，列表每 5 秒自动刷新" : ""}
             </p>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => void load()}
-                disabled={loading}
-                aria-label="刷新导出任务列表"
-                className="h-11 w-11 shrink-0 lg:h-8 lg:w-8"
-              >
-                <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-              </Button>
               <Button
                 onClick={openRequest}
                 disabled={limitReached || availableSources.length === 0}
@@ -511,7 +488,7 @@ export function ExportsList({ currentUserId, isAdmin }: { currentUserId: string;
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>
@@ -625,7 +602,7 @@ export function ExportsList({ currentUserId, isAdmin }: { currentUserId: string;
       <Sheet open={requestOpen} onOpenChange={setRequestOpen}>
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>发起导出</SheetTitle>

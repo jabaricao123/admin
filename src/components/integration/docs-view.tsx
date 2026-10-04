@@ -6,11 +6,9 @@
 
 import * as React from "react";
 import {
-  BookOpenIcon,
   CopyIcon,
   Loader2Icon,
   PlusIcon,
-  RefreshCwIcon,
   ShieldCheckIcon,
   WebhookIcon,
 } from "lucide-react";
@@ -18,13 +16,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -689,19 +681,6 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpenIcon className="size-5" />
-            接口文档
-          </CardTitle>
-          <CardDescription>
-            {currentDoc
-              ? `当前版本 ${currentDoc.version} · 发布人 ${publisherName} · ${
-                  currentDoc.changelog ?? "无变更说明"
-                }`
-              : "OpenAPI 3 规格与 Webhook 事件清单"}
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
             <Select
@@ -723,18 +702,6 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void loadVersions()}
-              disabled={loadingVersions}
-              aria-label="刷新接口文档"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon
-                className={loadingVersions ? "animate-spin" : undefined}
-              />
-            </Button>
             {isAdmin ? (
               <Button
                 onClick={openPublish}
@@ -766,6 +733,14 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
               </Select>
             ) : null}
           </div>
+
+          <p className="text-xs text-muted-foreground">
+            {currentDoc
+              ? `当前版本 ${currentDoc.version} · 发布人 ${publisherName} · ${
+                  currentDoc.changelog ?? "无变更说明"
+                }`
+              : "OpenAPI 3 规格与 Webhook 事件清单"}
+          </p>
 
           <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
             <nav
@@ -825,7 +800,7 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
       <Sheet open={publishOpen} onOpenChange={setPublishOpen}>
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>发布新版本</SheetTitle>

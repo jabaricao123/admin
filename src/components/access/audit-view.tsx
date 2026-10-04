@@ -14,7 +14,6 @@ import {
   DownloadIcon,
   FileClockIcon,
   Loader2Icon,
-  RefreshCwIcon,
   ShieldAlertIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -622,18 +621,6 @@ export function AccessAuditView() {
             <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
               <Button
                 variant="outline"
-                size="icon"
-                onClick={() => void load()}
-                disabled={opsLoading || deniedLoading}
-                aria-label="刷新权限审计"
-                className="h-11 w-11 lg:h-8 lg:w-8"
-              >
-                <RefreshCwIcon
-                  className={opsLoading ? "animate-spin" : undefined}
-                />
-              </Button>
-              <Button
-                variant="outline"
                 onClick={() => void handleExport()}
                 disabled={exporting}
                 className="h-11 flex-1 lg:h-8 lg:flex-none"
@@ -737,7 +724,7 @@ export function AccessAuditView() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>

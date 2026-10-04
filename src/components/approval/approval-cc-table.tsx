@@ -1,19 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { InboxIcon, RefreshCwIcon } from "lucide-react";
+import { InboxIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "cn";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -82,7 +76,7 @@ function nodeLabel(row: CcRow): string {
 
 export function ApprovalCcTable() {
   const isMobile = useIsMobile();
-  const [tab, setTab] = React.useState<CcTab>("all");
+  const [tab, setTab] = React.useState<CcTab>("unread");
   const [rows, setRows] = React.useState<CcRow[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -202,12 +196,6 @@ export function ApprovalCcTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>抄送我的</CardTitle>
-          <CardDescription>
-            知会类审批只读跟踪，进入详情自动标记已读
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
             <ToggleGroup
@@ -237,7 +225,7 @@ export function ApprovalCcTable() {
             </ToggleGroup>
             <Select value={moduleFilter} onValueChange={setModuleFilter}>
               <SelectTrigger
-                className="h-11 w-full sm:w-40 lg:h-8"
+                className="w-full sm:w-40 min-h-11 lg:min-h-8"
                 aria-label="按来源模块筛选"
               >
                 <SelectValue placeholder="全部来源" />
@@ -251,16 +239,6 @@ export function ApprovalCcTable() {
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新抄送列表"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-            </Button>
           </div>
 
           {loading ? (
@@ -323,7 +301,7 @@ export function ApprovalCcTable() {
                       >
                         {row.title}
                       </span>
-                      {unread ? <Badge>未读</Badge> : null}
+                      {unread ? <Badge variant="outline">未读</Badge> : null}
                     </div>
                     <div className="flex flex-col gap-1.5 text-sm">
                       <div className="flex items-center justify-between gap-4">
@@ -393,7 +371,7 @@ export function ApprovalCcTable() {
                             {row.title}
                           </span>
                           {unread ? (
-                            <Badge className="ml-2 align-middle">未读</Badge>
+                            <Badge variant="outline" className="ml-2 align-middle">未读</Badge>
                           ) : null}
                         </TableCell>
                         <TableCell className="text-center">
@@ -454,7 +432,7 @@ export function ApprovalCcTable() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           {detailRow ? (
             <>

@@ -5,7 +5,6 @@ import {
   BellRingIcon,
   FileClockIcon,
   Loader2Icon,
-  RefreshCwIcon,
   SearchIcon,
   Undo2Icon,
 } from "lucide-react";
@@ -13,13 +12,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -200,7 +193,8 @@ export function ApprovalMineTable() {
   const urgeRemaining = urgeThrottleRemainingMs(lastUrgedAt);
   const canOperate =
     detailRow !== null &&
-    asApprovalInstanceStatus(detailRow.instance_status) === "running";
+    asApprovalInstanceStatus(detailRow.instance_status) === "running" &&
+    detailRow.current_task_status === "pending";
 
   const handleWithdraw = async () => {
     if (!detailRow) {
@@ -264,12 +258,6 @@ export function ApprovalMineTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>我发起的</CardTitle>
-          <CardDescription>
-            跟踪我提交的审批进度，可撤回或催办当前处理人
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative flex-1 sm:max-w-xs">
@@ -284,7 +272,7 @@ export function ApprovalMineTable() {
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger
-                className="h-11 w-full sm:w-32 lg:h-8"
+                className="w-full sm:w-32 min-h-11 lg:min-h-8"
                 aria-label="按状态筛选"
               >
                 <SelectValue placeholder="全部状态" />
@@ -300,7 +288,7 @@ export function ApprovalMineTable() {
             </Select>
             <Select value={moduleFilter} onValueChange={setModuleFilter}>
               <SelectTrigger
-                className="h-11 w-full sm:w-36 lg:h-8"
+                className="w-full sm:w-36 min-h-11 lg:min-h-8"
                 aria-label="按来源模块筛选"
               >
                 <SelectValue placeholder="全部来源" />
@@ -319,7 +307,7 @@ export function ApprovalMineTable() {
               onValueChange={(value) => setTimeRange(value as TimeRange)}
             >
               <SelectTrigger
-                className="h-11 w-full sm:w-32 lg:h-8"
+                className="w-full sm:w-32 min-h-11 lg:min-h-8"
                 aria-label="按提交时间筛选"
               >
                 <SelectValue placeholder="全部时间" />
@@ -332,16 +320,6 @@ export function ApprovalMineTable() {
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新我发起的列表"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-            </Button>
           </div>
 
           {loading ? (
@@ -480,7 +458,7 @@ export function ApprovalMineTable() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           {detailRow ? (
             <>

@@ -9,7 +9,6 @@ import {
   HistoryIcon,
   Loader2Icon,
   PlusIcon,
-  RefreshCwIcon,
   Trash2Icon,
   WorkflowIcon,
 } from "lucide-react";
@@ -17,13 +16,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -608,24 +601,8 @@ export function SyncTasksTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>同步任务</CardTitle>
-          <CardDescription>
-            定义数据源 → 白名单目标表（部门 / 岗位 / 用户档案）的字段映射、方向与冲突策略；支持样本试跑预估
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新同步任务列表"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-            </Button>
             <Button
               onClick={openCreate}
               className="h-11 flex-1 lg:h-8 lg:flex-none"

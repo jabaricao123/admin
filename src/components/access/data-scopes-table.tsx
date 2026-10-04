@@ -355,13 +355,6 @@ export function DataScopesTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>数据权限</CardTitle>
-          <CardDescription>
-            为每个角色配置可见数据范围：仅本人 / 本部门 / 本部门及以下 /
-            全部。「全部」仅系统管理员角色可配置；未配置的角色按空集处理（看不到任何数据）。
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           {loading ? (
             <div className="flex flex-col gap-2">

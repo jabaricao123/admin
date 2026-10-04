@@ -10,7 +10,6 @@ import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import {
   DownloadIcon,
   Loader2Icon,
-  RefreshCwIcon,
   ShieldXIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -357,16 +356,6 @@ export function ActivityReport({ isAdmin }: { isAdmin: boolean }) {
             </Select>
             <ViewToggle value={view} onChange={setView} />
             <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => void load()}
-                disabled={loading}
-                aria-label="刷新操作活跃度"
-                className="h-11 w-11 lg:h-8 lg:w-8"
-              >
-                <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-              </Button>
               <Button
                 variant="outline"
                 onClick={() => void handleExport()}

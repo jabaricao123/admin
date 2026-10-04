@@ -10,20 +10,13 @@ import {
   CopyIcon,
   DownloadIcon,
   Loader2Icon,
-  RefreshCwIcon,
   ScrollTextIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -459,13 +452,6 @@ export function LogsTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>调用日志</CardTitle>
-          <CardDescription>
-            API / Webhook 调用排障明细（保留 30 天，聚合统计长期保留）；
-            失败调用在详情查看完整错误
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
             <Select value={kindFilter} onValueChange={setKindFilter}>
@@ -533,16 +519,6 @@ export function LogsTable() {
             <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
               <Button
                 variant="outline"
-                size="icon"
-                onClick={() => void load()}
-                disabled={loading}
-                aria-label="刷新调用日志"
-                className="h-11 w-11 lg:h-8 lg:w-8"
-              >
-                <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-              </Button>
-              <Button
-                variant="outline"
                 onClick={() => void handleExport()}
                 disabled={exporting}
                 className="h-11 flex-1 lg:h-8 lg:flex-none"
@@ -600,7 +576,7 @@ export function LogsTable() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>

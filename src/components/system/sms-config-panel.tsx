@@ -15,7 +15,6 @@ import {
   Loader2Icon,
   MessageSquareIcon,
   PlusIcon,
-  RefreshCwIcon,
   SaveIcon,
   SendIcon,
 } from "lucide-react";
@@ -403,10 +402,6 @@ export function SmsConfigPanel() {
     return (
       <div className="flex flex-col p-0 md:gap-6 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-          <CardHeader>
-            <Skeleton className="h-5 w-24" />
-            <Skeleton className="h-4 w-72 max-w-full" />
-          </CardHeader>
           <CardContent className="flex flex-col gap-4 p-4 md:p-6">
             <div className="grid gap-4 lg:grid-cols-2">
               {Array.from({ length: 4 }).map((_, index) => (
@@ -455,12 +450,6 @@ export function SmsConfigPanel() {
 
       {/* 通道配置 */}
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>短信服务</CardTitle>
-          <CardDescription>
-            服务商凭据与签名配置；凭据加密存储、界面仅显示掩码，保存后经测试验证
-          </CardDescription>
-        </CardHeader>
         <CardContent className="p-4 md:p-6">
           <form
             className="flex flex-col gap-6"
@@ -660,20 +649,6 @@ export function SmsConfigPanel() {
             登记服务商后台已审核模板（名称、场景、模板 Code、状态）；只登记，不管理服务商后台
           </CardDescription>
           <CardAction className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => void loadTemplates()}
-              disabled={templatesLoading}
-              aria-label="刷新模板列表"
-            >
-              <RefreshCwIcon
-                className={templatesLoading ? "animate-spin" : undefined}
-                data-icon="inline-start"
-              />
-              刷新
-            </Button>
             <Button type="button" size="sm" onClick={openCreateTemplate}>
               <PlusIcon data-icon="inline-start" />
               新增模板
@@ -809,7 +784,7 @@ export function SmsConfigPanel() {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>

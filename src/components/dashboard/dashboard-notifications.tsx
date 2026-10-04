@@ -6,25 +6,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  InboxIcon,
-  Loader2Icon,
-  MailOpenIcon,
-  RefreshCwIcon,
-} from "lucide-react";
+import { InboxIcon, Loader2Icon, MailOpenIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "cn";
 
 import { sourceModuleLabel } from "@/components/approval/approval-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -111,24 +100,11 @@ export function DashboardNotifications() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>我的通知</CardTitle>
-          <CardDescription>
-            最近 {NOTIFICATION_LIMIT} 条站内信；未读 {unreadCount} 条（与站内信同源）
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新通知列表"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-            </Button>
+            <span className="text-sm text-muted-foreground">
+              未读 {unreadCount} 条
+            </span>
             <Button
               variant="outline"
               onClick={() => void handleMarkAllRead()}

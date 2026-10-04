@@ -6,13 +6,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Field,
   FieldContent,
@@ -255,10 +249,6 @@ export function MailConfigForm() {
     return (
       <div className="flex flex-col p-0 md:gap-6 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-          <CardHeader>
-            <Skeleton className="h-5 w-24" />
-            <Skeleton className="h-4 w-72 max-w-full" />
-          </CardHeader>
           <CardContent className="flex flex-col gap-4 p-4 md:p-6">
             <div className="grid gap-4 lg:grid-cols-2">
               {Array.from({ length: 6 }).map((_, index) => (
@@ -295,12 +285,6 @@ export function MailConfigForm() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>邮件服务</CardTitle>
-          <CardDescription>
-            SMTP 邮件通道配置；凭据加密存储、界面仅显示掩码，保存草稿后经测试验证生效
-          </CardDescription>
-        </CardHeader>
         <CardContent className="p-4 md:p-6">
           <form
             className="flex flex-col gap-6"

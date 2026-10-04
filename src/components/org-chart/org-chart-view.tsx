@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   ChevronRightIcon,
   NetworkIcon,
-  RefreshCwIcon,
   UserRoundIcon,
   UsersIcon,
 } from "lucide-react";
@@ -12,14 +11,7 @@ import { cn } from "cn";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
@@ -443,27 +435,6 @@ export function OrgChartView() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>组织架构</CardTitle>
-          <CardDescription>
-            只读树形组织图：部门层级、负责人与人数；默认展示前 3 级，点击节点展开下级
-          </CardDescription>
-          <CardAction>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void load()}
-              disabled={loading}
-              className="h-11 lg:h-7"
-            >
-              <RefreshCwIcon
-                data-icon="inline-start"
-                className={cn(loading && "animate-spin")}
-              />
-              刷新
-            </Button>
-          </CardAction>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           {loading ? (
             <div className="flex flex-col gap-3">
@@ -622,7 +593,7 @@ export function OrgChartView() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>

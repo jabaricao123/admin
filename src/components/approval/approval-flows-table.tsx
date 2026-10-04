@@ -23,7 +23,6 @@ import {
   PencilIcon,
   PlayIcon,
   PlusIcon,
-  RefreshCwIcon,
   RocketIcon,
   Trash2Icon,
   WorkflowIcon,
@@ -32,13 +31,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -82,6 +75,7 @@ import {
   newFlowNode,
   nodesFromJson,
   nodesToJson,
+  resolveRoleId,
   ruleSummary,
   sampleFormData,
   validateFlowNodes,
@@ -256,8 +250,8 @@ export function ApprovalFlowsTable() {
     () => roles.filter((role) => role.status === "active"),
     [roles],
   );
-  const roleCodes = React.useMemo(
-    () => activeRoles.map((role) => role.code),
+  const roleIds = React.useMemo(
+    () => activeRoles.map((role) => role.id),
     [activeRoles],
   );
   const userIds = React.useMemo(
@@ -265,10 +259,10 @@ export function ApprovalFlowsTable() {
     [profiles],
   );
 
-  const defaultRoleCode = React.useMemo(
+  const defaultRoleId = React.useMemo(
     () =>
-      activeRoles.find((role) => role.code === "admin")?.code ??
-      activeRoles[0]?.code ??
+      activeRoles.find((role) => role.code === "admin")?.id ??
+      activeRoles[0]?.id ??
       "",
     [activeRoles],
   );
@@ -282,6 +276,42 @@ export function ApprovalFlowsTable() {
     () => templates.filter((template) => template.status !== "disabled"),
     [templates],
   );
+
+  /** template_id → 该模板已存在流程的 id 集合（同模板可有多版本行） */
+  const flowIdsByTemplate = React.useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const row of flows) {
+      const ids = map.get(row.template_id) ?? new Set<string>();
+      ids.add(row.id);
+      map.set(row.template_id, ids);
+    }
+    return map;
+  }, [flows]);
+
+  /** 新建可用模板：排除已有流程的模板，消除「该模板下已存在流程」必败路径 */
+  const createTemplates = React.useMemo(
+    () =>
+      bindableTemplates.filter(
+        (template) => !flowIdsByTemplate.has(template.id),
+      ),
+    [bindableTemplates, flowIdsByTemplate],
+  );
+
+  /** 编辑草稿当前绑定的模板 id（该模板保持可选，回切不受限） */
+  const editingFlowTemplateId = React.useMemo(() => {
+    if (!editingId) {
+      return null;
+    }
+    return flows.find((row) => row.id === editingId)?.template_id ?? null;
+  }, [flows, editingId]);
+
+  /** 编辑态：当前流程绑定的模板保持可选；其余已有流程的模板禁用 */
+  const isTemplateTaken = (templateId: string) => {
+    if (editingId !== null && templateId === editingFlowTemplateId) {
+      return false;
+    }
+    return flowIdsByTemplate.has(templateId);
+  };
 
   const boundTemplate = React.useMemo(
     () => templates.find((template) => template.id === formTemplateId) ?? null,
@@ -302,15 +332,19 @@ export function ApprovalFlowsTable() {
   // -------------------------------------------------------------------------
   const openCreate = () => {
     const template =
-      bindableTemplates.find((item) => item.status === "published") ??
-      bindableTemplates[0] ??
+      createTemplates.find((item) => item.status === "published") ??
+      createTemplates[0] ??
       null;
-    const first = newFlowNode({ roleCode: defaultRoleCode });
+    if (!template) {
+      toast.error("所有可用模板均已绑定流程，请先新建模板版本");
+      return;
+    }
+    const first = newFlowNode({ roleId: defaultRoleId });
     setSheetMode("create");
     setEditingId(null);
     setEditingVersion(null);
     setFormName("");
-    setFormTemplateId(template?.id ?? "");
+    setFormTemplateId(template.id);
     setNodes([first]);
     setSelectedNodeId(first.id);
     setActiveTab("design");
@@ -325,7 +359,14 @@ export function ApprovalFlowsTable() {
     tab: "design" | "simulate" = "design",
   ) => {
     const parsed = nodesFromJson(row.nodes);
-    const initial = parsed.length > 0 ? parsed : [newFlowNode()];
+    const initialRaw =
+      parsed.length > 0 ? parsed : [newFlowNode({ roleId: defaultRoleId })];
+    // 存量节点 role value 可能是 code：归一化为 role.id 后再进入设计器
+    const initial = initialRaw.map((node) =>
+      node.ruleType === "role"
+        ? { ...node, roleId: resolveRoleId(node.roleId, roles) }
+        : node,
+    );
     const template = templates.find((item) => item.id === row.template_id) ?? null;
     setSheetMode(mode);
     setEditingId(row.id);
@@ -372,7 +413,7 @@ export function ApprovalFlowsTable() {
   };
 
   const addNode = () => {
-    const node = newFlowNode({ roleCode: defaultRoleCode });
+    const node = newFlowNode({ roleId: defaultRoleId });
     setNodes((prev) => [...prev, node]);
     setSelectedNodeId(node.id);
   };
@@ -409,7 +450,7 @@ export function ApprovalFlowsTable() {
       toast.error("绑定模板已停用，请改绑其他版本");
       return null;
     }
-    const nodeError = validateFlowNodes(nodes, roleCodes, userIds);
+    const nodeError = validateFlowNodes(nodes, roleIds, userIds);
     if (nodeError) {
       toast.error(nodeError);
       return null;
@@ -431,7 +472,7 @@ export function ApprovalFlowsTable() {
     setEditingId(data.id);
     setEditingVersion(data.version);
     return data;
-  }, [boundTemplate, editingId, formName, formTemplateId, nodes, roleCodes, userIds]);
+  }, [boundTemplate, editingId, formName, formTemplateId, nodes, roleIds, userIds]);
 
   const handleSaveDraft = async () => {
     const saved = await saveDraft();
@@ -522,7 +563,7 @@ export function ApprovalFlowsTable() {
   // 模拟运行
   // -------------------------------------------------------------------------
   const runSimulation = async () => {
-    const nodeError = validateFlowNodes(nodes, roleCodes, userIds);
+    const nodeError = validateFlowNodes(nodes, roleIds, userIds);
     if (nodeError) {
       toast.error(nodeError);
       return;
@@ -732,31 +773,12 @@ export function ApprovalFlowsTable() {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>审批流程</CardTitle>
-          <CardDescription>
-            按模板定义线性审批节点（角色 / 部门负责人 / 指定人）与超时时长；仅草稿可编辑，
-            发布后冻结。模拟运行与真实提交共用同一审批人解析逻辑，可先验证再发布。
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm text-muted-foreground">
               共 {groups.length} 个模板流程（{flows.length} 个版本）
             </span>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => void load()}
-                disabled={loading}
-                aria-label="刷新流程列表"
-                className="h-11 w-11 lg:h-8 lg:w-8"
-              >
-                <RefreshCwIcon
-                  className={loading ? "animate-spin" : undefined}
-                />
-              </Button>
               <Button onClick={openCreate} className="h-11 lg:h-8">
                 <PlusIcon data-icon="inline-start" />
                 新增流程
@@ -956,15 +978,23 @@ export function ApprovalFlowsTable() {
                       <SelectValue placeholder="选择模板版本" />
                     </SelectTrigger>
                     <SelectContent>
-                      {bindableTemplates.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name} v{template.version}（{template.code}）
-                        </SelectItem>
-                      ))}
+                      {bindableTemplates.map((template) => {
+                        const taken = isTemplateTaken(template.id);
+                        return (
+                          <SelectItem
+                            key={template.id}
+                            value={template.id}
+                            disabled={taken}
+                          >
+                            {template.name} v{template.version}（{template.code}）
+                            {taken ? " · 已有流程" : ""}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   <FieldDescription>
-                    绑定的是具体模板版本；模板发布新版后需为流程创建新版本并改绑
+                    绑定的是具体模板版本；同模板仅维护一条版本链，已有流程的模板请用「新版本」
                   </FieldDescription>
                 </Field>
               </div>
@@ -1116,9 +1146,9 @@ export function ApprovalFlowsTable() {
                             const ruleType = asApproverRuleType(value);
                             updateNode(selectedNode.id, {
                               ruleType,
-                              roleCode:
+                              roleId:
                                 ruleType === "role"
-                                  ? selectedNode.roleCode || defaultRoleCode
+                                  ? selectedNode.roleId || defaultRoleId
                                   : "",
                               userId:
                                 ruleType === "user" ? selectedNode.userId : "",
@@ -1149,9 +1179,9 @@ export function ApprovalFlowsTable() {
                         <Field>
                           <FieldLabel htmlFor="node-role">角色</FieldLabel>
                           <Select
-                            value={selectedNode.roleCode}
+                            value={selectedNode.roleId}
                             onValueChange={(value) =>
-                              updateNode(selectedNode.id, { roleCode: value })
+                              updateNode(selectedNode.id, { roleId: value })
                             }
                             disabled={readOnly}
                           >
@@ -1160,8 +1190,8 @@ export function ApprovalFlowsTable() {
                             </SelectTrigger>
                             <SelectContent>
                               {activeRoles.map((role) => (
-                                <SelectItem key={role.id} value={role.code}>
-                                  {role.name}（{role.code}）
+                                <SelectItem key={role.id} value={role.id}>
+                                  {role.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>

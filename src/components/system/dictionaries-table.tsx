@@ -10,13 +10,7 @@
 // 移动端（<1024px）：导航横向滚动，项列表渲染卡片。
 
 import * as React from "react";
-import {
-  BookMarkedIcon,
-  Loader2Icon,
-  PlusIcon,
-  RefreshCwIcon,
-  SaveIcon,
-} from "lucide-react";
+import { BookMarkedIcon, Loader2Icon, PlusIcon, SaveIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -527,20 +521,6 @@ export function DictionariesTable() {
             <CardAction className="flex items-center gap-2">
               <Button
                 type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => void loadCatalog(selectedKey, { silent: true })}
-                disabled={itemsLoading}
-                aria-label="刷新字典项"
-              >
-                <RefreshCwIcon
-                  className={itemsLoading ? "animate-spin" : undefined}
-                  data-icon="inline-start"
-                />
-                刷新
-              </Button>
-              <Button
-                type="button"
                 size="sm"
                 onClick={openCreateItem}
                 disabled={selectedKey === ""}
@@ -687,7 +667,7 @@ export function DictionariesTable() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader className="border-b">
             <SheetTitle>
@@ -847,7 +827,7 @@ export function DictionariesTable() {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader className="border-b">
             <SheetTitle>新增字典</SheetTitle>

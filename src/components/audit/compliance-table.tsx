@@ -10,7 +10,6 @@ import {
   FileTextIcon,
   Loader2Icon,
   PrinterIcon,
-  RefreshCwIcon,
   ShieldCheckIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -339,13 +338,6 @@ export function ComplianceTable() {
   return (
     <div className="flex flex-col gap-4 p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>合规报告</CardTitle>
-          <CardDescription>
-            按周期聚合操作量、权限变更、登录失败与数据变更趋势，生成可打印
-            HTML（A4）；归档保留 1 年，可随时重新查看或下载
-          </CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-end gap-2">
             <label className="flex flex-col gap-1.5 text-sm">
@@ -389,18 +381,6 @@ export function ComplianceTable() {
                 <ShieldCheckIcon data-icon="inline-start" />
               )}
               生成报告
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void loadHistory()}
-              disabled={loadingHistory}
-              aria-label="刷新历史报告"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon
-                className={loadingHistory ? "animate-spin" : undefined}
-              />
             </Button>
           </div>
 

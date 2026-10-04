@@ -343,7 +343,7 @@ export function CustomReportEditor({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[35vw] min-w-[320px] max-w-[480px]"
+        className="w-full sm:max-w-[480px]"
       >
         <SheetHeader>
           <SheetTitle>{definition ? "编辑报表" : "新建报表"}</SheetTitle>

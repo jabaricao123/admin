@@ -95,7 +95,6 @@ export function BuiltinReports({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="flex flex-col gap-4 p-4 md:gap-6 md:p-6">
       <div>
-        <h2 className="text-lg font-medium">预置报表</h2>
         <p className="text-sm text-muted-foreground">
           开箱即用的统计报表，只读消费各模块公开视图；数字随当前账号的数据范围过滤。
         </p>

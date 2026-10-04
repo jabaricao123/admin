@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   Loader2Icon,
-  RefreshCwIcon,
   SearchIcon,
   UserRoundXIcon,
 } from "lucide-react";
@@ -15,9 +14,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Field,
@@ -449,10 +445,6 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardHeader>
-          <CardTitle>用户管理</CardTitle>
-          <CardDescription>维护账号的角色与启停用状态</CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="relative flex-1 sm:max-w-xs">
@@ -513,16 +505,6 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="刷新用户列表"
-              className="h-11 w-11 lg:h-8 lg:w-8"
-            >
-              <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
-            </Button>
           </div>
 
           {loading ? (
@@ -732,7 +714,7 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
       >
         <SheetContent
           side="right"
-          className="w-[35vw] min-w-[320px] max-w-[480px]"
+          className="w-full sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>编辑用户</SheetTitle>
