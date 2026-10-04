@@ -1,7 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChevronsUpDownIcon, LogOutIcon } from "lucide-react";
+import Link from "next/link";
+import {
+  ChevronsUpDownIcon,
+  LogOutIcon,
+  UserRoundIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -95,6 +100,12 @@ export function NavUser({ user }: { user: SidebarUser }) {
               当前角色：{roleLabel}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/settings/profile">
+                <UserRoundIcon />
+                个人中心
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => void handleLogout()}>
               <LogOutIcon />
               退出登录

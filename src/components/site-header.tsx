@@ -53,6 +53,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/integration/webhooks": "Webhook",
   "/integration/logs": "调用日志",
   "/integration/docs": "接口文档",
+  "/settings/profile": "个人中心",
 };
 
 export function SiteHeader() {
