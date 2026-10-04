@@ -1,6 +1,6 @@
 // IM 扫码登录起点（im/002）：服务端生成一次性 state → 经 im_backend 最小角色调
 // public.im_start_auth（厂商凭据解密与授权 URL 构造在 Postgres 内完成，secret 不出库）
-// → 302 到厂商授权页（飞书托管页内含扫码）。
+// → 302 到厂商授权页（飞书托管页内含扫码；企业微信 PC 扫码 / App 内免登两形态）。
 //
 // 为什么不在 Next.js 读凭据构造 URL：secret 不允许离开 Postgres（INDEX 规则 10、
 // ADR-001 全局禁 service_role）；im_backend JWT 仅能执行 im_start_auth /
@@ -11,7 +11,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createImBackendClient } from "@/lib/im/backend";
 import { imCallbackBase } from "@/lib/im/callback";
-import { getImProvider } from "@/lib/im/provider";
+import { getImProvider, imStartStatePrefix } from "@/lib/im/provider";
 import {
   createImState,
   imStateCookieName,
@@ -45,7 +45,11 @@ export async function GET(
   }
 
   const base = imCallbackBase(request);
-  const state = createImState();
+  // 企业微信 App 内嵌 WebView（UA 含 wxwork）→ 免登授权端点；PC 浏览器 → 扫码端点。
+  // im_start_auth 签名不变，模式经 state 的 `m.` 前缀传入 Postgres（im/004）。
+  const state =
+    imStartStatePrefix(provider, request.headers.get("user-agent")) +
+    createImState();
 
   // Postgres 内构造授权 URL（含凭据解密；未启用 / 凭据缺失返回 im_unavailable）
   const { data: authorizeUrl, error } = await backend.rpc("im_start_auth", {
