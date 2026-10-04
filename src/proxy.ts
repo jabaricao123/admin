@@ -5,7 +5,7 @@ import { updateSession } from "@/lib/supabase/proxy";
 /**
  * Next.js 16 网络边界代理（原 middleware）：
  * 1. 刷新 Supabase 会话 Cookie
- * 2. 未登录访问受保护页面 → 重定向 /login
+ * 2. 未登录访问受保护页面 → 重定向 /login（/auth/* 登录回调链路放行）
  * 3. 已登录访问 /login → 重定向 /
  * 4. 已停用账号 → 清会话并重定向 /login?reason=banned
  *    - Admin API ban 后 GoTrue 对 GET /user 直接返回 403 user_banned
@@ -18,7 +18,9 @@ export async function proxy(request: NextRequest) {
   const { supabaseResponse, supabase, user, userError } =
     await updateSession(request);
   const { pathname } = request.nextUrl;
-  const isAuthRoute = pathname.startsWith("/login");
+  const isLoginRoute = pathname.startsWith("/login");
+  // IM / OAuth 回调（/auth/*）必须匿名可达；已登录会话也不拦截（扫码可换绑/重登）
+  const isAuthFlowRoute = pathname.startsWith("/auth/");
 
   // Auth 层封禁：GoTrue 403 user_banned（Admin API ban 的即时效果）
   const authBanned =
@@ -40,10 +42,10 @@ export async function proxy(request: NextRequest) {
       }
 
       clearAuthCookies(request, supabaseResponse);
-      return bannedRedirect(request, supabaseResponse, isAuthRoute);
+      return bannedRedirect(request, supabaseResponse, isLoginRoute);
     }
 
-    if (!isAuthRoute) {
+    if (!isLoginRoute && !isAuthFlowRoute) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return carryCookies(NextResponse.redirect(url), supabaseResponse);
@@ -61,10 +63,10 @@ export async function proxy(request: NextRequest) {
 
   if (profile?.status === "inactive") {
     clearAuthCookies(request, supabaseResponse);
-    return bannedRedirect(request, supabaseResponse, isAuthRoute);
+    return bannedRedirect(request, supabaseResponse, isLoginRoute);
   }
 
-  if (isAuthRoute) {
+  if (isLoginRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return carryCookies(NextResponse.redirect(url), supabaseResponse);
@@ -89,9 +91,9 @@ function clearAuthCookies(request: NextRequest, response: NextResponse) {
 function bannedRedirect(
   request: NextRequest,
   supabaseResponse: NextResponse,
-  isAuthRoute: boolean,
+  isLoginRoute: boolean,
 ) {
-  if (isAuthRoute && request.nextUrl.searchParams.get("reason") === "banned") {
+  if (isLoginRoute && request.nextUrl.searchParams.get("reason") === "banned") {
     return supabaseResponse;
   }
 

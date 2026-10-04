@@ -5,6 +5,8 @@
 ## [Unreleased]
 
 ### Added
+- IM 扫码登录（im/002）：`/login` 扫码登录 Tab（飞书）、`/auth/im/[provider]/start` 授权跳转 + state 防代扫（httpOnly cookie，5 分钟一次性）、`/auth/callback/feishu` 回调（调 `im_handle_callback` 在 Postgres 内完成 code 换 token → userinfo → 预绑定匹配，再由 Auth admin generateLink + verifyOtp 签发标准 session）、未绑定 / 停用拒绝 + `/audit/logins` 留痕（`via='im_feishu'`）、厂商逻辑下沉 Postgres + 最小角色 `im_backend`（修复 service_role 越权读取凭据）
+- 数据库（im/002）：`audit_logins` 新增 `via` / `im_userid`；`app.audit_login` 扩为 8 参；新增 `public.record_im_login_attempt`（anon 失败 / 已登录成功 + 绑定一致性校验）；厂商逻辑 RPC `public.im_start_auth` / `public.im_handle_callback`（仅 GRANT 最小角色 `im_backend`；凭据解密与 `extensions.http` 出站均在 Postgres 内，secret 不出库）
 - IM 登录数据底座（im/001）：profiles 三列 IM userid 预绑定（UNIQUE + 格式 CHECK）、im_auth_configs 全局单选启用 + 凭据 pgcrypto 加密、5 个 RPC（im_bind_self / im_unbind / im_admin_set_userid / im_upsert_config / im_get_enabled_provider）
 - docs/modules/ 模块开发文档体系 v1.4.3：10 模块 46 份规格 + 10 份 AGENT.md 执行卡 + INDEX 边界/契约/M0 底座/共享工件规则
 - approval/engine.md：审批引擎核心表与 submit_instance 契约

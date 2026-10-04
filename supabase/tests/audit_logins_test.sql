@@ -19,7 +19,7 @@ select has_column('public', 'audit_logins', 'created_at', 'created_at 列存在'
 select col_is_pk('public', 'audit_logins', 'id', 'id 为主键');
 select has_index('public', 'audit_logins', 'audit_logins_user_created_idx', '(user_id, created_at) 索引存在');
 select has_index('public', 'audit_logins', 'audit_logins_created_idx', 'created_at 索引存在');
-select has_function('app', 'audit_login', array['uuid','text','boolean','text','inet','text'], 'app.audit_login(uuid,text,boolean,text,inet,text) 存在');
+select has_function('app', 'audit_login', array['uuid','text','boolean','text','inet','text','text','text'], 'app.audit_login(uuid,text,boolean,text,inet,text,text,text) 存在（im/002 扩 via/im_userid）');
 select has_function('public', 'record_login_attempt', array['text','boolean','text'], 'public.record_login_attempt(text,boolean,text) 存在');
 select is(
   (select relrowsecurity from pg_class where oid = 'public.audit_logins'::regclass),

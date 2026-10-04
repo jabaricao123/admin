@@ -51,6 +51,7 @@ src/
 ├── hooks/                # 通用 hooks
 ├── lib/
 │   ├── supabase/         # client / server / proxy（@supabase/ssr）
+│   ├── im/               # IM 登录：provider 抽象 + feishu 实现 + 回调编排 + state
 │   ├── dictionaries.ts   # 角色 / 状态字典
 │   └── database.types.ts # supabase gen types 产物
 └── proxy.ts              # Next.js 16 网络边界：会话续期 + 登录拦截
@@ -68,6 +69,7 @@ supabase/
 - [x] 数据库基线：`profiles` 用户档案、角色枚举、RLS 与授权收紧（`supabase/migrations/`）
 - [x] 工作台（统计卡片 / 注册趋势 / 最近更新）+ 用户管理（列表 / 搜索 / 筛选 / 角色分配 / 启停用，仅管理员）
 - [x] 设计评审与修复：对比度、移动导航、追溯护栏（`updated_by`）、断点、错误边界
+- [x] IM 扫码登录（飞书，im/002）：`/login` 扫码 Tab、OAuth 全链路、未绑定拒绝留痕、state 防代扫
 
 ## 权限模型速览
 
@@ -75,3 +77,72 @@ supabase/
 - 角色变更：仅管理员可调 `admin_update_profile` RPC；不能修改自己的角色、不能停用自己
 - 菜单可见性：用户管理菜单仅管理员可见；页面内服务端二次校验角色
 - 新建用户：后续提供邀请流程；当前可在 Supabase Dashboard 创建（或 Admin API），再到用户管理页分配角色
+
+## IM 扫码登录（飞书）
+
+登录页「扫码登录」Tab 走飞书 OAuth：已绑定用户扫码后由后端签发标准 Supabase session（与密码登录同一会话 / RLS / 登出链路，ADR-003）。厂商凭据解密、授权 URL 构造、code 换 token、userinfo 与绑定匹配全部在 Postgres 内完成（`im_start_auth` / `im_handle_callback`）：**app_secret 不出库，全链路不使用 service_role**（INDEX 规则 10 / ADR-001）。
+
+### 部署硬前提
+
+| 项 | 要求 |
+|---|---|
+| `NEXT_PUBLIC_IM_CALLBACK_BASE` | 公网可达的 HTTPS 域名（如 `https://admin.example.com`），回调地址为 `<base>/auth/callback/feishu` |
+| `IM_BACKEND_JWT` | role=`im_backend` 的最小角色 JWT（仅可执行两个 IM 包装 RPC），签发方式见下节 |
+| 飞书开发者后台 | 该回调地址需登记在「安全设置 → 重定向 URL」白名单中（精确匹配） |
+| 多实例部署 | state 落 httpOnly cookie（无 Redis）；多副本共享同一域名时需 sticky session，或后续升级为 Redis 存储 |
+
+### IM 后端最小角色（im_backend）
+
+两个包装 RPC 仅授权给数据库最小角色 `im_backend`（nologin、非 BYPASSRLS、无任何表权限）；部署方用项目 JWT secret **离线签发**该角色 JWT：
+
+```bash
+SUPABASE_JWT_SECRET=<Dashboard → Project Settings → API → JWT secret> \
+  npm run im:backend-token        # 默认约 10 年；可传有效期秒数
+```
+
+把输出配置为部署环境变量 `IM_BACKEND_JWT`（JWT secret 只用于签发、绝不进应用运行时）。本地开发用 `supabase status` 的 JWT secret 签发后写入 `.env.local`。轮换：重新签发 → 更新环境变量 → 重启部署。
+
+
+### 飞书开放平台配置步骤
+
+1. 打开 <https://open.feishu.cn/app>，创建「企业自建应用」。
+2. 「凭据与基础信息」获取 App ID / App Secret。
+3. 「安全设置 → 重定向 URL」添加 `<NEXT_PUBLIC_IM_CALLBACK_BASE>/auth/callback/feishu`。
+4. 「权限管理」申请 `contact:user.employee_id:readonly`（`user_info` 返回 `user_id` 的前提，绑定匹配键即 `user_id`）。
+5. 创建版本并发布，确保测试账号在企业内可用该应用。
+6. 系统侧写入凭据（经 `im_upsert_config` 加密存储）与用户绑定：
+
+```sql
+-- Supabase SQL Editor 以管理员身份执行（临时通道；im/006 将提供配置页）
+select set_config(
+  'request.jwt.claims',
+  json_build_object(
+    'sub', (select id::text from public.profiles where role = 'admin' limit 1),
+    'role', 'authenticated'
+  )::text,
+  true
+);
+select public.im_upsert_config(
+  'feishu',
+  '{"app_id":"cli_xxx","app_secret":"yyy"}'::jsonb,
+  true  -- 启用飞书（全局单选取代其他厂商）
+);
+select public.im_admin_set_userid(
+  (select id from public.profiles where email = 'user@example.com'),
+  'feishu',
+  '飞书 user_id'
+);
+```
+
+### 本地联调
+
+- 飞书要求回调公网可达：本地起 `cloudflared tunnel --url http://localhost:3000`（或 ngrok），把得到的 HTTPS 域名写入 `.env.local` 的 `NEXT_PUBLIC_IM_CALLBACK_BASE`，并在飞书后台登记回调地址。
+- 本地栈还需 `IM_BACKEND_JWT`：用本地默认 JWT secret 签发后写入 `.env.local`：
+
+```bash
+# JWT secret 取 `supabase status` 显示的 JWT_SECRET（本地栈固定默认值）
+SUPABASE_JWT_SECRET=<JWT_SECRET> \
+  npm run im:backend-token   # 输出写入 .env.local 的 IM_BACKEND_JWT
+```
+
+- 登录页扫码开始前由服务端下发一次性 state（httpOnly cookie，5 分钟有效，读后作废）；登录成功 / 未绑定拒绝均落 `audit_logins`（`via='im_feishu'`，见 `/audit/logins`）。

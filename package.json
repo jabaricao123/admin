@@ -13,7 +13,8 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:status": "supabase status",
-    "db:types": "supabase gen types typescript --project-id mnhtuekkxiqsseoesjfn > src/lib/database.types.ts"
+    "db:types": "supabase gen types typescript --project-id mnhtuekkxiqsseoesjfn > src/lib/database.types.ts",
+    "im:backend-token": "node scripts/mint-im-backend-jwt.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
