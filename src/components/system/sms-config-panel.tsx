@@ -13,7 +13,6 @@ import {
   BanIcon,
   InfoIcon,
   Loader2Icon,
-  MessageSquareIcon,
   PlusIcon,
   SaveIcon,
   SendIcon,
@@ -642,7 +641,7 @@ export function SmsConfigPanel() {
       </Card>
 
       {/* 模板登记表 */}
-      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle>短信模板登记</CardTitle>
           <CardDescription>
@@ -740,7 +739,7 @@ export function SmsConfigPanel() {
                       key={row.id}
                       type="button"
                       onClick={() => openEditTemplate(row)}
-                      className="rounded-xl border bg-card p-4 text-left shadow-sm transition-colors hover:border-primary focus-visible:border-primary focus-visible:outline-none"
+                      className="rounded-xl border bg-card p-3 text-left shadow-sm transition-colors hover:border-primary focus-visible:border-primary focus-visible:outline-none"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">{row.name}</span>
@@ -751,7 +750,7 @@ export function SmsConfigPanel() {
                           {SMS_TEMPLATE_STATUS_LABELS[status]}
                         </Badge>
                       </div>
-                      <div className="mt-3 flex flex-col gap-1.5 text-sm">
+                      <div className="mt-2 flex flex-col gap-1.5 text-sm">
                         <div className="flex justify-between gap-3">
                           <span className="text-muted-foreground">场景</span>
                           <span>{row.scene}</span>
@@ -895,17 +894,22 @@ export function SmsConfigPanel() {
                 type="button"
                 variant="outline"
                 onClick={() => setSheetOpen(false)}
+                className="h-11 lg:h-8"
               >
                 取消
               </Button>
-              <Button type="submit" disabled={savingTemplate}>
+              <Button
+                type="submit"
+                disabled={savingTemplate}
+                className="h-11 lg:h-8"
+              >
                 {savingTemplate ? (
                   <Loader2Icon
                     className="animate-spin"
                     data-icon="inline-start"
                   />
                 ) : (
-                  <MessageSquareIcon data-icon="inline-start" />
+                  <SaveIcon data-icon="inline-start" />
                 )}
                 保存
               </Button>

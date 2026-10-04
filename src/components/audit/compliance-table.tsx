@@ -253,7 +253,7 @@ export function ComplianceTable() {
               type="button"
               onClick={() => void loadReport(row)}
               disabled={loadingReportId === row.id}
-              className="flex w-full flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60"
+              className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -261,7 +261,7 @@ export function ComplianceTable() {
                     {compliancePeriodLabel(row.period)} ·{" "}
                     {complianceRangeLabel(row.range)}
                   </div>
-                  <div className="truncate text-xs text-muted-foreground">
+                  <div className="truncate text-xs leading-tight text-muted-foreground">
                     {formatDateTime(row.created_at)}
                   </div>
                 </div>
@@ -443,7 +443,7 @@ export function ComplianceTable() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle>历史报告</CardTitle>
           <CardDescription>

@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   BriefcaseIcon,
   Loader2Icon,
+  SaveIcon,
   SearchIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -382,12 +383,12 @@ export function PositionsTable() {
                     type="button"
                     data-slot="position-card"
                     onClick={() => openEdit(row)}
-                    className="flex w-full flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                    className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate font-medium">{row.name}</div>
-                        <div className="truncate font-mono text-xs text-muted-foreground">
+                        <div className="truncate font-mono text-xs leading-tight text-muted-foreground">
                           {row.code}
                         </div>
                       </div>
@@ -656,16 +657,26 @@ export function PositionsTable() {
                 删除
               </Button>
             ) : null}
-            <Button variant="outline" onClick={closeSheet}>
+            <Button
+              variant="outline"
+              onClick={closeSheet}
+              className="h-11 lg:h-8"
+            >
               取消
             </Button>
-            <Button onClick={() => void handleSave()} disabled={saving}>
+            <Button
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className="h-11 lg:h-8"
+            >
               {saving ? (
                 <Loader2Icon
                   className="animate-spin"
                   data-icon="inline-start"
                 />
-              ) : null}
+              ) : (
+                <SaveIcon data-icon="inline-start" />
+              )}
               保存
             </Button>
           </SheetFooter>

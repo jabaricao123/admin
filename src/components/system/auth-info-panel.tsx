@@ -145,7 +145,7 @@ export function AuthInfoPanel() {
       </div>
 
       {/* 站点与会话概览 */}
-      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <GlobeIcon className="size-4 text-muted-foreground" />
@@ -210,7 +210,7 @@ export function AuthInfoPanel() {
       </Card>
 
       {/* 密码策略 */}
-      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <KeyRoundIcon className="size-4 text-muted-foreground" />
@@ -248,7 +248,7 @@ export function AuthInfoPanel() {
       </Card>
 
       {/* OAuth 提供商 */}
-      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FingerprintIcon className="size-4 text-muted-foreground" />
@@ -301,7 +301,7 @@ export function AuthInfoPanel() {
       </Card>
 
       {/* 回调 URL 清单 */}
-      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheckIcon className="size-4 text-muted-foreground" />

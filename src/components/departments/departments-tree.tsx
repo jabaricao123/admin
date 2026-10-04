@@ -6,6 +6,7 @@ import {
   Loader2Icon,
   NetworkIcon,
   PlusIcon,
+  SaveIcon,
   SearchIcon,
 } from "lucide-react";
 import { cn } from "cn";
@@ -578,13 +579,13 @@ export function DepartmentsTree() {
                       type="button"
                       data-slot="department-card"
                       onClick={() => openEdit(node)}
-                      className="flex min-w-0 flex-1 flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                      className="flex min-w-0 flex-1 flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="truncate font-medium">{node.name}</div>
                           {node.path ? (
-                            <div className="truncate text-xs text-muted-foreground">
+                            <div className="truncate text-xs leading-tight text-muted-foreground">
                               {node.path}
                             </div>
                           ) : null}
@@ -899,16 +900,26 @@ export function DepartmentsTree() {
             ) : null}
           </div>
           <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="outline" onClick={closeSheet}>
+            <Button
+              variant="outline"
+              onClick={closeSheet}
+              className="h-11 lg:h-8"
+            >
               取消
             </Button>
-            <Button onClick={() => void handleSave()} disabled={saving}>
+            <Button
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className="h-11 lg:h-8"
+            >
               {saving ? (
                 <Loader2Icon
                   className="animate-spin"
                   data-icon="inline-start"
                 />
-              ) : null}
+              ) : (
+                <SaveIcon data-icon="inline-start" />
+              )}
               保存
             </Button>
           </SheetFooter>

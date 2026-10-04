@@ -7,7 +7,7 @@
 //       写全经 public 管理 RPC（upsert / publish / rollback）。
 // 交互：列表按 event_key 分组展示 current 版本；Sheet 编辑（事件/渠道锁定、可用变量 Badge、
 //       等宽字体模板编辑、预览 tab 三渠道并列、历史版本 tab 回滚）。
-// 语义：published 版本不可改；「保存（草稿）」新建/续编草稿，「发布」把草稿设为 current；
+// 语义：published 版本不可改；「保存草稿」新建/续编草稿，「发布」把草稿设为 current；
 //       回滚 = 复制旧版本为新版本并置 current（后端保证历史保留）。
 
 import * as React from "react";
@@ -17,6 +17,7 @@ import {
   Loader2Icon,
   PlusIcon,
   RotateCcwIcon,
+  SaveIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -268,7 +269,7 @@ export function MessageTemplatesTable() {
     return null;
   }, [draftId, templates]);
 
-  /** 保存（草稿）：有草稿续编，否则新建 version=max+1；返回保存后的行 */
+  /** 保存草稿：有草稿续编，否则新建 version=max+1；返回保存后的行 */
   const saveDraft = async (): Promise<TemplateResult | null> => {
     if (!formEventKey) {
       toast.error("请选择事件");
@@ -452,7 +453,7 @@ export function MessageTemplatesTable() {
               {registry.map((event) => {
                 const vars = varNames(event.available_vars);
                 return (
-                  <Card key={event.event_key} className="shadow-xs">
+                  <Card key={event.event_key} className="shadow-xs gap-3! py-3!">
                     <CardHeader className="gap-1 pb-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <CardTitle className="font-mono text-sm">
@@ -860,8 +861,10 @@ export function MessageTemplatesTable() {
                   className="animate-spin"
                   data-icon="inline-start"
                 />
-              ) : null}
-              保存（草稿）
+              ) : (
+                <SaveIcon data-icon="inline-start" />
+              )}
+              保存草稿
             </Button>
             <Button
               className="h-11 lg:h-8"

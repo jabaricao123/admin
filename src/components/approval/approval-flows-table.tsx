@@ -24,6 +24,7 @@ import {
   PlayIcon,
   PlusIcon,
   RocketIcon,
+  SaveIcon,
   Trash2Icon,
   WorkflowIcon,
 } from "lucide-react";
@@ -1415,7 +1416,9 @@ export function ApprovalFlowsTable() {
                     className="animate-spin"
                     data-icon="inline-start"
                   />
-                ) : null}
+                ) : (
+                  <SaveIcon data-icon="inline-start" />
+                )}
                 保存草稿
               </Button>
               <Button

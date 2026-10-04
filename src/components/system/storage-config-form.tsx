@@ -631,7 +631,7 @@ export function StorageConfigForm() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <HardDriveIcon className="size-4 text-muted-foreground" />

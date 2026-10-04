@@ -728,6 +728,9 @@ export function describeCronExpr(expr: string | null): string {
         SYNC_WEEKDAY_LABELS.find((item) => item.value === dow)?.label ?? dow;
       return `每${weekday} ${time}`;
     }
+    if (day === "1" && month === "*" && dow === "*") {
+      return `每月 1 日 ${time}`;
+    }
   }
   return expr;
 }
@@ -1003,7 +1006,11 @@ export const REPORT_FILTER_OP_LABELS: Record<ReportFilterOp, string> = {
 /* -------------------------------------------------------------------------- */
 
 /** 订阅频率预设（页面只给预设，cron 由 upsert_report_subscription 映射落表） */
-export type ReportSubscriptionPreset = "hourly" | "daily" | "weekly";
+export type ReportSubscriptionPreset =
+  | "hourly"
+  | "daily"
+  | "weekly"
+  | "monthly";
 
 export const REPORT_SUBSCRIPTION_PRESET_LABELS: Record<
   ReportSubscriptionPreset,
@@ -1012,10 +1019,11 @@ export const REPORT_SUBSCRIPTION_PRESET_LABELS: Record<
   hourly: "每小时",
   daily: "每天",
   weekly: "每周",
+  monthly: "每月 1 日",
 };
 
 export const REPORT_SUBSCRIPTION_PRESET_OPTIONS = (
-  ["hourly", "daily", "weekly"] as ReportSubscriptionPreset[]
+  ["hourly", "daily", "weekly", "monthly"] as ReportSubscriptionPreset[]
 ).map((value) => ({ value, label: REPORT_SUBSCRIPTION_PRESET_LABELS[value] }));
 
 /** 订阅状态（report_subscriptions.status；逻辑删行不出现在列表） */

@@ -564,7 +564,7 @@ export function ApprovalTodoTable() {
                 tab === "pending" ? (
                   <div key={row.task_id} className="flex items-start gap-2">
                     <Checkbox
-                      className="mt-4"
+                      className="mt-3"
                       checked={selected.has(row.task_id)}
                       onCheckedChange={(checked) =>
                         toggleSelectOne(row.task_id, checked === true)
@@ -889,7 +889,7 @@ function TodoCard({
       data-highlighted={highlighted ? "true" : undefined}
       onClick={onOpen}
       className={cn(
-        "flex min-w-0 flex-1 flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+        "flex min-w-0 flex-1 flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
         highlighted && "border-primary bg-primary/5",
       )}
     >

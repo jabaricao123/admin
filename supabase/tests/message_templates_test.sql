@@ -84,15 +84,15 @@ select ok(
 -- ---------------------------------------------------------------------------
 select is(
   (select count(*) from public.message_event_registry),
-  9::bigint, '事件注册表恰 9 个事件（seed 8 + approval.cc）'
+  11::bigint, '事件注册表恰 11 个事件（seed 8 + approval.cc + report 失败通知 2）'
 );
 select is(
   (select array_agg(event_key order by event_key) from public.message_event_registry),
   array[
     'announcement.published', 'approval.approved', 'approval.cc', 'approval.pending',
-    'approval.rejected', 'approval.urge', 'report.export_ready',
-    'sync.run_finished', 'webhook.delivery_failed'
-  ], '事件清单与规格一致（含 approval.cc）'
+    'approval.rejected', 'approval.urge', 'report.export_failed', 'report.export_ready',
+    'report.subscription_failed', 'sync.run_finished', 'webhook.delivery_failed'
+  ], '事件清单与规格一致（含 approval.cc / report 失败通知）'
 );
 select is(
   (select available_vars from public.message_event_registry where event_key = 'approval.pending'),
@@ -100,7 +100,7 @@ select is(
 );
 select is(
   (select count(*) from public.message_event_registry where registered_by is null),
-  9::bigint, '9 行 registered_by 为 NULL（迁移内系统预置）'
+  11::bigint, '11 行 registered_by 为 NULL（迁移内系统预置）'
 );
 
 -- ---------------------------------------------------------------------------

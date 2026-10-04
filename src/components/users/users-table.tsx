@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   Loader2Icon,
+  SaveIcon,
   SearchIcon,
   UserRoundXIcon,
 } from "lucide-react";
@@ -553,14 +554,14 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
                   type="button"
                   data-slot="user-card"
                   onClick={() => openEdit(row)}
-                  className="flex w-full flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="truncate font-medium">
                         {row.full_name ?? row.email ?? "-"}
                       </div>
-                      <div className="truncate text-xs text-muted-foreground">
+                      <div className="truncate text-xs leading-tight text-muted-foreground">
                         {row.email}
                       </div>
                     </div>
@@ -855,16 +856,26 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
             </Field>
           </div>
           <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="outline" onClick={closeEdit}>
+            <Button
+              variant="outline"
+              onClick={closeEdit}
+              className="h-11 lg:h-8"
+            >
               取消
             </Button>
-            <Button onClick={() => void handleSave()} disabled={saving}>
+            <Button
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className="h-11 lg:h-8"
+            >
               {saving ? (
                 <Loader2Icon
                   className="animate-spin"
                   data-icon="inline-start"
                 />
-              ) : null}
+              ) : (
+                <SaveIcon data-icon="inline-start" />
+              )}
               保存
             </Button>
           </SheetFooter>

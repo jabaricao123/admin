@@ -1038,7 +1038,7 @@ function MobileConfig({
           重置
         </Button>
         <Button
-          className="h-11 flex-1"
+          className="h-11 flex-1 lg:h-8"
           disabled={saving || !hasChanges}
           onClick={onSave}
         >
@@ -1104,7 +1104,7 @@ function PreviewCard({
     .filter((entry) => entry.parentVisible || entry.children.length > 0);
 
   return (
-    <Card className="rounded-none border-0 md:rounded-xl md:border">
+    <Card className="rounded-none border-0 md:rounded-xl md:border gap-3! py-3!">
       <CardHeader>
         <CardTitle>按角色预览菜单</CardTitle>
         <CardDescription>

@@ -426,9 +426,9 @@ export function ChangesTable() {
               key={row.id}
               type="button"
               onClick={() => handleRecentClick(row)}
-              className="flex w-full items-center justify-between gap-3 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              className="flex w-full items-center justify-between gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
             >
-              <div className="flex min-w-0 flex-col gap-1">
+              <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate font-mono text-xs">{row.record_id}</span>
                 <span className="truncate text-xs text-muted-foreground">
                   {row.changed_by_name ?? "系统/后台"} ·{" "}
@@ -706,7 +706,7 @@ export function ChangesTable() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-none border-0 md:rounded-xl md:border">
+      <Card className="rounded-none border-0 md:rounded-xl md:border gap-3! py-3!">
         <CardHeader>
           <CardTitle>留痕表白名单</CardTitle>
           <CardDescription>

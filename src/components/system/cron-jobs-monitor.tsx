@@ -300,7 +300,7 @@ export function CronJobsMonitor() {
 
         {/* 任务登记：registry ⨝ cron.job 聚合（全站 job 只读总览） */}
         <TabsContent value="registry" className="mt-4">
-          <Card>
+          <Card className="gap-3! py-3!">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ClockIcon className="size-4 text-muted-foreground" />
@@ -414,7 +414,7 @@ export function CronJobsMonitor() {
 
         {/* 执行历史：cron.job_run_details 经 admin RPC（可按 job 过滤） */}
         <TabsContent value="history" className="mt-4">
-          <Card>
+          <Card className="gap-3! py-3!">
             <CardHeader>
               <CardTitle>执行历史（最近 {RUN_LIMIT} 条）</CardTitle>
               <CardDescription>

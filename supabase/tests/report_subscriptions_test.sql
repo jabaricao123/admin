@@ -269,7 +269,7 @@ set local role authenticated;
 select throws_ok(
   $$ select public.upsert_report_subscription(
        null, (select id from fixture_ids where label = 'def_public'),
-       'monthly', '09:00', null, array['inbox'], 'self') $$,
+       'yearly', '09:00', null, array['inbox'], 'self') $$,
   '22023', null, '未知频率预设被拒'
 );
 select throws_ok(
@@ -346,8 +346,8 @@ select is(
   (select cron_expr || '|' || status || '|' || recipients || '|' || channels::text
      from public.report_subscriptions
     where id = (select id from fixture_ids where label = 'sub_main')),
-  '30 9 * * *|active|self|{email,inbox}',
-  '新建落库：cron 映射 / active / self / 渠道去重排序'
+  '30 1 * * *|active|self|{email,inbox}',
+  '新建落库：cron 映射（09:30 CST → 01:30 UTC）/ active / self / 渠道去重排序'
 );
 select is(
   (select count(*) from cron.job
@@ -356,18 +356,18 @@ select is(
   'pg_cron 已注册 report-sub-<id> job'
 );
 select ok(
-  (select schedule = '30 9 * * *'
+  (select schedule = '30 1 * * *'
           and command like '%app.run_report_subscription(''%'
      from cron.job
     where jobname = 'report-sub-' || (select id::text from fixture_ids where label = 'sub_main')),
-  'cron 表达式与回调命令正确'
+  'cron 表达式（UTC）与回调命令正确'
 );
 select ok(
   exists (
     select 1 from public.system_cron_registry
      where job_name = 'report-sub-' || (select id::text from fixture_ids where label = 'sub_main')
        and module = 'report'
-       and cron_expr = '30 9 * * *'
+       and cron_expr = '30 1 * * *'
        and owner_route = '/report/subscriptions'
        and status = 'active'
   ),
@@ -397,13 +397,13 @@ reset role;
 select is(
   (select cron_expr || '|' || recipients from public.report_subscriptions
     where id = (select id from fixture_ids where label = 'sub_main')),
-  '5 8 * * 5|role:planner',
-  '编辑后 cron/recipients 落库正确'
+  '5 0 * * 5|role:planner',
+  '编辑后 cron/recipients 落库正确（周五 08:05 CST → 5 0 * * 5 UTC）'
 );
 select is(
   (select schedule from cron.job
     where jobname = 'report-sub-' || (select id::text from fixture_ids where label = 'sub_main')),
-  '5 8 * * 5',
+  '5 0 * * 5',
   '编辑后 pg_cron job 同步更新（同名幂等）'
 );
 

@@ -87,11 +87,6 @@ export const REPORT_CHART_TYPES: ReportChartType[] = [
   "pie",
 ];
 
-export const REPORT_CHART_OPTIONS = REPORT_CHART_TYPES.map((value) => ({
-  value,
-  label: REPORT_CHART_LABELS[value],
-}));
-
 export const REPORT_AGG_OPTIONS = (
   Object.keys(REPORT_AGG_LABELS) as ReportAgg[]
 ).map((value) => ({ value, label: REPORT_AGG_LABELS[value] }));
@@ -230,9 +225,12 @@ export function allowedViewColumns(view: AllowedView): Array<{
 
 /** 报表 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
 export function translateReportErrorMessage(message: string): string {
-  return /[\u4e00-\u9fa5]/.test(message)
-    ? message
-    : translateErrorMessage(message);
+  // 删除预检（delete_report_definition）的订阅引用拒绝带动态订阅数，显式列入白名单原文透传，
+  // 防止后续收窄中文兜底时被二次包裹为「操作失败：…（若持续出现请联系管理员）」
+  const isBusinessRule =
+    /^该报表仍有 \d+ 条订阅记录（含已删除订阅），无法删除$/.test(message) ||
+    /[\u4e00-\u9fa5]/.test(message);
+  return isBusinessRule ? message : translateErrorMessage(message);
 }
 
 /** 配置摘要（详情/导出任务行使用）：只列结构化要点，避免 JSON 噪音 */

@@ -456,7 +456,7 @@ export function DictionariesTable() {
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         {/* 左侧：字典分组导航 */}
-        <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+        <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
           <CardHeader>
             <CardTitle>字典分组</CardTitle>
             <CardDescription>
@@ -507,7 +507,7 @@ export function DictionariesTable() {
         </Card>
 
         {/* 右侧：字典项 Table */}
-        <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+        <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-mono text-base">
               <BookMarkedIcon className="size-4 text-muted-foreground" />

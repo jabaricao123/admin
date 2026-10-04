@@ -320,11 +320,9 @@ export function DataScopesTable() {
     );
   };
 
-  const renderSaveButton = (role: RoleInfo, className?: string) => (
+  const renderSaveButton = (role: RoleInfo) => (
     <Button
-      className={className}
-      size={isMobile ? "default" : "sm"}
-      variant="outline"
+      className="h-11 lg:h-8"
       disabled={!isDirty(role) || savingRoleId !== null}
       onClick={() => void handleSave(role)}
     >
@@ -381,7 +379,7 @@ export function DataScopesTable() {
               {roles.map((role) => (
                 <div
                   key={role.id}
-                  className="flex w-full flex-col gap-3 rounded-xl border bg-card p-4 shadow-xs"
+                  className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 shadow-xs"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -396,7 +394,7 @@ export function DataScopesTable() {
                           {role.isBuiltin ? "内置" : "自定义"}
                         </Badge>
                       </div>
-                      <div className="truncate font-mono text-xs text-muted-foreground">
+                      <div className="truncate font-mono text-xs leading-tight text-muted-foreground">
                         {role.code}
                       </div>
                     </div>
@@ -422,7 +420,7 @@ export function DataScopesTable() {
                     <span className="text-[11px] text-muted-foreground">
                       更新于 {formatDateTime(updatedAt[role.id] ?? null)}
                     </span>
-                    {renderSaveButton(role, "h-11")}
+                    {renderSaveButton(role)}
                   </div>
                 </div>
               ))}
@@ -496,7 +494,7 @@ export function DataScopesTable() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-none border-0 md:rounded-xl md:border">
+      <Card className="rounded-none border-0 md:rounded-xl md:border gap-3! py-3!">
         <CardHeader>
           <CardTitle>以用户视角预检</CardTitle>
           <CardDescription>

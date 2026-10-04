@@ -153,7 +153,7 @@ export function DashboardNotifications() {
                 <Link
                   key={row.id}
                   href={INBOX_ROUTE}
-                  className="relative flex w-full flex-col gap-2.5 rounded-xl border bg-card p-4 pl-5 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className="relative flex w-full flex-col gap-2 rounded-xl border bg-card p-3 pl-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
                   {isUnread(row) ? (
                     <span

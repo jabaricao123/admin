@@ -300,7 +300,7 @@ export function PushConfigPanel() {
           return (
             <Card
               key={channel}
-              className="rounded-none border-0 md:rounded-xl md:border md:@container/card"
+              className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!"
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

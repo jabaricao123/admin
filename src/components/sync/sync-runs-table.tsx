@@ -289,14 +289,14 @@ export function SyncRunsTable() {
                     type="button"
                     data-slot="sync-run-card"
                     onClick={() => openDetail(run)}
-                    className="flex w-full flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                    className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate font-medium">
                           {run.task_name}
                         </div>
-                        <div className="truncate text-xs text-muted-foreground">
+                        <div className="truncate text-xs leading-tight text-muted-foreground">
                           {formatDateTime(run.started_at)} ·{" "}
                           {formatDuration(run.started_at, run.finished_at)}
                         </div>

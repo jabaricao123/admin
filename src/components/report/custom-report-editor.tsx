@@ -13,6 +13,7 @@ import {
   Loader2Icon,
   PieChartIcon,
   PlusIcon,
+  SaveIcon,
   TableIcon,
   Trash2Icon,
 } from "lucide-react";
@@ -795,7 +796,11 @@ export function CustomReportEditor({
               上一步
             </Button>
           ) : (
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              variant="outline"
+              className="h-11 lg:h-8"
+              onClick={() => onOpenChange(false)}
+            >
               取消
             </Button>
           )}
@@ -807,10 +812,16 @@ export function CustomReportEditor({
               下一步
             </Button>
           ) : (
-            <Button onClick={() => void handleSave()} disabled={saving}>
+            <Button
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className="h-11 lg:h-8"
+            >
               {saving ? (
                 <Loader2Icon className="animate-spin" data-icon="inline-start" />
-              ) : null}
+              ) : (
+                <SaveIcon data-icon="inline-start" />
+              )}
               保存报表
             </Button>
           )}

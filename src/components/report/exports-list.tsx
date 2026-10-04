@@ -322,14 +322,14 @@ export function ExportsList({ currentUserId, isAdmin }: { currentUserId: string;
               key={job.id}
               type="button"
               onClick={() => setDetailId(job.id)}
-              className="flex w-full flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate font-medium">
                     {exportSourceLabel(job.source)}
                   </div>
-                  <div className="truncate font-mono text-xs text-muted-foreground">
+                  <div className="truncate font-mono text-xs leading-tight text-muted-foreground">
                     {job.source}
                   </div>
                 </div>
@@ -383,7 +383,16 @@ export function ExportsList({ currentUserId, isAdmin }: { currentUserId: string;
               <TableRow
                 key={job.id}
                 className="cursor-pointer"
+                role="button"
+                tabIndex={0}
+                aria-label={`查看导出任务 ${exportSourceLabel(job.source)}`}
                 onClick={() => setDetailId(job.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setDetailId(job.id);
+                  }
+                }}
               >
                 <TableCell className="text-center">
                   <div className="font-medium">{exportSourceLabel(job.source)}</div>
@@ -565,6 +574,7 @@ export function ExportsList({ currentUserId, isAdmin }: { currentUserId: string;
                 {parsedStatus === "failed" ? (
                   <Button
                     variant="outline"
+                    className="h-11 lg:h-8"
                     onClick={() => void handleRetry(activeJob)}
                     disabled={retryingId === activeJob.id || limitReached}
                   >
@@ -580,6 +590,7 @@ export function ExportsList({ currentUserId, isAdmin }: { currentUserId: string;
                   </Button>
                 ) : null}
                 <Button
+                  className="h-11 lg:h-8"
                   onClick={() => void handleDownload(activeJob)}
                   disabled={!downloadable || downloadingId === activeJob.id}
                 >
@@ -615,7 +626,10 @@ export function ExportsList({ currentUserId, isAdmin }: { currentUserId: string;
             <Field>
               <FieldLabel htmlFor="export-source">导出源</FieldLabel>
               <Select value={requestSource} onValueChange={setRequestSource}>
-                <SelectTrigger id="export-source" className="w-full">
+                <SelectTrigger
+                  id="export-source"
+                  className="w-full min-h-11 lg:min-h-8"
+                >
                   <SelectValue placeholder="请选择导出源" />
                 </SelectTrigger>
                 <SelectContent>
@@ -671,10 +685,15 @@ export function ExportsList({ currentUserId, isAdmin }: { currentUserId: string;
           </div>
 
           <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="outline" onClick={() => setRequestOpen(false)}>
+            <Button
+              variant="outline"
+              className="h-11 lg:h-8"
+              onClick={() => setRequestOpen(false)}
+            >
               取消
             </Button>
             <Button
+              className="h-11 lg:h-8"
               onClick={() => void handleRequest()}
               disabled={requesting || !requestSource || limitReached}
             >

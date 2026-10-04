@@ -298,14 +298,14 @@ export function LoginsTable({ isAdmin }: { isAdmin: boolean }) {
               {pagedRows.map((row) => (
                 <div
                   key={row.id}
-                  className="flex w-full flex-col gap-2.5 rounded-xl border bg-card p-4 shadow-xs"
+                  className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 shadow-xs"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="truncate font-medium">
                         {row.email ?? "未知邮箱"}
                       </div>
-                      <div className="truncate text-xs text-muted-foreground">
+                      <div className="truncate text-xs leading-tight text-muted-foreground">
                         {formatDateTime(row.created_at)}
                       </div>
                     </div>

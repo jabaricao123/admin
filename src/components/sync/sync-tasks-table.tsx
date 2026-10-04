@@ -9,6 +9,7 @@ import {
   HistoryIcon,
   Loader2Icon,
   PlusIcon,
+  SaveIcon,
   Trash2Icon,
   WorkflowIcon,
 } from "lucide-react";
@@ -642,12 +643,12 @@ export function SyncTasksTable() {
                     type="button"
                     data-slot="sync-task-card"
                     onClick={() => openEdit(row)}
-                    className="flex w-full flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                    className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="truncate font-medium">{row.name}</div>
-                        <div className="truncate text-xs text-muted-foreground">
+                        <div className="truncate text-xs leading-tight text-muted-foreground">
                           {row.source_name} · v{row.config_version}
                         </div>
                       </div>
@@ -1280,6 +1281,7 @@ export function SyncTasksTable() {
             <Button
               variant="outline"
               onClick={step > 1 ? previousStep : closeSheet}
+              className="h-11 lg:h-8"
             >
               {step > 1 ? (
                 <>
@@ -1296,13 +1298,19 @@ export function SyncTasksTable() {
                 <ArrowRightIcon data-icon="inline-end" />
               </Button>
             ) : (
-              <Button onClick={() => void handleSave()} disabled={saving}>
+              <Button
+                onClick={() => void handleSave()}
+                disabled={saving}
+                className="h-11 lg:h-8"
+              >
                 {saving ? (
                   <Loader2Icon
                     className="animate-spin"
                     data-icon="inline-start"
                   />
-                ) : null}
+                ) : (
+                  <SaveIcon data-icon="inline-start" />
+                )}
                 保存任务
               </Button>
             )}

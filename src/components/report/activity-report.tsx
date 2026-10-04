@@ -226,7 +226,7 @@ export function ActivityReport({ isAdmin }: { isAdmin: boolean }) {
 
   if (!isAdmin) {
     return (
-      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle>操作活跃度</CardTitle>
           <CardDescription>按日操作量、活跃用户 Top10</CardDescription>
@@ -330,7 +330,7 @@ export function ActivityReport({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
-      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle>操作活跃度</CardTitle>
           <CardDescription>
@@ -341,7 +341,7 @@ export function ActivityReport({ isAdmin }: { isAdmin: boolean }) {
           <div className="flex flex-wrap items-center gap-2">
             <Select value={rangeValue} onValueChange={setRangeValue}>
               <SelectTrigger
-                className="h-11 w-full sm:w-36 lg:h-8"
+                className="w-full sm:w-36 min-h-11 lg:min-h-8"
                 aria-label="时间范围"
               >
                 <SelectValue placeholder="时间范围" />
@@ -383,7 +383,7 @@ export function ActivityReport({ isAdmin }: { isAdmin: boolean }) {
       </Card>
 
       {hasData && !loading && !error ? (
-        <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+        <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
           <CardHeader>
             <CardTitle className="text-base">活跃用户 Top 10</CardTitle>
             <CardDescription>

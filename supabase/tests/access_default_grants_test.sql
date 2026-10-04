@@ -7,7 +7,7 @@
 
 begin;
 
-select plan(20);
+select plan(22);
 
 -- ===========================================================================
 -- 1. seed 授权结构（7）
@@ -18,8 +18,8 @@ select is(
      join public.roles r on r.id = g.role_id
     where r.code = 'engineer'
       and g.granted_by is null),
-  10::bigint,
-  'engineer 系统默认授权 10 条（granted_by=null）'
+  15::bigint,
+  'engineer 系统默认授权 15 条（granted_by=null，含报表菜单 5）'
 );
 select results_eq(
   $$ select g.menu_key
@@ -36,9 +36,14 @@ select results_eq(
        ('/message/inbox'),
        ('/org'),
        ('/org/chart'),
+       ('/report'),
+       ('/report/builtin'),
+       ('/report/custom'),
+       ('/report/exports'),
+       ('/report/subscriptions'),
        ('/system'),
        ('/system/about') $$,
-  'engineer 授权集 = 基础菜单 + 顶级分组（含完整祖先链）'
+  'engineer 授权集 = 基础菜单 + 顶级分组 + 报表菜单（含完整祖先链）'
 );
 select is(
   (select count(*)
@@ -46,8 +51,8 @@ select is(
      join public.roles r on r.id = g.role_id
     where r.code in ('engineer', 'planner', 'buyer', 'quality')
       and g.granted_by is null),
-  40::bigint,
-  '4 个内部角色系统默认授权共 40 条（各 10 条）'
+  60::bigint,
+  '4 个内部角色系统默认授权共 60 条（各 15 条，含报表菜单）'
 );
 select results_eq(
   $$ select g.menu_key
@@ -94,8 +99,8 @@ set local role authenticated;
 
 select is(
   (select count(*) from public.visible_menus()),
-  10::bigint,
-  'engineer：恰见 10 条默认授权菜单'
+  15::bigint,
+  'engineer：恰见 15 条默认授权菜单（含报表菜单）'
 );
 select ok(
   (select bool_and(not fallback) from public.visible_menus()),
@@ -105,6 +110,11 @@ select ok(
   exists (select 1 from public.visible_menus() where key = '/org/chart')
     and exists (select 1 from public.visible_menus() where key = '/dashboard/todos'),
   'engineer：含授权叶子 /org/chart、/dashboard/todos'
+);
+select ok(
+  exists (select 1 from public.visible_menus() where key = '/report/builtin')
+    and exists (select 1 from public.visible_menus() where key = '/report/subscriptions'),
+  'engineer：含报表菜单 /report/builtin、/report/subscriptions'
 );
 select ok(
   not exists (select 1 from public.visible_menus() where key = '/org/users')
@@ -149,6 +159,11 @@ select ok(
     and not exists (select 1 from public.visible_menus() where key = '/org/chart')
     and not exists (select 1 from public.visible_menus() where key = '/system/about'),
   'supplier：不含内部基础菜单（待办/组织图/关于）'
+);
+select ok(
+  not exists (select 1 from public.visible_menus() where key = '/report/builtin')
+    and not exists (select 1 from public.visible_menus() where key = '/report'),
+  'supplier：不含报表菜单（/report、/report/builtin）'
 );
 
 -- ===========================================================================

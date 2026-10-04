@@ -8,7 +8,7 @@
 
 begin;
 
-select plan(95);
+select plan(96);
 
 -- 测试账号（seeds）：admin=1111... / engineer=2222...0001 / planner=2222...0002；
 -- supplier 在夹具中构造（验证外部用户经 RLS 收窄的属主身份注入）。
@@ -497,15 +497,40 @@ select throws_ok(
 );
 reset role;
 
--- download：过期（创建时间 8 天前）拒绝
+-- download：E-2 基准修正——创建 8 天前、完成 1 天前的任务仍可下载（以 finished_at 计）
+insert into public.export_jobs (source, requested_by, status, content, size_bytes, created_at, finished_at)
+values ('org.users', '11111111-1111-1111-1111-111111111111', 'done', 'id,full_name', 12,
+        now() - interval '8 days', now() - interval '1 day');
+insert into fixture_ids (label, id)
+select 'admin_old_created', id from public.export_jobs
+ where requested_by = '11111111-1111-1111-1111-111111111111'
+   and status = 'done'
+   and created_at < now() - interval '7 days'
+   and content is not null
+ order by created_at desc
+ limit 1;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+select lives_ok(
+  $$ select public.download_export((select id from fixture_ids where label = 'admin_old_created')) $$,
+  'E-2：创建 8 天前但完成 1 天前的任务仍可下载（基准 finished_at）'
+);
+reset role;
+
+-- download：过期（完成时间 8 天前）拒绝
 update public.export_jobs
-   set created_at = now() - interval '8 days'
+   set created_at = now() - interval '8 days',
+       finished_at = now() - interval '8 days'
  where id = (select id from fixture_ids where label = 'eng_user');
 set local role authenticated;
 select throws_ok(
   $$ select public.download_export((select id from fixture_ids where label = 'eng_user')) $$,
-  'P0001', '导出文件已过期（创建后 7 天内可下载）',
-  '过期任务下载被拒（7 天有效期）'
+  'P0001', '导出文件已过期（完成后 7 天内可下载）',
+  '过期任务下载被拒（完成 7 天有效期）'
 );
 reset role;
 

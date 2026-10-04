@@ -25,6 +25,7 @@ import {
   PencilIcon,
   PlusIcon,
   RocketIcon,
+  SaveIcon,
   Trash2Icon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -1102,7 +1103,9 @@ export function ApprovalTemplatesTable() {
                     className="animate-spin"
                     data-icon="inline-start"
                   />
-                ) : null}
+                ) : (
+                  <SaveIcon data-icon="inline-start" />
+                )}
                 保存草稿
               </Button>
               <Button

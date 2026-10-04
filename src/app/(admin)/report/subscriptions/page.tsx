@@ -19,16 +19,5 @@ export default async function ReportSubscriptionsPage() {
   }
 
   // admin 可见全量订阅；普通用户仅自己的订阅（RLS 兜底）
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  return (
-    <ReportSubscriptions
-      currentUserId={user.id}
-      isAdmin={profile?.role === "admin"}
-    />
-  );
+  return <ReportSubscriptions currentUserId={user.id} />;
 }

@@ -10,6 +10,7 @@ import {
   BarChart3Icon,
   CopyIcon,
   LineChartIcon,
+  Loader2Icon,
   PencilIcon,
   PieChartIcon,
   PlusIcon,
@@ -119,6 +120,9 @@ export function CustomReports({
   const [page, setPage] = React.useState(1);
   const [panel, setPanel] = React.useState<PanelState>(null);
   const [runState, setRunState] = React.useState<RunState>(IDLE_RUN);
+  const [confirmDeleteDef, setConfirmDeleteDef] =
+    React.useState<ReportDefinition | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -259,20 +263,18 @@ export function CustomReports({
   };
 
   const handleDelete = async (def: ReportDefinition) => {
-    if (
-      !window.confirm(`确定删除报表「${def.name}」？删除后不可恢复。`)
-    ) {
-      return;
-    }
+    setDeleting(true);
     const { error: deleteError } = await createClient().rpc(
       "delete_report_definition",
       { p_def_id: def.id },
     );
+    setDeleting(false);
     if (deleteError) {
       toast.error(translateReportErrorMessage(deleteError.message));
       return;
     }
     toast.success("已删除");
+    setConfirmDeleteDef(null);
     closePanel();
     void load();
   };
@@ -328,7 +330,7 @@ export function CustomReports({
               key={def.id}
               type="button"
               onClick={() => openView(def.id)}
-              className="flex w-full flex-col gap-2.5 rounded-xl border bg-card p-4 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 truncate font-medium">{def.name}</div>
@@ -380,7 +382,16 @@ export function CustomReports({
               <TableRow
                 key={def.id}
                 className="cursor-pointer"
+                role="button"
+                tabIndex={0}
+                aria-label={`查看报表 ${def.name}`}
                 onClick={() => openView(def.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openView(def.id);
+                  }
+                }}
               >
                 <TableCell className="text-center font-medium">
                   {def.name}
@@ -626,7 +637,7 @@ export function CustomReports({
               {isOwner || isAdmin ? (
                 <Button
                   variant="destructive"
-                  onClick={() => void handleDelete(activeDef)}
+                  onClick={() => setConfirmDeleteDef(activeDef)}
                 >
                   <Trash2Icon data-icon="inline-start" />
                   删除
@@ -634,6 +645,54 @@ export function CustomReports({
               ) : null}
             </SheetFooter>
           ) : null}
+        </SheetContent>
+      </Sheet>
+
+      {/* 删除确认 Sheet（替代 window.confirm） */}
+      <Sheet
+        open={confirmDeleteDef !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmDeleteDef(null);
+          }
+        }}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-[480px]">
+          <SheetHeader>
+            <SheetTitle>删除报表</SheetTitle>
+            <SheetDescription>
+              {confirmDeleteDef
+                ? `确定删除报表「${confirmDeleteDef.name}」？删除后不可恢复。`
+                : ""}
+            </SheetDescription>
+          </SheetHeader>
+          <SheetFooter className="flex-row justify-end gap-2">
+            <Button
+              variant="outline"
+              className="h-11 lg:h-8"
+              onClick={() => setConfirmDeleteDef(null)}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              className="h-11 lg:h-8"
+              disabled={deleting}
+              onClick={() =>
+                confirmDeleteDef && void handleDelete(confirmDeleteDef)
+              }
+            >
+              {deleting ? (
+                <Loader2Icon
+                  className="animate-spin"
+                  data-icon="inline-start"
+                />
+              ) : (
+                <Trash2Icon data-icon="inline-start" />
+              )}
+              删除
+            </Button>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
 

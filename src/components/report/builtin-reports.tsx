@@ -108,7 +108,7 @@ export function BuiltinReports({ isAdmin }: { isAdmin: boolean }) {
             onClick={() => setSelected(report.key)}
             className="group text-left focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none rounded-xl"
           >
-            <Card className="h-full transition-colors group-hover:border-primary/50">
+            <Card className="h-full transition-colors group-hover:border-primary/50 gap-3! py-3!">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">

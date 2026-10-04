@@ -188,9 +188,19 @@ export function ReportResultView({
         name: String(row.__label),
         value: Number(row[primary.alias] ?? 0),
       }));
+      // 图例按行名建 ChartConfig：ChartLegendContent(nameKey="name") 反查 label 才能渲染文字
+      const pieConfig: ChartConfig = Object.fromEntries(
+        pieData.map((entry, index) => [
+          entry.name,
+          {
+            label: entry.name,
+            color: CHART_COLORS[index % CHART_COLORS.length],
+          },
+        ]),
+      );
       return (
         <ChartContainer
-          config={{ value: { label: primary.label, color: primary.color } }}
+          config={pieConfig}
           className="aspect-auto h-[280px] w-full"
         >
           <PieChart>

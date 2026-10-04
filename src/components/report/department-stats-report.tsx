@@ -7,7 +7,8 @@
 
 import * as React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { Building2Icon } from "lucide-react";
+import { Building2Icon, DownloadIcon, Loader2Icon } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   ReportEmptyState,
@@ -17,6 +18,7 @@ import {
   type ReportViewMode,
 } from "@/components/report/report-shared";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -86,6 +88,7 @@ export function DepartmentStatsReport() {
   const [positions, setPositions] = React.useState<PositionRow[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [exporting, setExporting] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -119,6 +122,27 @@ export function DepartmentStatsReport() {
   React.useEffect(() => {
     void load();
   }, [load]);
+
+  /** 导出部门分布数据：走 report 统一导出管道（CSV） */
+  const handleExport = async () => {
+    setExporting(true);
+    const { error: exportError } = await createClient().rpc("request_export", {
+      p_source: "org.departments",
+    });
+    setExporting(false);
+
+    if (exportError) {
+      // TODO(report/008 + org/013)：export_sources 尚未注册 org.departments，
+      // request_export 会报「导出源不存在」；后端登记该源后删掉本兜底分支。
+      if (exportError.message.includes("导出源不存在")) {
+        toast.error("该报表导出暂未开通");
+        return;
+      }
+      toast.error(translateErrorMessage(exportError.message));
+      return;
+    }
+    toast.success("导出任务已创建，完成后到 /report/exports 下载");
+  };
 
   const stats = React.useMemo<DeptStat[]>(() => {
     return depts.map((dept) => {
@@ -289,7 +313,7 @@ export function DepartmentStatsReport() {
   };
 
   return (
-    <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+    <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
       <CardHeader>
         <CardTitle>部门分布</CardTitle>
         <CardDescription>
@@ -299,6 +323,22 @@ export function DepartmentStatsReport() {
       <CardContent className="flex flex-col gap-4 p-4 md:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <ViewToggle value={view} onChange={setView} />
+          <Button
+            variant="outline"
+            onClick={() => void handleExport()}
+            disabled={exporting}
+            className="ml-auto h-11 lg:h-8"
+          >
+            {exporting ? (
+              <Loader2Icon
+                className="animate-spin"
+                data-icon="inline-start"
+              />
+            ) : (
+              <DownloadIcon data-icon="inline-start" />
+            )}
+            导出部门数据
+          </Button>
         </div>
 
         {renderContent()}

@@ -2,21 +2,22 @@
 
 // 报表中心 · 报表订阅（report/006）
 // 列表：报表名 / 频率（cron→中文预设回显）/ 渠道 / 接收范围 / 状态 / 上次执行 / 下次执行。
-// 新增编辑 Sheet：选报表（我的+公共）→ 频率预设（每天/每周/每小时）→ 渠道（站内信/邮件）
+// 新增编辑 Sheet：选报表（我的+公共）→ 频率预设（每小时/每天/每周/每月）→ 渠道（站内信/邮件）
 //   → 接收范围（自己/按角色）；频率只给预设，cron 由 upsert_report_subscription 映射落表。
-// 执行历史 Sheet：runs 列表（状态/耗时/失败原因）+ 手动执行一次 + 失败重发。
-// 删除二次确认（逻辑删：保留执行历史并注销 pg_cron job）；执行身份由后端注入订阅属主。
+// 行/卡片整卡可点打开执行历史 Sheet：runs 列表（状态/耗时/失败原因）+ 手动执行一次 + 失败重发；
+//   编辑/启停/删除动作集中在 Sheet 底部（列表页行内无按钮，DESIGN §4.3）。
+// 删除走确认 Sheet（逻辑删：保留执行历史并注销 pg_cron job）；执行身份由后端注入订阅属主。
 
 import * as React from "react";
 import {
   BellRingIcon,
   CalendarClockIcon,
   CalendarPlusIcon,
-  HistoryIcon,
   Loader2Icon,
   PencilIcon,
   PlayIcon,
   RotateCcwIcon,
+  SaveIcon,
   Trash2Icon,
   UsersIcon,
 } from "lucide-react";
@@ -65,7 +66,6 @@ import {
   asReportSubscriptionStatus,
   describeCronExpr,
   REPORT_CHANNEL_LABELS,
-  REPORT_SUBSCRIPTION_PRESET_LABELS,
   REPORT_SUBSCRIPTION_PRESET_OPTIONS,
   REPORT_SUBSCRIPTION_RUN_STATUS_BADGE_CLASSES,
   REPORT_SUBSCRIPTION_RUN_STATUS_LABELS,
@@ -111,7 +111,7 @@ const EMPTY_FORM: SubscriptionForm = {
   roleCode: "",
 };
 
-/** cron → 表单预设（仅解析 RPC 写入的三种形态；异常时回退每天 09:00） */
+/** cron → 表单预设（仅解析 RPC 写入的四种形态；异常时回退每天 09:00） */
 const parseSubscriptionCron = (
   expr: string | null | undefined,
 ): { preset: ReportSubscriptionPreset; time: string; weekday: string } => {
@@ -123,16 +123,19 @@ const parseSubscriptionCron = (
   if (
     parts.length === 5 &&
     /^\d{1,2}$/.test(parts[0]) &&
-    /^\d{1,2}$/.test(parts[1]) &&
-    parts[2] === "*" &&
-    parts[3] === "*"
+    /^\d{1,2}$/.test(parts[1])
   ) {
     const time = `${parts[1].padStart(2, "0")}:${parts[0].padStart(2, "0")}`;
-    if (parts[4] === "*") {
-      return { preset: "daily", time, weekday: "1" };
+    if (parts[2] === "1" && parts[3] === "*" && parts[4] === "*") {
+      return { preset: "monthly", time, weekday: "1" };
     }
-    if (/^\d$/.test(parts[4])) {
-      return { preset: "weekly", time, weekday: parts[4] };
+    if (parts[2] === "*" && parts[3] === "*") {
+      if (parts[4] === "*") {
+        return { preset: "daily", time, weekday: "1" };
+      }
+      if (/^\d$/.test(parts[4])) {
+        return { preset: "weekly", time, weekday: parts[4] };
+      }
     }
   }
   return { preset: "daily", time: "09:00", weekday: "1" };
@@ -149,15 +152,16 @@ const presetSummary = (form: SubscriptionForm): string => {
       `周${form.weekday}`;
     return `每${weekday} ${form.time}`;
   }
+  if (form.preset === "monthly") {
+    return `每月 1 日 ${form.time}`;
+  }
   return `每天 ${form.time}`;
 };
 
 export function ReportSubscriptions({
   currentUserId,
-  isAdmin,
 }: {
   currentUserId: string;
-  isAdmin: boolean;
 }) {
   const isMobile = useIsMobile();
   const [rows, setRows] = React.useState<SubscriptionRow[]>([]);
@@ -172,6 +176,8 @@ export function ReportSubscriptions({
   const [saving, setSaving] = React.useState(false);
   const [togglingId, setTogglingId] = React.useState<string | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [confirmDeleteFor, setConfirmDeleteFor] =
+    React.useState<SubscriptionRow | null>(null);
 
   const [historyFor, setHistoryFor] = React.useState<SubscriptionRow | null>(
     null,
@@ -353,14 +359,6 @@ export function ReportSubscriptions({
   };
 
   const handleDelete = async (row: SubscriptionRow) => {
-    if (
-      !window.confirm(
-        `确定删除订阅「${row.report_name}」？删除为逻辑删除：保留执行历史并注销定时任务。`,
-      )
-    ) {
-      return;
-    }
-
     setDeletingId(row.id);
     const { error: deleteError } = await createClient().rpc(
       "delete_report_subscription",
@@ -373,6 +371,7 @@ export function ReportSubscriptions({
       return;
     }
     toast.success("已删除（历史保留）");
+    setConfirmDeleteFor(null);
     if (historyFor?.id === row.id) {
       closeHistory();
     }
@@ -455,48 +454,10 @@ export function ReportSubscriptions({
       </span>
     );
 
-  const rowActions = (row: SubscriptionRow) => (
-    <div
-      className="flex items-center justify-center gap-1"
-      onClick={(event) => event.stopPropagation()}
-    >
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label="执行历史"
-        onClick={() => openHistory(row)}
-      >
-        <HistoryIcon />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label="编辑订阅"
-        onClick={() => openEdit(row)}
-      >
-        <PencilIcon />
-      </Button>
-      <Switch
-        checked={asReportSubscriptionStatus(row.status) === "active"}
-        disabled={togglingId === row.id}
-        aria-label={`${row.status === "active" ? "停用" : "启用"}订阅`}
-        onCheckedChange={(checked) => void handleToggle(row, checked)}
-      />
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label="删除订阅"
-        disabled={deletingId === row.id}
-        onClick={() => void handleDelete(row)}
-      >
-        {deletingId === row.id ? (
-          <Loader2Icon className="animate-spin" />
-        ) : (
-          <Trash2Icon />
-        )}
-      </Button>
-    </div>
-  );
+  /** 历史 Sheet 内操作使用列表最新行，启停后 Switch/按钮状态保持同步 */
+  const historyRow = historyFor
+    ? (rows.find((row) => row.id === historyFor.id) ?? historyFor)
+    : null;
 
   const renderLastRun = (row: SubscriptionRow) => {
     if (!row.last_run_status || !row.last_run_at) {
@@ -549,37 +510,33 @@ export function ReportSubscriptions({
           ) : isMobile ? (
             <div className="-mx-4 flex flex-col gap-2 px-4 md:mx-0 md:gap-3 md:px-0">
               {rows.map((row) => (
-                <div
+                <button
                   key={row.id}
-                  className="flex flex-col gap-2.5 rounded-xl border bg-card p-4 shadow-xs"
+                  type="button"
+                  onClick={() => openHistory(row)}
+                  aria-label={`查看订阅 ${row.report_name} 的执行历史`}
+                  className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <button
-                      type="button"
-                      className="min-w-0 text-left"
-                      onClick={() => openHistory(row)}
-                    >
+                    <div className="min-w-0">
                       <div className="truncate font-medium">
                         {row.report_name}
                       </div>
-                      <div className="truncate text-xs text-muted-foreground">
+                      <div className="truncate text-xs leading-tight text-muted-foreground">
                         {describeCronExpr(row.cron_expr)} · 下次{" "}
                         {formatDateTime(row.next_run_at)}
                       </div>
-                    </button>
+                    </div>
                     {renderStatusBadge(row.status)}
                   </div>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     {renderRecipients(row)}
                     {renderChannels(row)}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      上次 {formatDateTime(row.last_run_at)}
-                    </span>
-                    {rowActions(row)}
+                  <div className="text-xs text-muted-foreground">
+                    上次 {formatDateTime(row.last_run_at)}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           ) : (
@@ -587,14 +544,13 @@ export function ReportSubscriptions({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>报表</TableHead>
+                    <TableHead className="text-center">报表</TableHead>
                     <TableHead className="text-center">频率</TableHead>
                     <TableHead className="text-center">渠道</TableHead>
                     <TableHead className="text-center">接收范围</TableHead>
                     <TableHead className="text-center">状态</TableHead>
                     <TableHead className="text-center">上次执行</TableHead>
                     <TableHead className="text-center">下次执行</TableHead>
-                    <TableHead className="text-center">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -602,10 +558,19 @@ export function ReportSubscriptions({
                     <TableRow
                       key={row.id}
                       className="cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`查看订阅 ${row.report_name} 的执行历史`}
                       onClick={() => openHistory(row)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openHistory(row);
+                        }
+                      }}
                     >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-2">
                           <span className="font-medium">{row.report_name}</span>
                           <Badge variant="outline" className="text-xs">
                             {row.report_visibility === "public" ? "公共" : "私有"}
@@ -630,7 +595,6 @@ export function ReportSubscriptions({
                       <TableCell className="text-center text-xs text-muted-foreground">
                         {formatDateTime(row.next_run_at)}
                       </TableCell>
-                      <TableCell>{rowActions(row)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -840,16 +804,26 @@ export function ReportSubscriptions({
           </div>
 
           <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="outline" onClick={closeSheet}>
+            <Button
+              variant="outline"
+              className="h-11 lg:h-8"
+              onClick={closeSheet}
+            >
               取消
             </Button>
-            <Button onClick={() => void handleSave()} disabled={saving}>
+            <Button
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className="h-11 lg:h-8"
+            >
               {saving ? (
                 <Loader2Icon
                   className="animate-spin"
                   data-icon="inline-start"
                 />
-              ) : null}
+              ) : (
+                <SaveIcon data-icon="inline-start" />
+              )}
               保存订阅
             </Button>
           </SheetFooter>
@@ -882,7 +856,8 @@ export function ReportSubscriptions({
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                onClick={() => historyFor && void handleRunNow(historyFor)}
+                className="h-11 lg:h-8"
+                onClick={() => historyRow && void handleRunNow(historyRow)}
                 disabled={running}
               >
                 {running ? (
@@ -927,12 +902,12 @@ export function ReportSubscriptions({
                               : ` · ${run.duration_ms}ms`}
                           </span>
                         </div>
-                        {normalized === "failed" && historyFor ? (
+                        {normalized === "failed" && historyRow ? (
                           <Button
                             variant="outline"
                             size="sm"
                             disabled={running}
-                            onClick={() => void handleRunNow(historyFor)}
+                            onClick={() => void handleRunNow(historyRow)}
                           >
                             <RotateCcwIcon data-icon="inline-start" />
                             失败重发
@@ -951,9 +926,109 @@ export function ReportSubscriptions({
             )}
           </div>
 
-          <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="outline" onClick={closeHistory}>
+          <SheetFooter className="flex-row flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {historyRow ? (
+                <>
+                  <Button
+                    variant="outline"
+                    className="h-11 lg:h-8"
+                    onClick={() => {
+                      const row = historyRow;
+                      closeHistory();
+                      openEdit(row);
+                    }}
+                  >
+                    <PencilIcon data-icon="inline-start" />
+                    编辑
+                  </Button>
+                  <div className="flex min-h-11 items-center gap-2 lg:min-h-8">
+                    <Switch
+                      checked={
+                        asReportSubscriptionStatus(historyRow.status) === "active"
+                      }
+                      disabled={togglingId === historyRow.id}
+                      aria-label={`${
+                        asReportSubscriptionStatus(historyRow.status) === "active"
+                          ? "停用"
+                          : "启用"
+                      }订阅`}
+                      onCheckedChange={(checked) =>
+                        void handleToggle(historyRow, checked)
+                      }
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {asReportSubscriptionStatus(historyRow.status) === "active"
+                        ? "启用中"
+                        : "已停用"}
+                    </span>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    className="h-11 lg:h-8"
+                    disabled={deletingId === historyRow.id}
+                    onClick={() => setConfirmDeleteFor(historyRow)}
+                  >
+                    <Trash2Icon data-icon="inline-start" />
+                    删除
+                  </Button>
+                </>
+              ) : null}
+            </div>
+            <Button
+              variant="outline"
+              className="h-11 lg:h-8"
+              onClick={closeHistory}
+            >
               关闭
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      {/* 删除确认 Sheet（替代 window.confirm；逻辑删说明与动作一致） */}
+      <Sheet
+        open={confirmDeleteFor !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmDeleteFor(null);
+          }
+        }}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-[480px]">
+          <SheetHeader>
+            <SheetTitle>删除订阅</SheetTitle>
+            <SheetDescription>
+              {confirmDeleteFor
+                ? `确定删除订阅「${confirmDeleteFor.report_name}」？删除为逻辑删除：保留执行历史并注销定时任务。`
+                : ""}
+            </SheetDescription>
+          </SheetHeader>
+          <SheetFooter className="flex-row justify-end gap-2">
+            <Button
+              variant="outline"
+              className="h-11 lg:h-8"
+              onClick={() => setConfirmDeleteFor(null)}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              className="h-11 lg:h-8"
+              disabled={deletingId === confirmDeleteFor?.id}
+              onClick={() =>
+                confirmDeleteFor && void handleDelete(confirmDeleteFor)
+              }
+            >
+              {deletingId === confirmDeleteFor?.id ? (
+                <Loader2Icon
+                  className="animate-spin"
+                  data-icon="inline-start"
+                />
+              ) : (
+                <Trash2Icon data-icon="inline-start" />
+              )}
+              删除
             </Button>
           </SheetFooter>
         </SheetContent>

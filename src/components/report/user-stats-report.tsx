@@ -211,7 +211,7 @@ export function UserStatsReport() {
   };
 
   return (
-    <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
+    <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
       <CardHeader>
         <CardTitle>人员统计</CardTitle>
         <CardDescription>
