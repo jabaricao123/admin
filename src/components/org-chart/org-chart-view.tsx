@@ -55,6 +55,9 @@ type DirectoryMember = Pick<
   "id" | "full_name" | "email" | "role" | "status" | "department_id"
 >;
 
+/** department_headcount()：deptId → 在岗人数（含子部门聚合） */
+type HeadcountMap = Map<string, number>;
+
 type ChartNode = {
   id: string;
   name: string;
@@ -284,6 +287,8 @@ export function OrgChartView() {
   const isMobile = useIsMobile();
   const [rows, setRows] = React.useState<DepartmentRow[]>([]);
   const [members, setMembers] = React.useState<DirectoryMember[]>([]);
+  /** department_headcount() 结果：deptId → 在岗人数（含子部门）；null = RPC 失败，走前端兜底 */
+  const [headcounts, setHeadcounts] = React.useState<HeadcountMap | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
@@ -295,11 +300,12 @@ export function OrgChartView() {
     setLoading(true);
     setError(null);
     const supabase = createClient();
-    const [treeResult, directoryResult] = await Promise.all([
+    const [treeResult, directoryResult, headcountResult] = await Promise.all([
       supabase.rpc("department_tree"),
       supabase
         .from("profiles")
         .select("id, full_name, email, role, status, department_id"),
+      supabase.rpc("department_headcount"),
     ]);
 
     const loadError = treeResult.error ?? directoryResult.error;
@@ -311,6 +317,19 @@ export function OrgChartView() {
       setRows(treeResult.data ?? []);
       setMembers((directoryResult.data ?? []) as DirectoryMember[]);
     }
+
+    // 人数口径（org/013）：优先 department_headcount()（active + 含子部门聚合）；
+    // RPC 失败时置 null，由上方的 profiles 聚合兜底
+    setHeadcounts(
+      headcountResult.error
+        ? null
+        : new Map(
+            (headcountResult.data ?? []).map((row) => [
+              row.department_id,
+              Number(row.headcount),
+            ]),
+          ),
+    );
     setLoading(false);
   }, []);
 
@@ -338,7 +357,7 @@ export function OrgChartView() {
     initializedRef.current = true;
   }, [tree]);
 
-  /** profiles 按 department_id 聚合：兼任人数统计与成员抽屉数据源 */
+  /** profiles 按 department_id 聚合：成员抽屉数据源 + RPC 失败时的人数兜底 */
   const membersByDept = React.useMemo(() => {
     const map = new Map<string, DirectoryMember[]>();
     for (const member of members) {
@@ -369,9 +388,16 @@ export function OrgChartView() {
     [leaderNames],
   );
 
+  /** 人数：优先 department_headcount()（在岗、含子部门），RPC 失败/缺行时回退前端聚合 */
   const countOf = React.useCallback(
-    (id: string) => membersByDept.get(id)?.length ?? 0,
-    [membersByDept],
+    (id: string) => {
+      const fromRpc = headcounts?.get(id);
+      if (fromRpc !== undefined) {
+        return fromRpc;
+      }
+      return membersByDept.get(id)?.length ?? 0;
+    },
+    [headcounts, membersByDept],
   );
 
   const toggleExpand = React.useCallback((id: string) => {
@@ -428,6 +454,7 @@ export function OrgChartView() {
               size="sm"
               onClick={() => void load()}
               disabled={loading}
+              className="h-11 lg:h-7"
             >
               <RefreshCwIcon
                 data-icon="inline-start"
@@ -553,7 +580,7 @@ export function OrgChartView() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="mt-1 h-9 w-full"
+                              className="mt-1 h-11 w-full"
                               onClick={() => setMemberDeptId(node.id)}
                             >
                               <UsersIcon data-icon="inline-start" />

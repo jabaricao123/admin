@@ -121,6 +121,7 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
   const [search, setSearch] = React.useState("");
   const [roleFilter, setRoleFilter] = React.useState(ALL);
   const [statusFilter, setStatusFilter] = React.useState(ALL);
+  const [departmentFilter, setDepartmentFilter] = React.useState(ALL);
   const [page, setPage] = React.useState(1);
   const [editing, setEditing] = React.useState<Profile | null>(null);
   const [form, setForm] = React.useState<EditForm>(EMPTY_FORM);
@@ -208,6 +209,9 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
       if (statusFilter !== ALL && row.status !== statusFilter) {
         return false;
       }
+      if (departmentFilter !== ALL && row.department_id !== departmentFilter) {
+        return false;
+      }
       if (keyword) {
         const haystack = `${row.full_name ?? ""} ${
           row.email ?? ""
@@ -218,16 +222,19 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
       }
       return true;
     });
-  }, [rows, search, roleFilter, statusFilter]);
+  }, [rows, search, roleFilter, statusFilter, departmentFilter]);
 
   React.useEffect(() => {
     setPage(1);
-  }, [search, roleFilter, statusFilter]);
+  }, [search, roleFilter, statusFilter, departmentFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const hasActiveFilters =
-    search.trim() !== "" || roleFilter !== ALL || statusFilter !== ALL;
+    search.trim() !== "" ||
+    roleFilter !== ALL ||
+    statusFilter !== ALL ||
+    departmentFilter !== ALL;
   const pagedRows = filtered.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
@@ -272,6 +279,18 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
 
     return active;
   }, [departments, editing]);
+
+  /** 工具栏部门筛选：仅 active 部门，按层级缩进（与编辑下拉口径一致） */
+  const departmentFilterOptions = React.useMemo(
+    () =>
+      departments
+        .filter((item) => item.status === "active")
+        .map((item) => ({
+          id: item.id,
+          label: `${"\u3000".repeat(Math.max(0, item.depth - 1))}${item.name}`,
+        })),
+    [departments],
+  );
 
   /**
    * 岗位下拉（org/009）：active 岗位按所选部门过滤；
@@ -448,7 +467,7 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger
-                className="w-full sm:w-36 h-11 lg:h-8"
+                className="w-full sm:w-36 min-h-11 lg:min-h-8"
                 aria-label="按角色筛选"
               >
                 <SelectValue placeholder="全部角色" />
@@ -464,7 +483,7 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger
-                className="w-full sm:w-32 h-11 lg:h-8"
+                className="w-full sm:w-32 min-h-11 lg:min-h-8"
                 aria-label="按状态筛选"
               >
                 <SelectValue placeholder="全部状态" />
@@ -478,13 +497,29 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger
+                className="w-full sm:w-40 min-h-11 lg:min-h-8"
+                aria-label="按部门筛选"
+              >
+                <SelectValue placeholder="全部部门" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>全部部门</SelectItem>
+                {departmentFilterOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="icon"
               onClick={() => void load()}
               disabled={loading}
               aria-label="刷新用户列表"
-              className="h-9 w-9 lg:h-8 lg:w-8"
+              className="h-11 w-11 lg:h-8 lg:w-8"
             >
               <RefreshCwIcon className={loading ? "animate-spin" : undefined} />
             </Button>
@@ -518,6 +553,7 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
                       setSearch("");
                       setRoleFilter(ALL);
                       setStatusFilter(ALL);
+                      setDepartmentFilter(ALL);
                     }}
                   >
                     清除筛选
@@ -603,7 +639,16 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
                     <TableRow
                       key={row.id}
                       className="cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`编辑用户 ${row.full_name ?? row.email ?? "-"}`}
                       onClick={() => openEdit(row)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openEdit(row);
+                        }
+                      }}
                     >
                       <TableCell className="text-center">
                         <div className="font-medium">

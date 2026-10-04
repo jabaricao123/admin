@@ -585,7 +585,7 @@ export function DepartmentsTree() {
                         onClick={() => toggleExpand(node.id)}
                         aria-label={`${isOpen ? "折叠" : "展开"}部门 ${node.name}`}
                         aria-expanded={isOpen}
-                        className="mt-3 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                        className="mt-3 flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none lg:size-8"
                       >
                         <ChevronRightIcon
                           className={cn(
@@ -595,7 +595,7 @@ export function DepartmentsTree() {
                         />
                       </button>
                     ) : (
-                      <span className="mt-3 size-8 shrink-0" aria-hidden />
+                      <span className="mt-3 size-11 shrink-0 lg:size-8" aria-hidden />
                     )}
                     <button
                       type="button"

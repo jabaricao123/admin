@@ -456,7 +456,16 @@ export function PositionsTable() {
                       <TableRow
                         key={row.id}
                         className="cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`编辑岗位 ${row.name}`}
                         onClick={() => openEdit(row)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openEdit(row);
+                          }
+                        }}
                       >
                         <TableCell className="text-center font-medium">
                           {row.name}
