@@ -58,6 +58,7 @@ import {
   asServiceVerifyStatus,
   asSyncConflictPolicy,
   asSyncDirection,
+  asSyncRunStatus,
   asSyncStatus,
   asSyncTargetTable,
   SERVICE_VERIFY_STATUS_BADGE_CLASSES,
@@ -66,6 +67,8 @@ import {
   SYNC_CONFLICT_POLICY_LABELS,
   SYNC_CONFLICT_POLICY_OPTIONS,
   SYNC_DIRECTION_OPTIONS,
+  SYNC_RUN_STATUS_BADGE_CLASSES,
+  SYNC_RUN_STATUS_LABELS,
   SYNC_SOURCE_TYPE_LABELS,
   SYNC_STATUS_BADGE_CLASSES,
   SYNC_STATUS_LABELS,
@@ -84,6 +87,8 @@ type TaskRow =
   Database["public"]["Functions"]["get_sync_tasks"]["Returns"][number];
 type SourceRow =
   Database["public"]["Functions"]["get_sync_sources"]["Returns"][number];
+type RunSummary =
+  Database["public"]["Functions"]["get_sync_task_run_summaries"]["Returns"][number];
 type UpsertTaskArgs =
   Database["public"]["Functions"]["upsert_sync_task"]["Args"];
 
@@ -221,6 +226,9 @@ export function SyncTasksTable() {
   const isMobile = useIsMobile();
   const [tasks, setTasks] = React.useState<TaskRow[]>([]);
   const [sources, setSources] = React.useState<SourceRow[]>([]);
+  const [runSummaries, setRunSummaries] = React.useState<
+    Record<string, RunSummary>
+  >({});
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = React.useState(false);
@@ -247,9 +255,10 @@ export function SyncTasksTable() {
     setError(null);
     try {
       const supabase = createClient();
-      const [taskRes, sourceRes] = await Promise.all([
+      const [taskRes, sourceRes, runRes] = await Promise.all([
         supabase.rpc("get_sync_tasks"),
         supabase.rpc("get_sync_sources"),
+        supabase.rpc("get_sync_task_run_summaries"),
       ]);
       if (taskRes.error) {
         setError(taskRes.error.message);
@@ -258,11 +267,17 @@ export function SyncTasksTable() {
         setTasks(taskRes.data ?? []);
       }
       setSources(sourceRes.error ? [] : (sourceRes.data ?? []));
+      const summaryMap: Record<string, RunSummary> = {};
+      for (const summary of runRes.error ? [] : (runRes.data ?? [])) {
+        summaryMap[summary.task_id] = summary;
+      }
+      setRunSummaries(summaryMap);
     } catch (loadError) {
       setError(
         loadError instanceof Error ? loadError.message : String(loadError),
       );
       setTasks([]);
+      setRunSummaries({});
     }
     setLoading(false);
   }, []);
@@ -561,6 +576,35 @@ export function SyncTasksTable() {
 
   const targetFieldOptions = SYNC_TARGET_FIELD_OPTIONS[form.targetTable];
 
+  /** 「最近执行」列：读 sync_runs 最新一条摘要（get_sync_task_run_summaries） */
+  const renderLastRun = (taskId: string) => {
+    const summary = runSummaries[taskId];
+    if (!summary) {
+      return <span className="text-xs text-muted-foreground">—</span>;
+    }
+    const status = asSyncRunStatus(summary.status);
+    const time = summary.started_at
+      ? new Date(summary.started_at).toLocaleString("zh-CN", {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        })
+      : "";
+    return (
+      <span className="flex items-center justify-center gap-2">
+        <Badge
+          variant="outline"
+          className={SYNC_RUN_STATUS_BADGE_CLASSES[status]}
+        >
+          {SYNC_RUN_STATUS_LABELS[status]}
+        </Badge>
+        <span className="text-xs text-muted-foreground">{time}</span>
+      </span>
+    );
+  };
+
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
@@ -656,7 +700,7 @@ export function SyncTasksTable() {
                     </div>
                     <div className="flex items-center justify-between gap-4 text-sm">
                       <span className="text-muted-foreground">最近执行</span>
-                      <span>—</span>
+                      {renderLastRun(row.id)}
                     </div>
                   </button>
                 );
@@ -722,8 +766,8 @@ export function SyncTasksTable() {
                         <TableCell className="text-center text-xs text-muted-foreground">
                           v{row.config_version}
                         </TableCell>
-                        <TableCell className="text-center text-xs text-muted-foreground">
-                          —
+                        <TableCell className="text-center">
+                          {renderLastRun(row.id)}
                         </TableCell>
                       </TableRow>
                     );

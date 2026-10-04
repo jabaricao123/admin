@@ -684,6 +684,113 @@ export type Database = {
           },
         ]
       }
+      message_event_registry: {
+        Row: {
+          available_vars: NonNullable<Json>
+          created_at: string
+          description: string | null
+          event_key: string
+          module: string
+          registered_by: string | null
+        }
+        Insert: {
+          available_vars?: NonNullable<Json>
+          created_at?: string
+          description?: string | null
+          event_key: string
+          module: string
+          registered_by?: string | null
+        }
+        Update: {
+          available_vars?: NonNullable<Json>
+          created_at?: string
+          description?: string | null
+          event_key?: string
+          module?: string
+          registered_by?: string | null
+        }
+        Relationships: []
+      }
+      message_template_current: {
+        Row: {
+          channel: string
+          event_key: string
+          template_id: string
+        }
+        Insert: {
+          channel: string
+          event_key: string
+          template_id: string
+        }
+        Update: {
+          channel?: string
+          event_key?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_template_current_event_fk"
+            columns: ["event_key"]
+            isOneToOne: false
+            referencedRelation: "message_event_registry"
+            referencedColumns: ["event_key"]
+          },
+          {
+            foreignKeyName: "message_template_current_template_fk"
+            columns: ["template_id", "event_key", "channel"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["id", "event_key", "channel"]
+          },
+        ]
+      }
+      message_templates: {
+        Row: {
+          body_tpl: string
+          channel: string
+          created_at: string
+          event_key: string
+          id: string
+          status: string
+          subject_tpl: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          body_tpl: string
+          channel: string
+          created_at?: string
+          event_key: string
+          id?: string
+          status?: string
+          subject_tpl: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          body_tpl?: string
+          channel?: string
+          created_at?: string
+          event_key?: string
+          id?: string
+          status?: string
+          subject_tpl?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_event_key_fkey"
+            columns: ["event_key"]
+            isOneToOne: false
+            referencedRelation: "message_event_registry"
+            referencedColumns: ["event_key"]
+          },
+        ]
+      }
       messages: {
         Row: {
           body: string
@@ -1079,6 +1186,150 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      sync_conflicts: {
+        Row: {
+          created_at: string
+          id: string
+          resolution: string
+          resolved_at: string | null
+          resolved_by: string | null
+          row_key: string
+          run_id: string
+          source_data: NonNullable<Json>
+          target_data: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          resolution?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          row_key: string
+          run_id: string
+          source_data: NonNullable<Json>
+          target_data?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          resolution?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          row_key?: string
+          run_id?: string
+          source_data?: NonNullable<Json>
+          target_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_conflicts_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "sync_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_runs: {
+        Row: {
+          error: string | null
+          executed_by: string | null
+          finished_at: string | null
+          id: string
+          started_at: string
+          stats: NonNullable<Json>
+          status: string
+          task_id: string
+          trigger_type: string
+        }
+        Insert: {
+          error?: string | null
+          executed_by?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          stats?: NonNullable<Json>
+          status?: string
+          task_id: string
+          trigger_type?: string
+        }
+        Update: {
+          error?: string | null
+          executed_by?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          stats?: NonNullable<Json>
+          status?: string
+          task_id?: string
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_runs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "sync_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_schedules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          cron_expr: string | null
+          id: string
+          last_run_at: string | null
+          next_run_at: string | null
+          status: string
+          task_id: string
+          timezone: string
+          trigger_type: string
+          updated_at: string
+          updated_by: string | null
+          webhook_token_hash: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          cron_expr?: string | null
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          status?: string
+          task_id: string
+          timezone?: string
+          trigger_type?: string
+          updated_at?: string
+          updated_by?: string | null
+          webhook_token_hash?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          cron_expr?: string | null
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          status?: string
+          task_id?: string
+          timezone?: string
+          trigger_type?: string
+          updated_at?: string
+          updated_by?: string | null
+          webhook_token_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_schedules_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: true
+            referencedRelation: "sync_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sync_sources: {
         Row: {
@@ -1800,6 +2051,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      enable_webhook: { Args: { p_id: string }; Returns: Json }
       get_role_user_counts: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1828,6 +2080,59 @@ export type Database = {
           total_bytes: number
         }[]
       }
+      get_sync_run_conflicts: {
+        Args: { p_run_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          resolution: string
+          resolved_at: string
+          resolved_by: string
+          resolved_by_name: string
+          row_key: string
+          run_id: string
+          source_data: Json
+          target_data: Json
+        }[]
+      }
+      get_sync_runs: {
+        Args: { p_limit?: number; p_offset?: number; p_task_id?: string }
+        Returns: {
+          error: string
+          executed_by: string
+          executed_by_name: string
+          finished_at: string
+          id: string
+          pending_conflicts: number
+          started_at: string
+          stats: Json
+          status: string
+          target_table: string
+          task_id: string
+          task_name: string
+          trigger_type: string
+        }[]
+      }
+      get_sync_schedules: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          cron_expr: string
+          has_token: boolean
+          id: string
+          last_run_at: string
+          last_run_status: string
+          next_run_at: string
+          source_name: string
+          status: string
+          target_table: string
+          task_id: string
+          task_name: string
+          timezone: string
+          trigger_type: string
+          updated_at: string
+        }[]
+      }
       get_sync_sources: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1843,6 +2148,18 @@ export type Database = {
           updated_at: string
           updated_by: string
           verify_status: string
+        }[]
+      }
+      get_sync_task_run_summaries: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          finished_at: string
+          run_id: string
+          started_at: string
+          stats: Json
+          status: string
+          task_id: string
+          trigger_type: string
         }[]
       }
       get_sync_task_versions: {
@@ -1874,6 +2191,22 @@ export type Database = {
           target_table: string
           updated_at: string
           updated_by: string
+        }[]
+      }
+      get_webhooks: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          created_by: string
+          events: string[]
+          headers_masked: Json
+          id: string
+          name: string
+          retry_policy: Json
+          status: string
+          updated_at: string
+          updated_by: string
+          url: string
         }[]
       }
       grant_menu: {
@@ -2028,6 +2361,27 @@ export type Database = {
       }
       position_headcount: { Args: { p_position_id: string }; Returns: number }
       preview_scope: { Args: { p_user_id: string }; Returns: Json }
+      publish_message_template: {
+        Args: { p_id: string }
+        Returns: {
+          body_tpl: string
+          channel: string
+          created_at: string
+          event_key: string
+          id: string
+          status: string
+          subject_tpl: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "message_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       publish_report_definition: {
         Args: { p_def_id: string }
         Returns: {
@@ -2119,6 +2473,14 @@ export type Database = {
         Args: { p_config?: Json; p_source: string }
         Returns: string
       }
+      rerun_sync_task: {
+        Args: { p_sample?: Json; p_task_id: string }
+        Returns: string
+      }
+      resolve_sync_conflict: {
+        Args: { p_conflict_id: string; p_resolution: string }
+        Returns: Json
+      }
       retry_export: { Args: { p_job_id: string }; Returns: string }
       revoke_api_key: { Args: { p_id: string }; Returns: Json }
       revoke_menu: {
@@ -2136,8 +2498,34 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rollback_message_template: {
+        Args: { p_id: string }
+        Returns: {
+          body_tpl: string
+          channel: string
+          created_at: string
+          event_key: string
+          id: string
+          status: string
+          subject_tpl: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "message_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rollback_sync_task: { Args: { p_task_id: string }; Returns: Json }
       run_report: { Args: { p_def_id: string }; Returns: Json }
+      run_scheduled_sync: { Args: { p_task_id: string }; Returns: string }
+      run_sync_task: {
+        Args: { p_sample?: Json; p_task_id: string }
+        Returns: string
+      }
       save_report_definition: {
         Args: {
           p_config: Json
@@ -2163,6 +2551,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_sync_schedule_status: {
+        Args: { p_status: string; p_task_id: string }
+        Returns: Json
       }
       submit_instance: {
         Args: {
@@ -2200,6 +2592,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      trigger_sync_webhook: { Args: { p_token: string }; Returns: string }
       unread_count: { Args: Record<PropertyKey, never>; Returns: number }
       update_webhook: {
         Args: {
@@ -2250,6 +2643,33 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "departments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      upsert_message_template: {
+        Args: {
+          p_body_tpl: string
+          p_channel: string
+          p_event_key: string
+          p_id?: string
+          p_subject_tpl: string
+        }
+        Returns: {
+          body_tpl: string
+          channel: string
+          created_at: string
+          event_key: string
+          id: string
+          status: string
+          subject_tpl: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "message_templates"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -2313,6 +2733,17 @@ export type Database = {
       }
       upsert_service_config: {
         Args: { p_config: Json; p_credentials: string; p_service: string }
+        Returns: Json
+      }
+      upsert_sync_schedule: {
+        Args: {
+          p_cron_expr?: string
+          p_regenerate_token?: boolean
+          p_status?: string
+          p_task_id: string
+          p_timezone?: string
+          p_trigger_type: string
+        }
         Returns: Json
       }
       upsert_sync_source: {
@@ -2380,6 +2811,7 @@ export type Database = {
           sort_order: number
         }[]
       }
+      webhook_test_result: { Args: { p_request_id: number }; Returns: Json }
       withdraw_instance: {
         Args: { p_instance_id: string }
         Returns: {
@@ -2431,12 +2863,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2458,13 +2890,12 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2483,13 +2914,12 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2508,13 +2938,12 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2527,11 +2956,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

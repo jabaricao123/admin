@@ -14,6 +14,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/access/permissions": "菜单权限",
   "/access/data-scopes": "数据权限",
   "/message/inbox": "站内信",
+  "/message/templates": "通知模板",
   "/org/users": "用户管理",
   "/org/chart": "组织架构",
   "/system/services/mail": "邮件服务",
@@ -25,7 +26,11 @@ const PAGE_TITLES: Record<string, string> = {
   "/audit/logins": "登录日志",
   "/sync/sources": "数据源配置",
   "/sync/tasks": "同步任务",
+  "/sync/runs": "执行记录",
+  "/sync/schedules": "调度管理",
   "/report/builtin": "预置报表",
+  "/integration/api-keys": "API 密钥",
+  "/integration/webhooks": "Webhook",
 };
 
 export function SiteHeader() {

@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 路由 | /message/templates |
-| 状态 | P2，待立项（admin 专用） |
+| 状态 | P2，开发中（message/004+005+006 已交付，admin 专用） |
 | 模块 | [message](../README.md#10-消息中心-messagep2) |
 
 ## 目的
@@ -20,9 +20,10 @@
 
 ## 数据模型
 
-`message_templates`：id、event_key、channel、subject_tpl、body_tpl、version、status、updated_by、时间戳；唯一约束 **(event_key, channel, version)**；当前版本指针（current_version）。
-`message_template_versions`：template_id、version、快照。
-`message_event_registry`（事件注册表）：event_key PK、module、description、available_vars jsonb、registered_by、created_at；各模块交付时经 `register_message_event(event_key, module, vars)` RPC 登记；未注册事件不可建模板。
+`message_templates`：id、event_key、channel、subject_tpl、body_tpl、version、status、updated_by、时间戳；唯一约束 **(event_key, channel, version)**；published 版本内容冻结（触发器，改动需发新版本或回滚）。
+`message_template_current`（当前版本指针）：event_key、channel、template_id，PK (event_key, channel)；发送渲染只认指针指向的 published 模板（历史保留在 message_templates 各版本行）。
+`message_event_registry`（事件注册表）：event_key PK、module、description、available_vars jsonb、registered_by、created_at；各模块交付时经 `register_message_event(event_key, module, description, vars)` RPC 登记（幂等 upsert）；未注册事件不可建模板。
+管理 RPC（仅 admin）：`upsert_message_template`（保存草稿：续编既有草稿或新建 version=max+1）、`publish_message_template`（发布并把 current 指针指向该版本）、`rollback_message_template`（复制指定旧版本为 max+1 新版本并置 current）。
 
 ## RLS
 

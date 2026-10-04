@@ -505,8 +505,385 @@ export function asSyncConflictPolicy(value: string): SyncConflictPolicy {
 /** 同步 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
 export function translateSyncErrorMessage(message: string): string {
   const isBusinessRule =
-    /^(数据源|同步任务|目标表|目标字段|字段映射|映射项|样本|profiles|没有可回滚)/.test(
+    /^(数据源|同步任务|目标表|目标字段|字段映射|映射项|样本|profiles|没有可回滚|调度|Webhook|cron|时区|任务未启用|上级部门|负责人邮箱|所属部门|岗位编码|冲突|仅管理员)/.test(
       message,
     );
+  return isBusinessRule ? message : translateErrorMessage(message);
+}
+
+// ---------------------------------------------------------------------------
+// 第三方数据同步（sync）：执行记录 / 冲突裁决 / 调度
+// ---------------------------------------------------------------------------
+
+/** 触发方式（sync_runs.trigger_type / sync_schedules.trigger_type） */
+export type SyncTriggerType = "manual" | "cron" | "webhook";
+
+export const SYNC_TRIGGER_TYPE_LABELS: Record<SyncTriggerType, string> = {
+  manual: "手动",
+  cron: "定时",
+  webhook: "Webhook",
+};
+
+export const SYNC_TRIGGER_TYPE_OPTIONS = (
+  ["manual", "cron", "webhook"] as SyncTriggerType[]
+).map((value) => ({ value, label: SYNC_TRIGGER_TYPE_LABELS[value] }));
+
+export function asSyncTriggerType(value: string): SyncTriggerType {
+  return value === "cron" || value === "webhook" ? value : "manual";
+}
+
+/** 执行状态（sync_runs.status） */
+export type SyncRunStatus = "running" | "success" | "partial" | "failed";
+
+export const SYNC_RUN_STATUS_LABELS: Record<SyncRunStatus, string> = {
+  running: "执行中",
+  success: "成功",
+  partial: "部分成功",
+  failed: "失败",
+};
+
+export const SYNC_RUN_STATUS_BADGE_CLASSES: Record<SyncRunStatus, string> = {
+  running:
+    "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
+  success:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  partial:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+  failed:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+};
+
+export function asSyncRunStatus(value: string): SyncRunStatus {
+  return value === "success" || value === "partial" || value === "failed"
+    ? value
+    : "running";
+}
+
+/** 冲突裁决状态（sync_conflicts.resolution） */
+export type SyncConflictResolution = "pending" | "adopted" | "ignored";
+
+export const SYNC_CONFLICT_RESOLUTION_LABELS: Record<
+  SyncConflictResolution,
+  string
+> = {
+  pending: "待处理",
+  adopted: "已采纳",
+  ignored: "已忽略",
+};
+
+export const SYNC_CONFLICT_RESOLUTION_BADGE_CLASSES: Record<
+  SyncConflictResolution,
+  string
+> = {
+  pending:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+  adopted:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  ignored:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+export function asSyncConflictResolution(
+  value: string,
+): SyncConflictResolution {
+  return value === "adopted" || value === "ignored" ? value : "pending";
+}
+
+/** 调度状态（sync_schedules.status；disabled_pending_unschedule 为停用待注销瞬态） */
+export type SyncScheduleStatus =
+  | "active"
+  | "disabled"
+  | "disabled_pending_unschedule";
+
+export const SYNC_SCHEDULE_STATUS_LABELS: Record<SyncScheduleStatus, string> = {
+  active: "启用",
+  disabled: "停用",
+  disabled_pending_unschedule: "停用（待注销）",
+};
+
+export const SYNC_SCHEDULE_STATUS_BADGE_CLASSES: Record<
+  SyncScheduleStatus,
+  string
+> = {
+  active:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  disabled:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+  disabled_pending_unschedule:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+};
+
+export function asSyncScheduleStatus(value: string): SyncScheduleStatus {
+  return value === "disabled" || value === "disabled_pending_unschedule"
+    ? value
+    : "active";
+}
+
+/** cron 预设频率（页面选择器；高级模式直接暴露表达式） */
+export type SyncCronPreset = "hourly" | "daily" | "weekly" | "custom";
+
+export const SYNC_CRON_PRESET_LABELS: Record<SyncCronPreset, string> = {
+  hourly: "每小时",
+  daily: "每天",
+  weekly: "每周",
+  custom: "自定义（高级）",
+};
+
+export const SYNC_CRON_PRESET_OPTIONS = (
+  ["hourly", "daily", "weekly", "custom"] as SyncCronPreset[]
+).map((value) => ({ value, label: SYNC_CRON_PRESET_LABELS[value] }));
+
+export const SYNC_WEEKDAY_LABELS: { value: string; label: string }[] = [
+  { value: "1", label: "周一" },
+  { value: "2", label: "周二" },
+  { value: "3", label: "周三" },
+  { value: "4", label: "周四" },
+  { value: "5", label: "周五" },
+  { value: "6", label: "周六" },
+  { value: "0", label: "周日" },
+];
+
+/** cron 摘要（列表展示；无法识别时原样返回） */
+export function describeCronExpr(expr: string | null): string {
+  if (!expr) {
+    return "—";
+  }
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length !== 5) {
+    return expr;
+  }
+  const [minute, hour, day, month, dow] = parts;
+  if (minute === "0" && hour === "*" && day === "*" && month === "*" && dow === "*") {
+    return "每小时";
+  }
+  if (/^\d{1,2}$/.test(minute) && /^\d{1,2}$/.test(hour)) {
+    const time = `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+    if (day === "*" && month === "*" && dow === "*") {
+      return `每天 ${time}`;
+    }
+    if (day === "*" && month === "*" && /^\d$/.test(dow)) {
+      const weekday =
+        SYNC_WEEKDAY_LABELS.find((item) => item.value === dow)?.label ?? dow;
+      return `每${weekday} ${time}`;
+    }
+  }
+  return expr;
+}
+
+// ---------------------------------------------------------------------------
+// 接口/集成中心（integration）：API 密钥 / Webhook
+// ---------------------------------------------------------------------------
+
+/** API 密钥状态（api_keys.status；吊销即时失效且不可恢复） */
+export type ApiKeyStatus = "active" | "revoked";
+
+export const API_KEY_STATUS_LABELS: Record<ApiKeyStatus, string> = {
+  active: "生效",
+  revoked: "已吊销",
+};
+
+export const API_KEY_STATUS_BADGE_CLASSES: Record<ApiKeyStatus, string> = {
+  active:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  revoked:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+};
+
+export function asApiKeyStatus(value: string): ApiKeyStatus {
+  return value === "revoked" ? "revoked" : "active";
+}
+
+export const API_KEY_STATUS_OPTIONS = (
+  Object.keys(API_KEY_STATUS_LABELS) as ApiKeyStatus[]
+).map((value) => ({ value, label: API_KEY_STATUS_LABELS[value] }));
+
+/** API 密钥范围（v1 前端常量：预设只读范围，写入仍由服务端 scopes 白名单把关） */
+export const API_KEY_SCOPE_LABELS: Record<string, string> = {
+  "org:read": "组织只读",
+  "report:read": "报表只读",
+  "audit:read": "审计只读",
+};
+
+export const API_KEY_SCOPE_OPTIONS = Object.keys(API_KEY_SCOPE_LABELS).map(
+  (value) => ({ value, label: API_KEY_SCOPE_LABELS[value] }),
+);
+
+/** 密钥有效期预设（签发向导第三步；never = 永不过期） */
+export type ApiKeyExpiryPreset = "30" | "90" | "365" | "never";
+
+export const API_KEY_EXPIRY_LABELS: Record<ApiKeyExpiryPreset, string> = {
+  "30": "30 天",
+  "90": "90 天",
+  "365": "365 天",
+  never: "永不过期",
+};
+
+export const API_KEY_EXPIRY_OPTIONS = (
+  Object.keys(API_KEY_EXPIRY_LABELS) as ApiKeyExpiryPreset[]
+).map((value) => ({ value, label: API_KEY_EXPIRY_LABELS[value] }));
+
+/** Webhook 状态（webhooks.status；停用端点不再收到事件） */
+export type WebhookStatus = "active" | "disabled";
+
+export const WEBHOOK_STATUS_LABELS: Record<WebhookStatus, string> = {
+  active: "启用",
+  disabled: "停用",
+};
+
+export const WEBHOOK_STATUS_BADGE_CLASSES: Record<WebhookStatus, string> = {
+  active:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  disabled:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+export function asWebhookStatus(value: string): WebhookStatus {
+  return value === "disabled" ? "disabled" : "active";
+}
+
+export const WEBHOOK_STATUS_OPTIONS = (
+  Object.keys(WEBHOOK_STATUS_LABELS) as WebhookStatus[]
+).map((value) => ({ value, label: WEBHOOK_STATUS_LABELS[value] }));
+
+/**
+ * Webhook 订阅事件清单（v1 前端常量，按模块分组）。
+ * 与 docs/modules/integration/webhooks.md 首期发射点契约一致：
+ * approval 3 个 + org.user_changed + sync.run_finished + webhook.ping。
+ */
+export type WebhookEventOption = { value: string; label: string };
+export type WebhookEventGroup = {
+  module: string;
+  label: string;
+  events: WebhookEventOption[];
+};
+
+export const WEBHOOK_EVENT_GROUPS: WebhookEventGroup[] = [
+  {
+    module: "approval",
+    label: "审批",
+    events: [
+      { value: "approval.submitted", label: "审批提交" },
+      { value: "approval.approved", label: "审批通过" },
+      { value: "approval.rejected", label: "审批驳回" },
+    ],
+  },
+  {
+    module: "org",
+    label: "组织",
+    events: [{ value: "org.user_changed", label: "用户变更" }],
+  },
+  {
+    module: "sync",
+    label: "同步",
+    events: [{ value: "sync.run_finished", label: "同步完成" }],
+  },
+  {
+    module: "webhook",
+    label: "Webhook",
+    events: [{ value: "webhook.ping", label: "测试 ping" }],
+  },
+];
+
+export const WEBHOOK_EVENT_LABELS: Record<string, string> = Object.fromEntries(
+  WEBHOOK_EVENT_GROUPS.flatMap((group) =>
+    group.events.map((event) => [event.value, event.label]),
+  ),
+);
+
+/** Webhook 重试策略（retry_policy jsonb；投递器 005 按 max_attempts/backoff 消费） */
+export const WEBHOOK_MAX_ATTEMPTS_OPTIONS = [
+  { value: "1", label: "不重试（仅 1 次）" },
+  { value: "3", label: "3 次" },
+  { value: "5", label: "5 次" },
+];
+
+export const WEBHOOK_BACKOFF_LABELS: Record<string, string> = {
+  exponential: "指数退避（2^n 分钟）",
+  linear: "固定间隔（n 分钟）",
+};
+
+export const WEBHOOK_BACKOFF_OPTIONS = Object.keys(WEBHOOK_BACKOFF_LABELS).map(
+  (value) => ({ value, label: WEBHOOK_BACKOFF_LABELS[value] }),
+);
+
+/** 投递明细状态（webhook_deliveries.status） */
+export type DeliveryStatus = "delivering" | "done" | "failed";
+
+export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
+  delivering: "投递中",
+  done: "成功",
+  failed: "失败",
+};
+
+export const DELIVERY_STATUS_BADGE_CLASSES: Record<DeliveryStatus, string> = {
+  done: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  delivering:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+  failed:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+};
+
+export function asDeliveryStatus(value: string): DeliveryStatus {
+  return value === "done" || value === "failed" ? value : "delivering";
+}
+
+/** 接口集成 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
+export function translateIntegrationErrorMessage(message: string): string {
+  const isBusinessRule =
+    /^(密钥|Webhook|事件|至少订阅|有效期|重试策略|自定义 header|scopes)/.test(
+      message,
+    ) || message === "仅管理员可执行此操作";
+  return isBusinessRule ? message : translateErrorMessage(message);
+}
+
+// ---------------------------------------------------------------------------
+// 消息中心 · 通知文案模板（message_templates）
+// ---------------------------------------------------------------------------
+
+/** 模板渠道（message_templates.channel；本期仅建模，投递在 message/009） */
+export type TemplateChannel = "inbox" | "email" | "push";
+
+export const TEMPLATE_CHANNEL_LABELS: Record<TemplateChannel, string> = {
+  inbox: "站内信",
+  email: "邮件",
+  push: "推送",
+};
+
+export const TEMPLATE_CHANNEL_OPTIONS = (
+  Object.keys(TEMPLATE_CHANNEL_LABELS) as TemplateChannel[]
+).map((value) => ({ value, label: TEMPLATE_CHANNEL_LABELS[value] }));
+
+export function asTemplateChannel(value: string): TemplateChannel {
+  return value === "email" || value === "push" ? value : "inbox";
+}
+
+/** 模板状态（draft 可编辑 / published 生效 / disabled 停用） */
+export type TemplateStatus = "draft" | "published" | "disabled";
+
+export const TEMPLATE_STATUS_LABELS: Record<TemplateStatus, string> = {
+  draft: "草稿",
+  published: "已发布",
+  disabled: "已停用",
+};
+
+export const TEMPLATE_STATUS_BADGE_CLASSES: Record<TemplateStatus, string> = {
+  draft:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+  published:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  disabled:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+export function asTemplateStatus(value: string): TemplateStatus {
+  return value === "published" || value === "disabled" ? value : "draft";
+}
+
+/** 通知文案模板 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
+export function translateMessageTemplateErrorMessage(message: string): string {
+  const isBusinessRule =
+    /^(事件未注册|渠道不合法|该版本非草稿|标题模板不能为空|已停用版本|模板不存在|模板事件与渠道)/.test(
+      message,
+    ) || message === "仅管理员可执行此操作";
   return isBusinessRule ? message : translateErrorMessage(message);
 }
