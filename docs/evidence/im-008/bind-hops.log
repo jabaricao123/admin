@@ -1,0 +1,6 @@
+200 /login
+200 /settings/profile
+307 /settings/profile/bind/dingtalk/start
+200 https://login.dingtalk.com/oauth2/auth
+307 /settings/profile/bind/dingtalk/callback?authCode=mock-unbound-8t4iq7dz&state=m.MGSKimHwUDo5aVWIs6DFKT39CJ2zO1t1KBswg6AE9TA.1791143612862
+200 /settings/profile?bound=dingtalk

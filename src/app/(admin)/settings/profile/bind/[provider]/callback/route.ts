@@ -57,7 +57,8 @@ export async function GET(
     return fail("im_denied");
   }
 
-  const code = searchParams.get("code");
+  // 钉钉回调把授权码放在 authCode（与登录回调同兼容，见 src/lib/im/callback.ts:133）；code 优先，authCode 兜底
+  const code = searchParams.get("code") ?? searchParams.get("authCode");
   if (!code) {
     return fail("im_failed");
   }

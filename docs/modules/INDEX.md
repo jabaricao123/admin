@@ -112,6 +112,7 @@ docs/modules/
 | `site-header.tsx`（PAGE_TITLES） | 只追加行，键=完整路由；合并冲突双向保留 |
 | `database.types.ts` | 生成物：**冲突解决=删除后重生成**，禁止手工合并 |
 | `supabase/migrations/*` | 迁移只建本模块对象；跨模块引用走函数/视图晚绑定；依赖工单合入后再生成迁移；profiles 等共享表按波次串行（org 先、access 后） |
+| `supabase/migrations/*`（序号） | 同模块并行工单：迁移序号按工单号 × 10000 预分配段（im/005 → 170000、im/006 → 180000、im/007 → 190000、im/008 → 200000） |
 | `supabase/seed.sql` | 拆分为按模块多文件（`config.toml` 的 `sql_paths`） |
 | `src/lib/dictionaries.ts` | 先冻结接口，再并行追加条目；system 字典读取层改造排最后 |
 | `users-table.tsx` | 串行：access/003（assign_role）先合，org/009（角色下拉切换）后接 |

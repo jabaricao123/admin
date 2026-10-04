@@ -164,11 +164,12 @@ export function userAgentSummary(ua: string | null | undefined): string {
   return parts.length > 0 ? parts.join(" · ") : "未知设备";
 }
 
-/** 登录失败原因归类（audit/005 写入枚举；im/002 增 IM 未绑定） → 展示文案 */
+/** 登录失败原因归类（audit/005 写入枚举；im/002 增 IM 未绑定；im/008 增密码登录关闭） → 展示文案 */
 export const LOGIN_FAIL_REASON_LABELS: Record<string, string> = {
   invalid_credentials: "邮箱或密码错误",
   user_banned: "账号已禁用",
   im_not_bound: "未绑定 IM 账号",
+  password_login_disabled: "密码登录已关闭",
   other: "其他原因",
 };
 
