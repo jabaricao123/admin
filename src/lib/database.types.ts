@@ -2187,6 +2187,42 @@ export type Database = {
         }
         Relationships: []
       }
+      system_sms_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          provider_code: string
+          scene: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          provider_code: string
+          scene: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          provider_code?: string
+          scene?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       webhook_deliveries: {
         Row: {
           attempt_no: number
@@ -2541,6 +2577,15 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      approval_usage_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          flow_version_id: string
+          running_count: number
+          template_version_id: string
+          total_count: number
+        }[]
+      }
       assign_role: {
         Args: { p_new_role: string; p_target_user: string }
         Returns: {
@@ -2698,6 +2743,50 @@ export type Database = {
         Args: { p_dict_key: string; p_value: string }
         Returns: Json
       }
+      disable_flow: {
+        Args: { p_id: string }
+        Returns: {
+          branches: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          nodes: NonNullable<Json>
+          status: string
+          template_id: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "approval_flows"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      disable_form_template: {
+        Args: { p_id: string }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          module: string
+          name: string
+          schema: NonNullable<Json>
+          status: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "approval_form_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       disable_position: {
         Args: { p_id: string }
         Returns: {
@@ -2741,6 +2830,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      disable_sms_template: { Args: { p_id: string }; Returns: Json }
       disable_sync_source: { Args: { p_id: string }; Returns: Json }
       disable_webhook: { Args: { p_id: string }; Returns: Json }
       download_export: { Args: { p_job_id: string }; Returns: string }
@@ -2859,6 +2949,10 @@ export type Database = {
           status: string
         }[]
       }
+      get_dashboard_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_dict: { Args: { p_dict_key: string }; Returns: Json }
       get_dict_catalog: {
         Args: Record<PropertyKey, never>
@@ -2879,6 +2973,15 @@ export type Database = {
           updated_at: string
           updated_by: string
           value: string
+        }[]
+      }
+      get_push_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          channel: string
+          enabled: boolean
+          secret_masked: string
+          webhook_url: string
         }[]
       }
       get_report_subscriptions: {
@@ -3244,6 +3347,50 @@ export type Database = {
           title: string
         }[]
       }
+      new_flow_version: {
+        Args: { p_id: string }
+        Returns: {
+          branches: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          nodes: NonNullable<Json>
+          status: string
+          template_id: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "approval_flows"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      new_form_template_version: {
+        Args: { p_id: string }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          module: string
+          name: string
+          schema: NonNullable<Json>
+          status: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "approval_form_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       offline_announcement: { Args: { p_id: string }; Returns: Json }
       position_headcount: { Args: { p_position_id: string }; Returns: number }
       preview_scope: { Args: { p_user_id: string }; Returns: Json }
@@ -3254,6 +3401,50 @@ export type Database = {
       publish_api_doc: {
         Args: { p_changelog?: string; p_spec: Json; p_version: string }
         Returns: string
+      }
+      publish_flow: {
+        Args: { p_id: string }
+        Returns: {
+          branches: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          nodes: NonNullable<Json>
+          status: string
+          template_id: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "approval_flows"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      publish_form_template: {
+        Args: { p_id: string }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          module: string
+          name: string
+          schema: NonNullable<Json>
+          status: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "approval_form_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       publish_message_template: {
         Args: { p_id: string }
@@ -3500,6 +3691,17 @@ export type Database = {
         Args: { p_status: string; p_task_id: string }
         Returns: Json
       }
+      signup_trend: {
+        Args: { p_days?: number }
+        Returns: {
+          day: string
+          count: number
+        }[]
+      }
+      simulate_flow: {
+        Args: { p_flow_id: string; p_form_data?: Json; p_initiator?: string }
+        Returns: Json
+      }
       submit_instance: {
         Args: {
           p_form_data: Json
@@ -3511,6 +3713,8 @@ export type Database = {
         Returns: string
       }
       test_mail_config: { Args: { p_to: string }; Returns: Json }
+      test_push_config: { Args: { p_channel: string }; Returns: Json }
+      test_sms_config: { Args: { p_phone: string }; Returns: Json }
       test_storage_config: { Args: Record<PropertyKey, never>; Returns: Json }
       test_sync_source: { Args: { p_id: string }; Returns: Json }
       test_webhook: { Args: { p_webhook_id: string }; Returns: Json }
@@ -3639,6 +3843,61 @@ export type Database = {
         Args: { p_description: string; p_dict_key: string }
         Returns: Json
       }
+      upsert_flow: {
+        Args: {
+          p_id?: string
+          p_name: string
+          p_nodes: Json
+          p_template_id: string
+        }
+        Returns: {
+          branches: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          nodes: NonNullable<Json>
+          status: string
+          template_id: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "approval_flows"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      upsert_form_template: {
+        Args: {
+          p_code: string
+          p_id?: string
+          p_module: string
+          p_name: string
+          p_schema: Json
+        }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          module: string
+          name: string
+          schema: NonNullable<Json>
+          status: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "approval_form_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_message_template: {
         Args: {
           p_body_tpl: string
@@ -3695,6 +3954,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      upsert_push_channel: {
+        Args: {
+          p_channel: string
+          p_enabled: boolean
+          p_secret: string
+          p_webhook_url: string
+        }
+        Returns: Json
       }
       upsert_report_subscription: {
         Args: {
@@ -3768,6 +4036,16 @@ export type Database = {
           p_key: string
           p_value: Json
           p_value_type: string
+        }
+        Returns: Json
+      }
+      upsert_sms_template: {
+        Args: {
+          p_id: string
+          p_name: string
+          p_provider_code: string
+          p_scene: string
+          p_status: string
         }
         Returns: Json
       }

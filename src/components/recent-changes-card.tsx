@@ -1,0 +1,140 @@
+import Link from "next/link";
+import { FileClockIcon, ShieldXIcon } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { formatDateTime, rowVersionTableLabel } from "@/lib/audit";
+
+export type RecentChange = {
+  id: number;
+  tableName: string;
+  recordId: string;
+  version: number;
+  changedByName: string | null;
+  changedAt: string;
+};
+
+/** 最近更新（admin）：audit_row_versions 最近 10 条数据变更 */
+export function RecentChangesCard({ changes }: { changes: RecentChange[] }) {
+  return (
+    <Card className="@container/card">
+      <CardHeader>
+        <CardTitle>最近更新</CardTitle>
+        <CardDescription>最近 10 条关键表数据变更</CardDescription>
+        <CardAction>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/audit/changes">查看全部</Link>
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        {changes.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-sm text-muted-foreground">
+            <FileClockIcon className="size-8 opacity-60" />
+            <span>暂无变更记录</span>
+          </div>
+        ) : (
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-center">对象</TableHead>
+                    <TableHead className="text-center">版本</TableHead>
+                    <TableHead className="text-center">操作人</TableHead>
+                    <TableHead className="text-center">时间</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {changes.map((change) => (
+                    <TableRow key={change.id}>
+                      <TableCell className="text-center">
+                        <div className="font-medium">
+                          {rowVersionTableLabel(change.tableName)}
+                        </div>
+                        <div className="max-w-56 truncate font-mono text-xs text-muted-foreground">
+                          {change.recordId}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="font-mono">
+                          v{change.version}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {change.changedByName ?? "系统/后台"}
+                      </TableCell>
+                      <TableCell className="text-center text-xs whitespace-nowrap text-muted-foreground">
+                        {formatDateTime(change.changedAt)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="flex flex-col divide-y md:hidden">
+              {changes.map((change) => (
+                <div
+                  key={change.id}
+                  className="flex items-center justify-between gap-3 py-3"
+                >
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <span className="truncate text-sm font-medium">
+                      {rowVersionTableLabel(change.tableName)}
+                    </span>
+                    <span className="truncate font-mono text-xs text-muted-foreground">
+                      {change.recordId}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {change.changedByName ?? "系统/后台"} ·{" "}
+                      {formatDateTime(change.changedAt)}
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="shrink-0 font-mono">
+                    v{change.version}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** 最近更新（非 admin）：audit_row_versions 仅 admin 可读，显式占位 */
+export function RecentChangesUnavailable() {
+  return (
+    <Card className="@container/card">
+      <CardHeader>
+        <CardTitle>最近更新</CardTitle>
+        <CardDescription>最近 10 条关键表数据变更</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+        <ShieldXIcon className="size-10 text-muted-foreground" />
+        <div className="text-lg font-medium">需要管理员权限</div>
+        <p className="max-w-md text-sm text-muted-foreground">
+          数据变更摘要来自审计留痕（audit_row_versions），仅管理员可读；
+          数据层 RLS 会过滤非管理员的查询结果。
+        </p>
+      </CardContent>
+    </Card>
+  );
+}

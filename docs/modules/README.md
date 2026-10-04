@@ -7,7 +7,7 @@
 
 | 序号 | 顶级目录 | 标识 | 优先级 | 状态 |
 |---|---|---|---|---|
-| 1 | 工作台 | dashboard | - | ✅ 已上线 |
+| 1 | 工作台 | dashboard | - | ✅ 已上线（概览 + 待办 + 通知） |
 | 2 | 组织管理 | org | P0 | 部分已上线 |
 | 3 | 权限管理 | access | P0 | 待立项 |
 | 4 | 审批中心 | approval | P1 | 待立项 |
@@ -22,9 +22,9 @@
 
 | 子菜单 | 路由 | 功能 | 状态 |
 |---|---|---|---|
-| 概览 | /dashboard | 统计卡片、注册趋势、最近更新 | ✅ 已上线 |
-| 我的待办 | /dashboard/todos | 跨模块待办聚合 | P1，依赖审批中心 |
-| 我的通知 | /dashboard/notifications | 未读消息快捷入口 | P2 |
+| 概览 | /dashboard | 统计卡片、注册趋势、最近更新 | ✅ 已上线（统计/趋势走 dashboard_stats RPC；公告横幅） |
+| 我的待办 | /dashboard/todos | 跨模块待办聚合 | ✅ 已上线（dashboard/002，消费 my_todos） |
+| 我的通知 | /dashboard/notifications | 未读消息快捷入口 | ✅ 已上线（dashboard/003，消费 message RPC） |
 
 ## 2. 组织管理 org（P0）
 

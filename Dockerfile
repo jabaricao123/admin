@@ -25,6 +25,8 @@ RUN addgroup --system --gid 1001 nodejs \
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+# 关于页（system/015）服务端读取仓库 CHANGELOG.md；standalone 输出需显式带入
+COPY --from=builder /app/CHANGELOG.md ./CHANGELOG.md
 
 USER nextjs
 

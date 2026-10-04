@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
+import { DictionariesLoader } from "@/components/system/dictionaries-loader";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/supabase/server";
 
@@ -49,6 +50,7 @@ export default async function AdminLayout({
       }
     >
       <AppSidebar variant="inset" user={userInfo} />
+      <DictionariesLoader />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">

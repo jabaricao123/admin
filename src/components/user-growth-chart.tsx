@@ -1,5 +1,6 @@
 "use client";
 
+import { ShieldXIcon } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import {
@@ -15,7 +16,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import type { WeeklySignupPoint } from "@/lib/trends";
+import type { SignupTrendPoint } from "@/lib/trends";
 
 const chartConfig = {
   count: {
@@ -24,24 +25,58 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+/** UTC 日期（RPC 口径）→ 图表轴标签 M/D */
+function formatDayLabel(day: string): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    return day;
+  }
+  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+}
+
 export function UserGrowthChart({
   data,
-  lowData,
+  isAdmin,
 }: {
-  data: WeeklySignupPoint[];
-  /** 数据不足（总量过低）时降级为提示 */
-  lowData?: boolean;
+  /** signup_trend(p_days=30) 返回的逐日注册数 */
+  data: SignupTrendPoint[];
+  isAdmin: boolean;
 }) {
+  if (!isAdmin) {
+    return (
+      <Card className="@container/card">
+        <CardHeader>
+          <CardTitle>注册趋势</CardTitle>
+          <CardDescription>近 30 天注册用户数</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+          <ShieldXIcon className="size-10 text-muted-foreground" />
+          <div className="text-lg font-medium">需要管理员权限</div>
+          <p className="max-w-md text-sm text-muted-foreground">
+            注册趋势来自全量用户档案（signup_trend RPC），仅管理员可读；
+            数据层会过滤非管理员的查询结果。
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const points = data.map((point) => ({
+    ...point,
+    label: formatDayLabel(point.day),
+  }));
+  const lowData = data.reduce((sum, point) => sum + point.count, 0) < 10;
+
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>新增用户</CardTitle>
+        <CardTitle>注册趋势</CardTitle>
         <CardDescription>
           {lowData ? (
             <span>用户数据还很少，趋势图将在积累更多注册后变得有意义</span>
           ) : (
             <span className="hidden @[540px]/card:block">
-              按周统计的注册用户数
+              近 30 天按日统计的注册用户数
             </span>
           )}
         </CardDescription>
@@ -51,7 +86,7 @@ export function UserGrowthChart({
           config={chartConfig}
           className="aspect-auto h-[250px] w-full"
         >
-          <AreaChart data={data}>
+          <AreaChart data={points}>
             <defs>
               <linearGradient id="fillCount" x1="0" y1="0" x2="0" y2="1">
                 <stop
@@ -68,7 +103,7 @@ export function UserGrowthChart({
             </defs>
             <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="week"
+              dataKey="label"
               tickLine={false}
               axisLine={false}
               tickMargin={8}

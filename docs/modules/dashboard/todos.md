@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 路由 | /dashboard/todos |
-| 状态 | P1，依赖审批中心 |
+| 状态 | ✅ 已交付（dashboard/002，消费 approval `my_todos`） |
 | 模块 | [dashboard](../README.md#1-工作台-dashboard) |
 
 ## 目的

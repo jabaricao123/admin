@@ -14,12 +14,12 @@
 
 1. 统计卡片：用户总数、本周新增、活跃用户、待办数（待办数依赖审批中心，P1 前显示 `—`）。
 2. 注册趋势：近 30 天注册用户折线图（recharts）。
-3. 最近更新：最近 10 条数据变更摘要（数据变更摘要依赖审计中心，P1 前显示 profiles 最近更新）。
+3. 最近更新：最近 10 条数据变更摘要（`audit_row_versions`，admin；非 admin 显式占位「需要管理员权限」）。
 4. 公告横幅：生效期内且置顶的公告展示于页面顶部（消费 system `system_announcements` published 视图；无公告时不占位）。
 
 ## 数据模型
 
-只读消费：`profiles` 聚合统计走 org 发布的公开 RPC（`org_stats()`、`signup_trend(days int)`，范围过滤在 RPC 内完成；非 admin 不见全局统计）。
+只读消费：`profiles` 聚合统计走本模块公开 RPC（`get_dashboard_stats()`、`signup_trend(days int)`，范围过滤在 RPC 内完成；非 admin 不见全局统计）。原定 org/013 的 `org_stats()` 尚未合入，先以 dashboard_stats 落地，合入后可评估收敛。
 
 ## RLS
 

@@ -275,9 +275,15 @@ export function translateSystemErrorMessage(message: string): string {
     message === "测试收件邮箱不能为空" ||
     message === "邮件配置不存在，请先保存配置" ||
     message === "对象存储配置不存在，请先保存配置" ||
+    message === "推送配置不存在，请先保存配置" ||
+    message === "短信配置不存在，请先保存配置" ||
+    message === "测试手机号不能为空" ||
+    message === "测试手机号格式不正确" ||
+    message === "短信通道未启用，请先开启通道后再测试" ||
+    message === "启用推送渠道前请先填写 Webhook URL" ||
     message === "参数值不能为 NULL" ||
     message === "仅管理员可执行此操作" ||
-    /^(参数 key 不能为空|参数分组不能为空|参数说明不能为空|未知参数类型|参数值类型与 |字典标识不能为空|字典用途说明不能为空|字典项 value 不能为空|字典项 label 不能为空|非法字典项状态|字典项不存在|字典 .+ 尚未登记用途说明)/.test(
+    /^(参数 key 不能为空|参数分组不能为空|参数说明不能为空|未知参数类型|参数值类型与 |字典标识不能为空|字典用途说明不能为空|字典项 value 不能为空|字典项 label 不能为空|非法字典项状态|字典项不存在|字典 .+ 尚未登记用途说明|未知推送渠道|模板名称不能为空|模板场景不能为空|模板 code 不能为空|非法模板状态|短信模板不存在)/.test(
       message,
     );
   return isBusinessRule ? message : translateErrorMessage(message);
@@ -1176,4 +1182,293 @@ export const CALL_STATUS_FILTER_OPTIONS = [
 /** 导出源 integration.logs 的错误透传（业务提示已是中文） */
 export function translateIntegrationLogsErrorMessage(message: string): string {
   return translateIntegrationErrorMessage(message);
+}
+
+/* -------------------------------------------------------------------------- */
+/* 系统管理 · 消息推送 / 短信服务（system/004 + system/005）                     */
+/* -------------------------------------------------------------------------- */
+
+/** 推送渠道（system_services service='push' config 子键；双卡片） */
+export type PushChannel = "wecom" | "dingtalk";
+
+export const PUSH_CHANNEL_LABELS: Record<PushChannel, string> = {
+  wecom: "企业微信",
+  dingtalk: "钉钉",
+};
+
+export const PUSH_CHANNEL_DESCRIPTIONS: Record<PushChannel, string> = {
+  wecom: "企业微信群机器人 Webhook（群设置 → 群机器人 → 添加机器人）",
+  dingtalk: "钉钉群机器人 Webhook（群设置 → 智能群助手 → 添加机器人）",
+};
+
+export const PUSH_CHANNEL_OPTIONS = (
+  Object.keys(PUSH_CHANNEL_LABELS) as PushChannel[]
+).map((value) => ({ value, label: PUSH_CHANNEL_LABELS[value] }));
+
+export function asPushChannel(value: string): PushChannel {
+  return value === "dingtalk" ? "dingtalk" : "wecom";
+}
+
+/** 短信服务商（services-sms.md：阿里云/腾讯云预设） */
+export type SmsProvider = "aliyun" | "tencent";
+
+export const SMS_PROVIDER_LABELS: Record<SmsProvider, string> = {
+  aliyun: "阿里云",
+  tencent: "腾讯云",
+};
+
+export const SMS_PROVIDER_OPTIONS = (
+  Object.keys(SMS_PROVIDER_LABELS) as SmsProvider[]
+).map((value) => ({ value, label: SMS_PROVIDER_LABELS[value] }));
+
+export function asSmsProvider(value: string): SmsProvider {
+  return value === "tencent" ? "tencent" : "aliyun";
+}
+
+/** 短信模板登记状态（system_sms_templates.status；服务商后台模板状态另行维护） */
+export type SmsTemplateStatus = "active" | "disabled";
+
+export const SMS_TEMPLATE_STATUS_LABELS: Record<SmsTemplateStatus, string> = {
+  active: "启用",
+  disabled: "停用",
+};
+
+export const SMS_TEMPLATE_STATUS_BADGE_CLASSES: Record<
+  SmsTemplateStatus,
+  string
+> = {
+  active:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  disabled:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+export const SMS_TEMPLATE_STATUS_OPTIONS = (
+  Object.keys(SMS_TEMPLATE_STATUS_LABELS) as SmsTemplateStatus[]
+).map((value) => ({ value, label: SMS_TEMPLATE_STATUS_LABELS[value] }));
+
+export function asSmsTemplateStatus(value: string): SmsTemplateStatus {
+  return value === "disabled" ? "disabled" : "active";
+}
+
+/* -------------------------------------------------------------------------- */
+/* 字典读取层（system/010）：get_dict 优先、编译期常量兜底                        */
+/* -------------------------------------------------------------------------- */
+
+/** common.status 编译期兜底：与 system/009 seed（system_dictionaries）逐字一致 */
+export const COMMON_STATUS_LABELS: Record<string, string> = {
+  active: "启用",
+  disabled: "停用",
+  deleted: "已删除",
+};
+
+export const COMMON_STATUS_BADGE_CLASSES: Record<string, string> = {
+  active:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  disabled:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+  deleted:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+};
+
+/** common.yesno 编译期兜底：与 system/009 seed 逐字一致 */
+export const COMMON_YESNO_LABELS: Record<string, string> = {
+  yes: "是",
+  no: "否",
+};
+
+export const COMMON_YESNO_BADGE_CLASSES: Record<string, string> = {
+  yes: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  no: "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+/** 已登记的共享字典 key（dictionaries.md：前端引用 dict_key，运行时取数） */
+export const DICTIONARY_KEYS = {
+  commonStatus: "common.status",
+  commonYesno: "common.yesno",
+} as const;
+
+export type DictionaryKey =
+  (typeof DICTIONARY_KEYS)[keyof typeof DICTIONARY_KEYS];
+
+/** get_dict 单项（仅消费 label / color_class；结构对齐 RPC 返回） */
+export type DictionaryItem = {
+  value: string;
+  label: string;
+  sort_order: number;
+  color_class: string | null;
+  status: string;
+};
+
+type DictionarySnapshot = Record<DictionaryKey, DictionaryItem[]>;
+
+const DICTIONARY_TTL_MS = 60_000;
+
+function toFallbackItems(
+  labels: Record<string, string>,
+  badgeClasses: Record<string, string>,
+): DictionaryItem[] {
+  return Object.entries(labels).map(([value, label], index) => ({
+    value,
+    label,
+    sort_order: (index + 1) * 10,
+    color_class: badgeClasses[value] ?? null,
+    status: "active",
+  }));
+}
+
+/** 编译期默认快照（加载前/失败时渲染，不阻塞首屏） */
+export const DEFAULT_DICTIONARIES: DictionarySnapshot = {
+  "common.status": toFallbackItems(
+    COMMON_STATUS_LABELS,
+    COMMON_STATUS_BADGE_CLASSES,
+  ),
+  "common.yesno": toFallbackItems(COMMON_YESNO_LABELS, COMMON_YESNO_BADGE_CLASSES),
+};
+
+let dictionarySnapshot: DictionarySnapshot | null = null;
+let dictionaryLoadedAt = 0;
+let dictionaryInflight: Promise<DictionarySnapshot> | null = null;
+
+function parseDictionaryRows(data: unknown): DictionaryItem[] {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+  const items: DictionaryItem[] = [];
+  for (const raw of data) {
+    if (raw === null || typeof raw !== "object") {
+      continue;
+    }
+    const row = raw as Record<string, unknown>;
+    if (typeof row.value !== "string" || typeof row.label !== "string") {
+      continue;
+    }
+    items.push({
+      value: row.value,
+      label: row.label,
+      sort_order: typeof row.sort_order === "number" ? row.sort_order : 0,
+      color_class: typeof row.color_class === "string" ? row.color_class : null,
+      status: typeof row.status === "string" ? row.status : "active",
+    });
+  }
+  return items;
+}
+
+/** DB 行合并覆盖编译期默认：同 value 覆盖 label/排序/配色，DB 独有项追加 */
+function mergeDictionaryItems(
+  key: DictionaryKey,
+  rows: DictionaryItem[],
+): DictionaryItem[] {
+  if (rows.length === 0) {
+    return DEFAULT_DICTIONARIES[key];
+  }
+  const byValue = new Map<string, DictionaryItem>();
+  for (const item of DEFAULT_DICTIONARIES[key]) {
+    byValue.set(item.value, item);
+  }
+  for (const item of rows) {
+    byValue.set(item.value, item);
+  }
+  return Array.from(byValue.values()).sort((a, b) => {
+    if (a.sort_order !== b.sort_order) {
+      return a.sort_order - b.sort_order;
+    }
+    return a.value.localeCompare(b.value);
+  });
+}
+
+/**
+ * 加载共享字典（受 TTL 60s 缓存与并发去重约束）。
+ * 首选 get_dict RPC（仅 active 项）；失败或缺失的 key 回退编译期默认值，不抛出。
+ * 客户端调用（(admin)/layout 挂载的 DictionariesLoader）；首屏先用默认值渲染。
+ */
+export async function loadDictionaries(options?: {
+  force?: boolean;
+}): Promise<DictionarySnapshot> {
+  const ttl = options?.force ? 0 : DICTIONARY_TTL_MS;
+  if (dictionarySnapshot && Date.now() - dictionaryLoadedAt < ttl) {
+    return dictionarySnapshot;
+  }
+  if (dictionaryInflight) {
+    return dictionaryInflight;
+  }
+
+  dictionaryInflight = (async () => {
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const keys = Object.values(DICTIONARY_KEYS) as DictionaryKey[];
+      const results = await Promise.all(
+        keys.map(async (key) => {
+          const { data, error } = await supabase.rpc("get_dict", {
+            p_dict_key: key,
+          });
+          return [key, error ? [] : parseDictionaryRows(data)] as const;
+        }),
+      );
+
+      const next: DictionarySnapshot = { ...DEFAULT_DICTIONARIES };
+      for (const [key, rows] of results) {
+        next[key] = mergeDictionaryItems(key, rows);
+      }
+      dictionarySnapshot = next;
+      dictionaryLoadedAt = Date.now();
+      return next;
+    } catch (error) {
+      console.warn("共享字典加载失败，已回退编译期默认值：", error);
+      return dictionarySnapshot ?? DEFAULT_DICTIONARIES;
+    } finally {
+      dictionaryInflight = null;
+    }
+  })();
+
+  return dictionaryInflight;
+}
+
+/** 读取某字典全部项（未加载时返回默认值） */
+export function getDictionaryItems(key: DictionaryKey): DictionaryItem[] {
+  return (dictionarySnapshot ?? DEFAULT_DICTIONARIES)[key];
+}
+
+function findDictionaryItem(
+  key: DictionaryKey,
+  value: string,
+): DictionaryItem | undefined {
+  return getDictionaryItems(key).find((item) => item.value === value);
+}
+
+/** common.status 文案（未加载/未命中回退编译期常量） */
+export function getCommonStatusLabel(value: string): string {
+  return (
+    findDictionaryItem(DICTIONARY_KEYS.commonStatus, value)?.label ??
+    COMMON_STATUS_LABELS[value] ??
+    value
+  );
+}
+
+/** common.status Badge 配色（未加载/未命中回退编译期常量） */
+export function getCommonStatusBadgeClass(value: string): string {
+  return (
+    findDictionaryItem(DICTIONARY_KEYS.commonStatus, value)?.color_class ??
+    COMMON_STATUS_BADGE_CLASSES[value] ??
+    ""
+  );
+}
+
+/** common.yesno 文案（未加载/未命中回退编译期常量） */
+export function getCommonYesnoLabel(value: string): string {
+  return (
+    findDictionaryItem(DICTIONARY_KEYS.commonYesno, value)?.label ??
+    COMMON_YESNO_LABELS[value] ??
+    value
+  );
+}
+
+/** common.yesno Badge 配色（未加载/未命中回退编译期常量） */
+export function getCommonYesnoBadgeClass(value: string): string {
+  return (
+    findDictionaryItem(DICTIONARY_KEYS.commonYesno, value)?.color_class ??
+    COMMON_YESNO_BADGE_CLASSES[value] ??
+    ""
+  );
 }

@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 路由 | /dashboard/notifications |
-| 状态 | P2，依赖消息中心 |
+| 状态 | ✅ 已交付（dashboard/003，消费 message RPC） |
 | 模块 | [dashboard](../README.md#1-工作台-dashboard) |
 
 ## 目的
