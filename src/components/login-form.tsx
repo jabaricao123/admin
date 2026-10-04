@@ -33,11 +33,11 @@ function translate(message: string) {
   return ERROR_MESSAGES[message] ?? translateErrorMessage(message);
 }
 
-export function LoginForm() {
+export function LoginForm({ initialError }: { initialError?: string }) {
   const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(initialError ?? null);
   const [loading, setLoading] = React.useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {

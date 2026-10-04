@@ -7,11 +7,15 @@ export type UserRole = Database["public"]["Enums"]["user_role"];
 export type ProfileStatus = Database["public"]["Enums"]["profile_status"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
+/** 停用账号被 Auth 层 ban（登录拒绝）与 /login?reason=banned 的统一提示 */
+export const BANNED_ACCOUNT_MESSAGE = "账号已被停用，请联系管理员";
+
 /** Supabase / PostgREST 常见错误的中文映射；未命中时返回带原文的兜底文案 */
 const ERROR_MESSAGES: Record<string, string> = {
   "Invalid login credentials": "邮箱或密码错误",
   "Email not confirmed": "邮箱尚未确认，请联系管理员",
   "Too many requests": "尝试次数过多，请稍后再试",
+  "User is banned": BANNED_ACCOUNT_MESSAGE,
   "missing email or phone": "请输入邮箱和密码",
   "仅管理员可执行此操作": "仅管理员可执行此操作",
   "不能修改自己的管理员角色": "不能修改自己的管理员角色",

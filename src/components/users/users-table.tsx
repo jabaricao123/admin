@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { banUser, unbanUser } from "@/app/(admin)/org/users/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -329,6 +330,8 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
       return;
     }
 
+    const statusChanged = form.status !== editing.status;
+
     // 停用确认：状态从启用改为停用时先确认
     if (editing.status === "active" && form.status === "inactive") {
       const confirmed = window.confirm(
@@ -355,6 +358,21 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
       }
     }
 
+    // Auth 层 ban/unban 先于档案状态：
+    // 停用 = banUser → status='inactive'；启用 = unbanUser → status='active'。
+    // 前端守卫不可信，action 内会以当前会话二次校验调用者为 admin。
+    if (statusChanged) {
+      const banResult =
+        form.status === "inactive"
+          ? await banUser(editing.id)
+          : await unbanUser(editing.id);
+      if (!banResult.ok) {
+        setSaving(false);
+        toast.error(banResult.message);
+        return;
+      }
+    }
+
     // admin_update_profile 负责姓名/部门/岗位/状态（角色已收窄，不再传 p_role）；
     // org/009：部门/岗位走 id 参数（触发器回写部门文本），仅在变更时传参
     const departmentChanged =
@@ -374,12 +392,30 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
     setSaving(false);
 
     if (saveError) {
-      toast.error(translateUserErrorMessage(saveError.message));
+      const message = translateUserErrorMessage(saveError.message);
+      if (!statusChanged) {
+        toast.error(message);
+      } else {
+        // 档案写入失败 → 回滚 Auth 层 ban/unban，避免“档案状态与登录封禁”不一致
+        const rollback =
+          form.status === "inactive"
+            ? await unbanUser(editing.id)
+            : await banUser(editing.id);
+        toast.error(
+          rollback.ok
+            ? `${message}（已恢复该账号原登录状态）`
+            : `${message}；登录状态回滚失败，请手动检查该账号`,
+        );
+      }
       void load();
       return;
     }
 
-    toast.success("已保存");
+    toast.success(
+      statusChanged && form.status === "inactive"
+        ? "已停用，该账号已无法登录"
+        : "已保存",
+    );
     closeEdit();
     void load();
   };
