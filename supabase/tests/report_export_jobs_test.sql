@@ -39,8 +39,8 @@ select is(
 select is(
   (select string_agg(source || '=' || owner_module, ',' order by source)
      from public.export_sources),
-  'audit.operations=audit,integration.logs=integration,org.users=org',
-  'seed 源 owner_module 归属正确（含 integration/007 登记的 integration.logs）'
+  'audit.logins=audit,audit.operations=audit,integration.logs=integration,org.users=org',
+  'seed 源 owner_module 归属正确（含 integration/007 与 audit 批次 2 登记的源）'
 );
 select is(
   (select config_schema ->> 'access' from public.export_sources where source = 'audit.operations'),
@@ -666,7 +666,7 @@ select throws_ok(
 reset role;
 
 -- RLS：export_sources 非 admin 仅见 enabled 源；admin 可见停用源
--- 启用源：org.users / integration.logs（admin 可见 3 源，其中 audit.operations 停用）
+-- 启用源：org.users / integration.logs / audit.logins（admin 可见 4 源，其中 audit.operations 停用）
 update public.export_sources set enabled = false where source = 'audit.operations';
 select set_config(
   'request.jwt.claims',
@@ -676,7 +676,7 @@ select set_config(
 set local role authenticated;
 select is(
   (select count(*) from public.export_sources),
-  2::bigint,
+  3::bigint,
   'RLS：非 admin 仅见 enabled 源'
 );
 reset role;
@@ -689,7 +689,7 @@ select set_config(
 set local role authenticated;
 select is(
   (select count(*) from public.export_sources),
-  3::bigint,
+  4::bigint,
   'RLS：admin 可见停用源'
 );
 reset role;

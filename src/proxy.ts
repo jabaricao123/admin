@@ -11,6 +11,7 @@ import { updateSession } from "@/lib/supabase/proxy";
  *    - Admin API ban 后 GoTrue 对 GET /user 直接返回 403 user_banned
  *      （userError 路径，主路径）；
  *    - profiles.status='inactive'（兜底，ban 未落 Auth 层时）；
+ *    - 命中时经 record_denied_attempt('auth', path, 'user_banned') 留痕（best-effort）；
  *    RLS 数据侧由 app.current_role()（status='active' 才返回角色）兜底。
  */
 export async function proxy(request: NextRequest) {
@@ -26,6 +27,18 @@ export async function proxy(request: NextRequest) {
 
   if (!user) {
     if (authBanned) {
+      // denied 留痕（audit 批次 1）：封禁账号越权访问以本人身份打点（module=auth）。
+      // best-effort：会话已吊销/限流/网络失败均不影响封禁重定向。
+      try {
+        await supabase.rpc("record_denied_attempt", {
+          p_module: "auth",
+          p_route: pathname,
+          p_reason: "user_banned",
+        });
+      } catch {
+        // 忽略：denied 留痕不是安全边界
+      }
+
       clearAuthCookies(request, supabaseResponse);
       return bannedRedirect(request, supabaseResponse, isAuthRoute);
     }

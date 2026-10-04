@@ -806,7 +806,7 @@ export function ReportSubscriptions({
           <SheetFooter className="flex-row justify-end gap-2">
             <Button
               variant="outline"
-              className="h-11 lg:h-8"
+              className="h-9 lg:h-8"
               onClick={closeSheet}
             >
               取消
@@ -814,15 +814,15 @@ export function ReportSubscriptions({
             <Button
               onClick={() => void handleSave()}
               disabled={saving}
-              className="h-11 lg:h-8"
+              className="h-9 lg:h-8"
             >
               {saving ? (
                 <Loader2Icon
-                  className="animate-spin"
+                  className="size-3.5 animate-spin"
                   data-icon="inline-start"
                 />
               ) : (
-                <SaveIcon data-icon="inline-start" />
+                <SaveIcon className="size-3.5" data-icon="inline-start" />
               )}
               保存订阅
             </Button>

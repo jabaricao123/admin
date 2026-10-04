@@ -9,6 +9,8 @@ import * as React from "react";
 import {
   ArrowRightIcon,
   CheckIcon,
+  EyeIcon,
+  EyeOffIcon,
   FileClockIcon,
   FileSearchIcon,
   Loader2Icon,
@@ -116,6 +118,11 @@ function renderFieldValue(key: string, value: Json | undefined): string {
   return formatDiffValue(value);
 }
 
+/** 对比视图技术字段（默认折叠）：主键/外键 ID 与邮箱等噪音字段 */
+function isTechnicalField(key: string): boolean {
+  return key === "id" || key === "email" || key.endsWith("_id");
+}
+
 export function ChangesTable() {
   const [whitelist, setWhitelist] = React.useState<WhitelistRow[]>([]);
   const [whitelistLoading, setWhitelistLoading] = React.useState(true);
@@ -137,6 +144,7 @@ export function ChangesTable() {
   const [recentError, setRecentError] = React.useState<string | null>(null);
 
   const [savingTable, setSavingTable] = React.useState<string | null>(null);
+  const [showTechnical, setShowTechnical] = React.useState(false);
 
   const sortedWhitelist = React.useMemo(
     () =>
@@ -377,13 +385,13 @@ export function ChangesTable() {
     return (
       <>
         <div className="hidden overflow-x-auto md:block">
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead>记录</TableHead>
-                <TableHead className="text-center">版本</TableHead>
-                <TableHead className="text-center">操作人</TableHead>
-                <TableHead className="text-center">时间</TableHead>
+                <TableHead>记录 / 操作人</TableHead>
+                <TableHead className="w-11 text-center">版本</TableHead>
+                <TableHead className="w-14 text-center">类型</TableHead>
+                <TableHead className="w-36 text-center">时间</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -403,14 +411,17 @@ export function ChangesTable() {
                     }
                   }}
                 >
-                  <TableCell className="max-w-56 truncate font-mono text-xs">
-                    {row.record_id}
+                  <TableCell className="max-w-56 font-mono text-xs">
+                    <div className="break-all">{row.record_id}</div>
+                    <div className="truncate font-sans text-muted-foreground">
+                      {row.changed_by_name ?? "系统/后台"}
+                    </div>
                   </TableCell>
                   <TableCell className="text-center font-mono text-xs">
                     v{row.version}
                   </TableCell>
                   <TableCell className="text-center">
-                    {row.changed_by_name ?? "系统/后台"}
+                    <ChangeTypeBadge changeType={row.change_type} />
                   </TableCell>
                   <TableCell className="text-center text-xs whitespace-nowrap text-muted-foreground">
                     {formatDateTime(row.changed_at)}
@@ -435,9 +446,12 @@ export function ChangesTable() {
                   {formatDateTime(row.changed_at)}
                 </span>
               </div>
-              <Badge variant="outline" className="shrink-0 font-mono">
-                v{row.version}
-              </Badge>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <Badge variant="outline" className="font-mono">
+                  v{row.version}
+                </Badge>
+                <ChangeTypeBadge changeType={row.change_type} />
+              </div>
             </button>
           ))}
         </div>
@@ -539,24 +553,51 @@ export function ChangesTable() {
       return null;
     }
     const { before, after } = comparePair;
+    const technicalCount = diffFields.filter((field) =>
+      isTechnicalField(field.key),
+    ).length;
+    const visibleFields = showTechnical
+      ? diffFields
+      : diffFields.filter((field) => !isTechnicalField(field.key));
 
     return (
       <section className="flex flex-col gap-3 rounded-xl border p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-medium">版本对比</h3>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className="font-mono">v{before.version}</span>
-            <ArrowRightIcon className="size-3.5" />
-            <span className="font-mono">v{after.version}</span>
-            <span>
-              · 变更 {changedCount} 项 / 共 {diffFields.length} 项
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-mono">v{before.version}</span>
+              <ArrowRightIcon className="size-3.5" />
+              <span className="font-mono">v{after.version}</span>
+              <span>
+                · 变更 {changedCount} 项 / 共 {diffFields.length} 项
+              </span>
+              {!showTechnical && technicalCount > 0 ? (
+                <span>· 已折叠 {technicalCount} 项技术字段</span>
+              ) : null}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-11 lg:h-8"
+              aria-pressed={showTechnical}
+              onClick={() => setShowTechnical((value) => !value)}
+            >
+              {showTechnical ? (
+                <EyeOffIcon data-icon="inline-start" />
+              ) : (
+                <EyeIcon data-icon="inline-start" />
+              )}
+              {showTechnical ? "隐藏技术字段" : "显示技术字段"}
+            </Button>
           </div>
         </div>
 
-        {diffFields.length === 0 ? (
+        {visibleFields.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
-            两个版本快照均为空
+            {diffFields.length === 0
+              ? "两个版本快照均为空"
+              : "仅剩技术字段，点击「显示技术字段」查看"}
           </p>
         ) : (
           <>
@@ -570,7 +611,7 @@ export function ChangesTable() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {diffFields.map((field) => (
+                  {visibleFields.map((field) => (
                     <TableRow
                       key={field.key}
                       className={field.changed ? "bg-primary/10" : undefined}
@@ -597,7 +638,7 @@ export function ChangesTable() {
             </div>
 
             <div className="flex flex-col gap-2 md:hidden">
-              {diffFields.map((field) => (
+              {visibleFields.map((field) => (
                 <div
                   key={field.key}
                   className={`flex flex-col gap-1.5 rounded-lg border p-3 ${
@@ -639,7 +680,7 @@ export function ChangesTable() {
           >
             <Select value={selectedTable} onValueChange={handleTableChange}>
               <SelectTrigger
-                className="h-11 w-full sm:w-44 lg:h-8"
+                className="min-h-11 w-full sm:w-44 lg:min-h-8"
                 aria-label="选择留痕表"
               >
                 <SelectValue placeholder="选择表" />

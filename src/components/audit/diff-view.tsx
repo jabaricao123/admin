@@ -6,15 +6,21 @@
 import { ArrowRightIcon } from "lucide-react";
 
 import type { Json } from "@/lib/database.types";
-import { formatDiffValue, isPlainObject } from "@/lib/audit";
+import {
+  formatDiffValue,
+  isPlainObject,
+  ROW_VERSION_FIELD_LABELS,
+} from "@/lib/audit";
 
-/** 已知字段的中文展示名；未知字段回退原始 key */
+/**
+ * 已知字段的中文展示名；未知字段回退原始 key。
+ * 复用数据变更页（audit_row_versions）的字段映射（org 白名单表的 full_name、
+ * department_id 等），再补操作日志/权限审计常见键（reason、module 等）。
+ */
 const FIELD_LABELS: Record<string, string> = {
+  ...ROW_VERSION_FIELD_LABELS,
   reason: "原因",
-  name: "名称",
   code: "标识",
-  status: "状态",
-  role: "角色",
   role_id: "角色 ID",
   module: "模块",
   config: "配置",

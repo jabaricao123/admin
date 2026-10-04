@@ -326,7 +326,6 @@ select is(
   'export_failed 变量清单 = 失败通知实际发送键'
 );
 
-select * from finish();
 -- monthly 预设映射（UTC 换算）
 select set_config(
   'request.jwt.claims',
@@ -347,4 +346,5 @@ select is(
   'monthly 09:00 CST → cron 0 1 1 * *（UTC 当月 1 日）'
 );
 
+select * from finish();
 rollback;

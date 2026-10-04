@@ -130,6 +130,8 @@ select ok(
 delete from public.audit_logins;
 delete from public.audit_row_versions;
 delete from public.audit_operations;
+-- 共享本地库可能已有手工生成/其他会话留下的报告，清空保证计数口径可控
+delete from public.compliance_reports;
 
 -- 操作：范围 compliance_test 内 3 条（含权限摘要无关），窗口外 1 条
 insert into public.audit_operations

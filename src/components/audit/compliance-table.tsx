@@ -88,6 +88,7 @@ export function ComplianceTable() {
   const [loadingReportId, setLoadingReportId] = React.useState<string | null>(
     null,
   );
+  const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
 
   const iframeRef = React.useRef<HTMLIFrameElement>(null);
   const viewerRef = React.useRef<HTMLDivElement>(null);
@@ -201,16 +202,42 @@ export function ComplianceTable() {
     const blob = new Blob([report.html], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
+    // 文件名日期按业务时区（Asia/Shanghai）生成：避免 toISOString 的 UTC 偏移差一天
+    const dateLabel = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "Asia/Shanghai",
+    }).format(new Date(report.createdAt));
     anchor.href = url;
-    anchor.download = `合规报告-${compliancePeriodLabel(report.period)}-${new Date(
-      report.createdAt,
-    )
-      .toISOString()
-      .slice(0, 10)}.html`;
+    anchor.download = `合规报告-${compliancePeriodLabel(report.period)}-${dateLabel}.html`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
+  };
+
+  /** 历史列表直接下载：按需取全文，不经过预览态 */
+  const handleRowDownload = async (row: ReportRow) => {
+    setDownloadingId(row.id);
+    const { data, error } = await createClient()
+      .from("compliance_reports")
+      .select("file_content")
+      .eq("id", row.id)
+      .single();
+    setDownloadingId(null);
+
+    if (error || !data) {
+      toast.error(
+        `报告下载失败：${translateAuditErrorMessage(error?.message ?? "未知错误")}`,
+      );
+      return;
+    }
+
+    handleDownload({
+      id: row.id,
+      period: row.period,
+      range: row.range,
+      createdAt: row.created_at,
+      html: data.file_content,
+    });
   };
 
   const renderHistory = () => {
@@ -248,36 +275,54 @@ export function ComplianceTable() {
       return (
         <div className="-mx-4 flex flex-col gap-2 px-4 md:mx-0 md:gap-3 md:px-0">
           {history.map((row) => (
-            <button
+            <div
               key={row.id}
-              type="button"
-              onClick={() => void loadReport(row)}
-              disabled={loadingReportId === row.id}
-              className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60"
+              className="flex w-full items-stretch gap-2 rounded-xl border bg-card p-3 shadow-xs transition-colors hover:border-primary/50"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate font-medium">
-                    {compliancePeriodLabel(row.period)} ·{" "}
-                    {complianceRangeLabel(row.range)}
+              <button
+                type="button"
+                onClick={() => void loadReport(row)}
+                disabled={loadingReportId === row.id}
+                className="flex min-w-0 flex-1 flex-col gap-2 text-left focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">
+                      {compliancePeriodLabel(row.period)} ·{" "}
+                      {complianceRangeLabel(row.range)}
+                    </div>
+                    <div className="truncate text-xs leading-tight text-muted-foreground">
+                      {formatDateTime(row.created_at)}
+                    </div>
                   </div>
-                  <div className="truncate text-xs leading-tight text-muted-foreground">
-                    {formatDateTime(row.created_at)}
-                  </div>
+                  {loadingReportId === row.id ? (
+                    <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground">
+                      查看
+                    </Badge>
+                  )}
                 </div>
-                {loadingReportId === row.id ? (
-                  <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-muted-foreground">生成人</span>
+                  <span>{generatorName(row.generated_by)}</span>
+                </div>
+              </button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-11 shrink-0"
+                aria-label="下载 HTML 报告"
+                disabled={downloadingId === row.id}
+                onClick={() => void handleRowDownload(row)}
+              >
+                {downloadingId === row.id ? (
+                  <Loader2Icon className="animate-spin" />
                 ) : (
-                  <Badge variant="outline" className="text-muted-foreground">
-                    查看
-                  </Badge>
+                  <DownloadIcon />
                 )}
-              </div>
-              <div className="flex items-center justify-between gap-4 text-sm">
-                <span className="text-muted-foreground">生成人</span>
-                <span>{generatorName(row.generated_by)}</span>
-              </div>
-            </button>
+              </Button>
+            </div>
           ))}
         </div>
       );
@@ -292,6 +337,7 @@ export function ComplianceTable() {
               <TableHead className="text-center">周期</TableHead>
               <TableHead className="text-center">范围</TableHead>
               <TableHead className="text-center">生成人</TableHead>
+              <TableHead className="w-16 text-center">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -327,6 +373,25 @@ export function ComplianceTable() {
                     generatorName(row.generated_by)
                   )}
                 </TableCell>
+                <TableCell className="text-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    aria-label="下载 HTML 报告"
+                    disabled={downloadingId === row.id}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleRowDownload(row);
+                    }}
+                  >
+                    {downloadingId === row.id ? (
+                      <Loader2Icon className="animate-spin" />
+                    ) : (
+                      <DownloadIcon />
+                    )}
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -343,7 +408,7 @@ export function ComplianceTable() {
             <label className="flex flex-col gap-1.5 text-sm">
               <span className="text-muted-foreground">周期</span>
               <Select value={period} onValueChange={setPeriod}>
-                <SelectTrigger className="h-11 w-full sm:w-32 lg:h-8">
+                <SelectTrigger className="min-h-11 w-full sm:w-32 lg:min-h-8">
                   <SelectValue placeholder="选择周期" />
                 </SelectTrigger>
                 <SelectContent>
@@ -358,7 +423,7 @@ export function ComplianceTable() {
             <label className="flex flex-col gap-1.5 text-sm">
               <span className="text-muted-foreground">范围</span>
               <Select value={range} onValueChange={setRange}>
-                <SelectTrigger className="h-11 w-full sm:w-40 lg:h-8">
+                <SelectTrigger className="min-h-11 w-full sm:w-40 lg:min-h-8">
                   <SelectValue placeholder="选择范围" />
                 </SelectTrigger>
                 <SelectContent>
@@ -430,6 +495,9 @@ export function ComplianceTable() {
                   ref={iframeRef}
                   title="合规报告预览"
                   srcDoc={viewing.html}
+                  // 禁脚本（无 allow-scripts）；保留 allow-modals 以让「打印」按钮可用
+                  // （空 sandbox 会连带禁用 window.print()，见 HTML 规范 SandboxModals）
+                  sandbox="allow-modals"
                   className="h-[70vh] w-full rounded-lg border bg-white"
                 />
               </>

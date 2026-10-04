@@ -623,15 +623,15 @@ export function SmsConfigPanel() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="h-11 w-full sm:w-auto lg:h-8"
+                className="h-9 w-full sm:w-auto lg:h-8"
               >
                 {saving ? (
                   <Loader2Icon
-                    className="animate-spin"
+                    className="size-3.5 animate-spin"
                     data-icon="inline-start"
                   />
                 ) : (
-                  <SaveIcon data-icon="inline-start" />
+                  <SaveIcon className="size-3.5" data-icon="inline-start" />
                 )}
                 保存
               </Button>
@@ -894,22 +894,22 @@ export function SmsConfigPanel() {
                 type="button"
                 variant="outline"
                 onClick={() => setSheetOpen(false)}
-                className="h-11 lg:h-8"
+                className="h-9 lg:h-8"
               >
                 取消
               </Button>
               <Button
                 type="submit"
                 disabled={savingTemplate}
-                className="h-11 lg:h-8"
+                className="h-9 lg:h-8"
               >
                 {savingTemplate ? (
                   <Loader2Icon
-                    className="animate-spin"
+                    className="size-3.5 animate-spin"
                     data-icon="inline-start"
                   />
                 ) : (
-                  <SaveIcon data-icon="inline-start" />
+                  <SaveIcon className="size-3.5" data-icon="inline-start" />
                 )}
                 保存
               </Button>

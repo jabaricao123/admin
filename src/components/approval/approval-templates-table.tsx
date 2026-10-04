@@ -1094,22 +1094,22 @@ export function ApprovalTemplatesTable() {
               </span>
               <Button
                 variant="outline"
-                className="h-11 lg:h-8"
+                className="h-9 lg:h-8"
                 onClick={() => void handleSaveDraft()}
                 disabled={saving || publishing}
               >
                 {saving ? (
                   <Loader2Icon
-                    className="animate-spin"
+                    className="size-3.5 animate-spin"
                     data-icon="inline-start"
                   />
                 ) : (
-                  <SaveIcon data-icon="inline-start" />
+                  <SaveIcon className="size-3.5" data-icon="inline-start" />
                 )}
                 保存草稿
               </Button>
               <Button
-                className="h-11 lg:h-8"
+                className="h-9 lg:h-8"
                 onClick={() => void handlePublish()}
                 disabled={saving || publishing}
               >

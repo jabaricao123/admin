@@ -629,7 +629,7 @@ export function AnnouncementsTable() {
             <Button
               type="button"
               variant="outline"
-              className="h-11 lg:h-8"
+              className="h-9 lg:h-8"
               onClick={() => setSheetOpen(false)}
               disabled={busy}
             >
@@ -641,23 +641,23 @@ export function AnnouncementsTable() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 lg:h-8"
+                  className="h-9 lg:h-8"
                   onClick={() => void handleSave()}
                   disabled={busy}
                 >
                   {saving ? (
                     <Loader2Icon
-                      className="animate-spin"
+                      className="size-3.5 animate-spin"
                       data-icon="inline-start"
                     />
                   ) : (
-                    <SaveIcon data-icon="inline-start" />
+                    <SaveIcon className="size-3.5" data-icon="inline-start" />
                   )}
                   保存草稿
                 </Button>
                 <Button
                   type="button"
-                  className="h-11 lg:h-8"
+                  className="h-9 lg:h-8"
                   onClick={() => void handlePublish()}
                   disabled={busy}
                 >

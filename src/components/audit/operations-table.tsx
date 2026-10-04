@@ -277,8 +277,17 @@ export function OperationsTable() {
 
   const handleExport = async () => {
     setExporting(true);
+    // 导出带上当前日期筛选（config.start/end，YYYY-MM-DD；无筛选时不传键）
+    const config: Record<string, string> = {};
+    if (dateFrom) {
+      config.start = dateFrom;
+    }
+    if (dateTo) {
+      config.end = dateTo;
+    }
     const { error: exportError } = await createClient().rpc("request_export", {
       p_source: "audit.operations",
+      p_config: config,
     });
     setExporting(false);
 
@@ -290,10 +299,7 @@ export function OperationsTable() {
     toast.success("导出任务已创建，完成后到 /report/exports 下载");
   };
 
-  const handleTimelineSearch = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
+  const runTimelineSearch = async () => {
     const objectType = timelineType.trim();
     const objectId = timelineId.trim();
     if (!objectType || !objectId) {
@@ -319,6 +325,11 @@ export function OperationsTable() {
     } else {
       setTimelineRows(data ?? []);
     }
+  };
+
+  const handleTimelineSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void runTimelineSearch();
   };
 
   const renderList = () => {
@@ -489,6 +500,9 @@ export function OperationsTable() {
           <p className="text-destructive">
             加载失败：{translateAuditErrorMessage(timelineError)}
           </p>
+          <Button variant="outline" onClick={() => void runTimelineSearch()}>
+            重试
+          </Button>
         </div>
       );
     }
@@ -573,7 +587,7 @@ export function OperationsTable() {
               <>
                 <Select value={moduleFilter} onValueChange={setModuleFilter}>
                   <SelectTrigger
-                    className="h-11 w-full sm:w-32 lg:h-8"
+                    className="min-h-11 w-full sm:w-32 lg:min-h-8"
                     aria-label="按模块筛选"
                   >
                     <SelectValue placeholder="全部模块" />
@@ -589,7 +603,7 @@ export function OperationsTable() {
                 </Select>
                 <Select value={actorFilter} onValueChange={setActorFilter}>
                   <SelectTrigger
-                    className="h-11 w-full sm:w-32 lg:h-8"
+                    className="min-h-11 w-full sm:w-32 lg:min-h-8"
                     aria-label="按操作人筛选"
                   >
                     <SelectValue placeholder="全部操作人" />
@@ -606,7 +620,7 @@ export function OperationsTable() {
                 </Select>
                 <Select value={actionFilter} onValueChange={setActionFilter}>
                   <SelectTrigger
-                    className="h-11 w-full sm:w-28 lg:h-8"
+                    className="min-h-11 w-full sm:w-28 lg:min-h-8"
                     aria-label="按动作筛选"
                   >
                     <SelectValue placeholder="全部动作" />
@@ -625,7 +639,7 @@ export function OperationsTable() {
                   onValueChange={setObjectTypeFilter}
                 >
                   <SelectTrigger
-                    className="h-11 w-full sm:w-32 lg:h-8"
+                    className="min-h-11 w-full sm:w-32 lg:min-h-8"
                     aria-label="按对象类型筛选"
                   >
                     <SelectValue placeholder="全部对象" />
@@ -639,23 +653,29 @@ export function OperationsTable() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(event) => setDateFrom(event.target.value)}
-                  className="h-11 w-full text-base sm:w-36 lg:h-8 lg:text-sm"
-                  aria-label="起始日期"
-                />
+                <label className="flex w-full flex-col gap-1 text-xs text-muted-foreground sm:w-auto sm:flex-row sm:items-center sm:gap-2">
+                  <span className="shrink-0">开始</span>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(event) => setDateFrom(event.target.value)}
+                    className="h-11 w-full text-base sm:w-36 lg:h-8 lg:text-sm"
+                    aria-label="起始日期"
+                  />
+                </label>
                 <span className="hidden text-xs text-muted-foreground sm:inline">
                   至
                 </span>
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={(event) => setDateTo(event.target.value)}
-                  className="h-11 w-full text-base sm:w-36 lg:h-8 lg:text-sm"
-                  aria-label="结束日期"
-                />
+                <label className="flex w-full flex-col gap-1 text-xs text-muted-foreground sm:w-auto sm:flex-row sm:items-center sm:gap-2">
+                  <span className="shrink-0">结束</span>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(event) => setDateTo(event.target.value)}
+                    className="h-11 w-full text-base sm:w-36 lg:h-8 lg:text-sm"
+                    aria-label="结束日期"
+                  />
+                </label>
                 {hasActiveFilters ? (
                   <Button
                     variant="ghost"
@@ -668,7 +688,7 @@ export function OperationsTable() {
               </>
             ) : (
               <form
-                onSubmit={(event) => void handleTimelineSearch(event)}
+                onSubmit={handleTimelineSearch}
                 className="flex w-full flex-wrap items-center gap-2 sm:w-auto"
               >
                 <Input
@@ -685,7 +705,11 @@ export function OperationsTable() {
                   className="h-11 w-full text-base sm:w-40 lg:h-8 lg:text-sm"
                   aria-label="对象标识"
                 />
-                <Button type="submit" className="h-11 w-full lg:h-8 sm:w-auto">
+                <Button
+                  type="submit"
+                  disabled={timelineLoading}
+                  className="h-11 w-full lg:h-8 sm:w-auto"
+                >
                   <FileSearchIcon data-icon="inline-start" />
                   查看时间线
                 </Button>
@@ -713,6 +737,12 @@ export function OperationsTable() {
           </div>
 
           {mode === "list" ? renderList() : renderTimeline()}
+
+          {mode === "list" && !loading && !error && rows.length >= FETCH_LIMIT ? (
+            <p className="text-xs text-muted-foreground">
+              仅显示最近 {FETCH_LIMIT} 条，更早数据请使用导出
+            </p>
+          ) : null}
 
           {mode === "list" && !loading && !error && filtered.length > 0 ? (
             <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">

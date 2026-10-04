@@ -18,8 +18,8 @@ select is(
      join public.roles r on r.id = g.role_id
     where r.code = 'engineer'
       and g.granted_by is null),
-  15::bigint,
-  'engineer 系统默认授权 15 条（granted_by=null，含报表菜单 5）'
+  17::bigint,
+  'engineer 系统默认授权 17 条（granted_by=null，含报表菜单 5 + 审计菜单 2）'
 );
 select results_eq(
   $$ select g.menu_key
@@ -28,7 +28,9 @@ select results_eq(
       where r.code = 'engineer'
       order by g.menu_key $$,
   $$ values
-       ('/dashboard'::text),
+       ('/audit'::text),
+       ('/audit/logins'),
+       ('/dashboard'),
        ('/dashboard/notifications'),
        ('/dashboard/todos'),
        ('/message'),
@@ -43,7 +45,7 @@ select results_eq(
        ('/report/subscriptions'),
        ('/system'),
        ('/system/about') $$,
-  'engineer 授权集 = 基础菜单 + 顶级分组 + 报表菜单（含完整祖先链）'
+  'engineer 授权集 = 基础菜单 + 顶级分组 + 报表菜单 + 审计菜单（含完整祖先链）'
 );
 select is(
   (select count(*)
@@ -51,8 +53,8 @@ select is(
      join public.roles r on r.id = g.role_id
     where r.code in ('engineer', 'planner', 'buyer', 'quality')
       and g.granted_by is null),
-  60::bigint,
-  '4 个内部角色系统默认授权共 60 条（各 15 条，含报表菜单）'
+  68::bigint,
+  '4 个内部角色系统默认授权共 68 条（各 17 条，含报表/审计菜单）'
 );
 select results_eq(
   $$ select g.menu_key
@@ -99,8 +101,8 @@ set local role authenticated;
 
 select is(
   (select count(*) from public.visible_menus()),
-  15::bigint,
-  'engineer：恰见 15 条默认授权菜单（含报表菜单）'
+  17::bigint,
+  'engineer：恰见 17 条默认授权菜单（含报表/审计菜单）'
 );
 select ok(
   (select bool_and(not fallback) from public.visible_menus()),

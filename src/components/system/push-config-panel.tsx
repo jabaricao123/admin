@@ -385,7 +385,7 @@ export function PushConfigPanel() {
                     variant="outline"
                     onClick={() => void handleTest(channel)}
                     disabled={testing || saving || !form.configured}
-                    className="h-11 lg:h-8"
+                    className="h-9 lg:h-8"
                   >
                     {testing ? (
                       <Loader2Icon
@@ -401,15 +401,15 @@ export function PushConfigPanel() {
                     type="button"
                     onClick={() => void handleSave(channel)}
                     disabled={saving || testing}
-                    className="h-11 lg:h-8"
+                    className="h-9 lg:h-8"
                   >
                     {saving ? (
                       <Loader2Icon
-                        className="animate-spin"
+                        className="size-3.5 animate-spin"
                         data-icon="inline-start"
                       />
                     ) : (
-                      <SaveIcon data-icon="inline-start" />
+                      <SaveIcon className="size-3.5" data-icon="inline-start" />
                     )}
                     保存
                   </Button>

@@ -3236,6 +3236,7 @@ export type Database = {
       list_recent_versions: {
         Args: { p_limit?: number; p_table: string }
         Returns: {
+          change_type: string
           changed_at: string
           changed_by: string
           changed_by_name: string
@@ -3522,6 +3523,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      record_denied_attempt: {
+        Args: { p_module: string; p_reason: string; p_route: string }
+        Returns: number
       }
       record_login_attempt: {
         Args: { p_email: string; p_fail_reason?: string; p_success: boolean }

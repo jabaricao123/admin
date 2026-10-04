@@ -1281,7 +1281,7 @@ export function SyncTasksTable() {
             <Button
               variant="outline"
               onClick={step > 1 ? previousStep : closeSheet}
-              className="h-11 lg:h-8"
+              className="h-9 lg:h-8"
             >
               {step > 1 ? (
                 <>
@@ -1301,15 +1301,15 @@ export function SyncTasksTable() {
               <Button
                 onClick={() => void handleSave()}
                 disabled={saving}
-                className="h-11 lg:h-8"
+                className="h-9 lg:h-8"
               >
                 {saving ? (
                   <Loader2Icon
-                    className="animate-spin"
+                    className="size-3.5 animate-spin"
                     data-icon="inline-start"
                   />
                 ) : (
-                  <SaveIcon data-icon="inline-start" />
+                  <SaveIcon className="size-3.5" data-icon="inline-start" />
                 )}
                 保存任务
               </Button>

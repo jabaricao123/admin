@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ShieldXIcon } from "lucide-react";
 
+import { ForbiddenCard } from "@/components/forbidden-card";
 import { OperationsTable } from "@/components/audit/operations-table";
-import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -28,17 +27,10 @@ export default async function AuditOperationsPage() {
 
   if (profile?.role !== "admin") {
     return (
-      <div className="flex flex-1 items-center justify-center p-6">
-        <Card className="max-w-md">
-          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-            <ShieldXIcon className="size-10 text-muted-foreground" />
-            <div className="text-lg font-medium">403 · 无访问权限</div>
-            <p className="text-sm text-muted-foreground">
-              仅管理员可访问操作日志。
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <ForbiddenCard
+        module="audit"
+        description="仅管理员可访问操作日志。"
+      />
     );
   }
 

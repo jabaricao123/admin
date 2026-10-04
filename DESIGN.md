@@ -53,7 +53,7 @@
 5. 保存走 Supabase RPC / 数据操作，成功后 `toast.success` + 刷新列表；失败 `toast.error(error.message)`。
 6. 枚举展示用 `Badge variant="outline"` + `src/lib/dictionaries.ts` 中的配色类名，禁止散落硬编码。
 7. **移动端（<1024px）列表渲染为卡片**：整卡是 `button`（键盘可达），标题行 = 主字段 + 角色 Badge，详情行 label 左 / value 右；**卡片内边距 12px（`p-3`），标题块↔首行内容 8px（`gap-2`），名称↔副标题 2px**；静态态细边框 + 微投影，hover/focus 边框变主色。点击卡片打开右侧 Sheet（同第 4 条，与桌面一致）。
-8. **保存按钮统一**：实心主按钮 + `SaveIcon`（保存中换 `Loader2Icon`），尺寸 `h-11 lg:h-8`；Sheet footer 的「取消/关闭」与保存同高；与「发布」并排的「保存草稿」保持描边（主次）。
+8. **保存按钮统一**：实心主按钮 + `SaveIcon`（保存中换 `Loader2Icon`，图标 `size-3.5`），按钮尺寸 `h-9 lg:h-8`；Sheet footer 的「取消/关闭」与保存同高；与「发布」并排的「保存草稿」保持描边（主次）。
 9. **带标题的区域卡（含 Tab 卡与功能卡）统一 12px 节奏**：Card 加 `gap-3! py-3!`（标题/描述↔内容与上下外缘 12px），标题字号不变。
 
 ## 5. 布局细则

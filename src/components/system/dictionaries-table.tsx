@@ -793,7 +793,7 @@ export function DictionariesTable() {
             <Button
               type="button"
               variant="outline"
-              className="h-11 lg:h-8"
+              className="h-9 lg:h-8"
               onClick={() => setItemOpen(false)}
               disabled={savingItem}
             >
@@ -801,14 +801,14 @@ export function DictionariesTable() {
             </Button>
             <Button
               type="button"
-              className="h-11 lg:h-8"
+              className="h-9 lg:h-8"
               onClick={() => void handleSaveItem()}
               disabled={savingItem}
             >
               {savingItem ? (
-                <Loader2Icon className="animate-spin" data-icon="inline-start" />
+                <Loader2Icon className="size-3.5 animate-spin" data-icon="inline-start" />
               ) : (
-                <SaveIcon data-icon="inline-start" />
+                <SaveIcon className="size-3.5" data-icon="inline-start" />
               )}
               保存
             </Button>
@@ -969,9 +969,9 @@ export function DictionariesTable() {
               disabled={creating}
             >
               {creating ? (
-                <Loader2Icon className="animate-spin" data-icon="inline-start" />
+                <Loader2Icon className="size-3.5 animate-spin" data-icon="inline-start" />
               ) : (
-                <SaveIcon data-icon="inline-start" />
+                <SaveIcon className="size-3.5" data-icon="inline-start" />
               )}
               创建
             </Button>

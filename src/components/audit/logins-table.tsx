@@ -3,14 +3,18 @@
 // 登录日志页面（audit/005）：admin 全量视图 / 普通用户「我的登录记录」。
 // 数据源：audit_logins（RLS：admin 全量；user_id = auth.uid() 本人自查），
 // 前端同一查询按角色自动收敛，无需分页数据源。
+// 导出：request_export('audit.logins')（report 统一导出管道，admin 独占源）。
 
 import * as React from "react";
 import {
   AlertTriangleIcon,
+  DownloadIcon,
   KeyRoundIcon,
+  Loader2Icon,
   SearchIcon,
   ShieldAlertIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,18 +40,19 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import type { Database } from "@/lib/database.types";
 import {
   formatDateTime,
+  LOGIN_FAIL_REASON_BADGE_CLASS,
+  LOGIN_FAILURE_BADGE_CLASS,
+  LOGIN_MULTI_IP_BADGE_CLASS,
+  LOGIN_SUCCESS_BADGE_CLASS,
   loginFailReasonLabel,
   translateAuditErrorMessage,
+  userAgentSummary,
 } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/client";
 
 const ALL = "all";
 const PAGE_SIZE = 20;
 const FETCH_LIMIT = 500;
-const SUCCESS_BADGE_CLASS =
-  "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300";
-const FAILURE_BADGE_CLASS =
-  "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300";
 
 type LoginRow = Database["public"]["Tables"]["audit_logins"]["Row"];
 type ResultFilter = "all" | "success" | "failure";
@@ -71,7 +76,9 @@ function ResultBadge({ success }: { success: boolean }) {
   return (
     <Badge
       variant="outline"
-      className={success ? SUCCESS_BADGE_CLASS : FAILURE_BADGE_CLASS}
+      className={
+        success ? LOGIN_SUCCESS_BADGE_CLASS : LOGIN_FAILURE_BADGE_CLASS
+      }
     >
       {success ? "成功" : "失败"}
     </Badge>
@@ -81,10 +88,7 @@ function ResultBadge({ success }: { success: boolean }) {
 /** logins.md 功能 4：同账号短窗口多 IP 失败警示 */
 function MultiIpWarning() {
   return (
-    <Badge
-      variant="outline"
-      className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300"
-    >
+    <Badge variant="outline" className={LOGIN_MULTI_IP_BADGE_CLASS}>
       <AlertTriangleIcon className="size-3" />
       多 IP 失败
     </Badge>
@@ -134,6 +138,7 @@ export function LoginsTable({ isAdmin }: { isAdmin: boolean }) {
   const [emailSearch, setEmailSearch] = React.useState("");
   const [timeRange, setTimeRange] = React.useState<TimeRange>("all");
   const [page, setPage] = React.useState(1);
+  const [exporting, setExporting] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -202,6 +207,21 @@ export function LoginsTable({ isAdmin }: { isAdmin: boolean }) {
     setTimeRange("all");
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    const { error: exportError } = await createClient().rpc("request_export", {
+      p_source: "audit.logins",
+    });
+    setExporting(false);
+
+    if (exportError) {
+      toast.error(translateAuditErrorMessage(exportError.message));
+      return;
+    }
+    // 报表中心导出页（/report/exports）已上线：引导到任务列表下载
+    toast.success("导出任务已创建，完成后到 /report/exports 下载");
+  };
+
   return (
     <div className="flex flex-col p-0 md:gap-6 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
@@ -224,7 +244,7 @@ export function LoginsTable({ isAdmin }: { isAdmin: boolean }) {
               }
             >
               <SelectTrigger
-                className="h-11 w-full sm:w-32 lg:h-8"
+                className="min-h-11 w-full sm:w-32 lg:min-h-8"
                 aria-label="按结果筛选"
               >
                 <SelectValue placeholder="全部结果" />
@@ -240,7 +260,7 @@ export function LoginsTable({ isAdmin }: { isAdmin: boolean }) {
               onValueChange={(value) => setTimeRange(value as TimeRange)}
             >
               <SelectTrigger
-                className="h-11 w-full sm:w-32 lg:h-8"
+                className="min-h-11 w-full sm:w-32 lg:min-h-8"
                 aria-label="按时间筛选"
               >
                 <SelectValue placeholder="全部时间" />
@@ -262,7 +282,31 @@ export function LoginsTable({ isAdmin }: { isAdmin: boolean }) {
                 清除筛选
               </Button>
             ) : null}
+            {isAdmin ? (
+              <Button
+                variant="outline"
+                onClick={() => void handleExport()}
+                disabled={exporting}
+                className="h-11 w-full sm:w-auto sm:ml-auto lg:h-8"
+              >
+                {exporting ? (
+                  <Loader2Icon
+                    className="animate-spin"
+                    data-icon="inline-start"
+                  />
+                ) : (
+                  <DownloadIcon data-icon="inline-start" />
+                )}
+                导出
+              </Button>
+            ) : null}
           </div>
+
+          {!isAdmin ? (
+            <p className="text-xs text-muted-foreground">
+              仅显示你本人的登录记录
+            </p>
+          ) : null}
 
           {loading ? (
             <div className="flex flex-col gap-2">
@@ -335,7 +379,7 @@ export function LoginsTable({ isAdmin }: { isAdmin: boolean }) {
                         className="truncate text-right text-xs"
                         title={row.ua ?? undefined}
                       >
-                        {row.ua ?? "—"}
+                        {userAgentSummary(row.ua)}
                       </span>
                     </div>
                   </div>
@@ -378,7 +422,7 @@ export function LoginsTable({ isAdmin }: { isAdmin: boolean }) {
                         ) : (
                           <Badge
                             variant="outline"
-                            className={FAILURE_BADGE_CLASS}
+                            className={LOGIN_FAIL_REASON_BADGE_CLASS}
                           >
                             <ShieldAlertIcon className="size-3" />
                             {loginFailReasonLabel(row.fail_reason)}
@@ -393,7 +437,7 @@ export function LoginsTable({ isAdmin }: { isAdmin: boolean }) {
                           className="line-clamp-2"
                           title={row.ua ?? undefined}
                         >
-                          {row.ua ?? "—"}
+                          {userAgentSummary(row.ua)}
                         </span>
                       </TableCell>
                     </TableRow>

@@ -623,7 +623,7 @@ function DesktopMatrix({
           ) : null}
           <Button
             variant="outline"
-            className="h-11 lg:h-8"
+            className="h-9 lg:h-8"
             disabled={saving || !hasChanges}
             onClick={onReset}
           >
@@ -631,14 +631,14 @@ function DesktopMatrix({
             重置
           </Button>
           <Button
-            className="h-11 min-w-28 lg:h-8"
+            className="h-9 min-w-28 lg:h-8"
             disabled={saving || !hasChanges}
             onClick={onSave}
           >
             {saving ? (
-              <Loader2Icon className="animate-spin" data-icon="inline-start" />
+              <Loader2Icon className="size-3.5 animate-spin" data-icon="inline-start" />
             ) : (
-              <SaveIcon data-icon="inline-start" />
+              <SaveIcon className="size-3.5" data-icon="inline-start" />
             )}
             保存
           </Button>
@@ -1031,21 +1031,21 @@ function MobileConfig({
         </span>
         <Button
           variant="outline"
-          className="h-11"
+          className="h-9"
           disabled={saving || !hasChanges}
           onClick={onReset}
         >
           重置
         </Button>
         <Button
-          className="h-11 flex-1 lg:h-8"
+          className="h-9 flex-1 lg:h-8"
           disabled={saving || !hasChanges}
           onClick={onSave}
         >
           {saving ? (
-            <Loader2Icon className="animate-spin" data-icon="inline-start" />
+            <Loader2Icon className="size-3.5 animate-spin" data-icon="inline-start" />
           ) : (
-            <SaveIcon data-icon="inline-start" />
+            <SaveIcon className="size-3.5" data-icon="inline-start" />
           )}
           保存
         </Button>

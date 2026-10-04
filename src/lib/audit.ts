@@ -106,6 +106,64 @@ export function auditActionBadgeClass(action: string): string {
   return "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400";
 }
 
+// ---------------------------------------------------------------------------
+// 登录日志（audit/005）：结果/警示 Badge 配色 + 失败原因中性色 + UA 摘要
+// ---------------------------------------------------------------------------
+
+/** 登录成功 Badge 配色（配合 Badge variant="outline"） */
+export const LOGIN_SUCCESS_BADGE_CLASS =
+  "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300";
+
+/** 登录失败 Badge 配色（配合 Badge variant="outline"） */
+export const LOGIN_FAILURE_BADGE_CLASS =
+  "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300";
+
+/** 多 IP 失败警示 Badge 配色（配合 Badge variant="outline"） */
+export const LOGIN_MULTI_IP_BADGE_CLASS =
+  "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300";
+
+/** 失败原因 Badge 中性配色：与红色「失败」结果 Badge 区分（配合 Badge variant="outline"） */
+export const LOGIN_FAIL_REASON_BADGE_CLASS =
+  "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400";
+
+/**
+ * UA → 「浏览器 · 系统」摘要（自写轻量解析，仅常见组合，未知回退「未知设备」）。
+ * 例：Chrome/Linux UA → 「Chrome · Linux」；iPhone Safari → 「Safari · iPhone」。
+ * 原始 UA 由调用方放入 title 悬停展示。
+ */
+export function userAgentSummary(ua: string | null | undefined): string {
+  if (!ua) {
+    return "—";
+  }
+  const browser = /Edg[A-Z]?\//.test(ua)
+    ? "Edge"
+    : /OPR\//.test(ua)
+      ? "Opera"
+      : /Firefox\/|FxiOS\//.test(ua)
+        ? "Firefox"
+        : /Chrome\/|CriOS\//.test(ua)
+          ? "Chrome"
+          : /Safari\//.test(ua)
+            ? "Safari"
+            : null;
+  // 顺序敏感：iPhone/iPad 的 UA 亦含 "like Mac OS X"，Android 亦含 "Linux"
+  const os = /iPhone|iPod/.test(ua)
+    ? "iPhone"
+    : /iPad/.test(ua)
+      ? "iPad"
+      : /Android/.test(ua)
+        ? "Android"
+        : /Windows/.test(ua)
+          ? "Windows"
+          : /Mac OS X|Macintosh/.test(ua)
+            ? "macOS"
+            : /Linux|X11/.test(ua)
+              ? "Linux"
+              : null;
+  const parts = [browser, os].filter((part): part is string => part !== null);
+  return parts.length > 0 ? parts.join(" · ") : "未知设备";
+}
+
 /** 登录失败原因归类（audit/005 写入枚举） → 展示文案 */
 export const LOGIN_FAIL_REASON_LABELS: Record<string, string> = {
   invalid_credentials: "邮箱或密码错误",

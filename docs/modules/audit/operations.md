@@ -23,7 +23,7 @@
 `audit_operations`：id、actor_id、module、action、object_type、object_id、diff jsonb、ip、ua、created_at（append-only，禁止 UPDATE/DELETE）。
 唯一写入入口：`audit_log(module, action, object_type, object_id, diff)` RPC（INDEX 规则 2；不 GRANT authenticated，仅经后端 SECURITY DEFINER wrapper 调用，INDEX 规则 10）。
 公开面：发布 `audit_operations_v`（actor 名、module、action、object_type、object_id、diff、ip、ua、created_at），供 access 权限审计、report 操作活跃度、audit 合规报告消费（INDEX 登记）。
-`audit_denied_v`：越权尝试视图（user、module、route、reason、time），写入路径为应用层捕获 42501/守卫拒绝后调 `audit_log(module, 'denied', ...)`；access/audit 消费。
+`audit_denied_v`：越权尝试视图（user、module、route、reason、time），写入路径已实现：公开包装 `record_denied_attempt(module, route, reason)`（GRANT authenticated，SECURITY DEFINER）统一写 `audit_log(module, 'denied', 'route', ...)`；module 白名单 = 10 个业务模块 + auth（代理封禁），route ≤200 / reason ≤500 截断，同用户 1 分钟 ≤20 条限流；接入点为 `src/proxy.ts` 403 user_banned 分支与各守卫页 403 卡片（`forbidden-card.tsx`）。access/audit 消费。
 分区：按月分区表（量增长后维护）。
 
 ## RLS
