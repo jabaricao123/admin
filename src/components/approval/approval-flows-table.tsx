@@ -1407,7 +1407,7 @@ export function ApprovalFlowsTable() {
               </span>
               <Button
                 variant="outline"
-                className="h-9 lg:h-8"
+                className="h-8"
                 onClick={() => void handleSaveDraft()}
                 disabled={saving || publishing}
               >
@@ -1422,7 +1422,7 @@ export function ApprovalFlowsTable() {
                 保存草稿
               </Button>
               <Button
-                className="h-9 lg:h-8"
+                className="h-8"
                 onClick={() => void handlePublish()}
                 disabled={saving || publishing}
               >

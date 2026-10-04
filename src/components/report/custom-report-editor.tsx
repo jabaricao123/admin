@@ -798,7 +798,7 @@ export function CustomReportEditor({
           ) : (
             <Button
               variant="outline"
-              className="h-9 lg:h-8"
+              className="h-8"
               onClick={() => onOpenChange(false)}
             >
               取消
@@ -815,7 +815,7 @@ export function CustomReportEditor({
             <Button
               onClick={() => void handleSave()}
               disabled={saving}
-              className="h-9 lg:h-8"
+              className="h-8"
             >
               {saving ? (
                 <Loader2Icon className="size-3.5 animate-spin" data-icon="inline-start" />

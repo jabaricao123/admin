@@ -623,7 +623,7 @@ function DesktopMatrix({
           ) : null}
           <Button
             variant="outline"
-            className="h-9 lg:h-8"
+            className="h-8"
             disabled={saving || !hasChanges}
             onClick={onReset}
           >
@@ -631,7 +631,7 @@ function DesktopMatrix({
             重置
           </Button>
           <Button
-            className="h-9 min-w-28 lg:h-8"
+            className="h-8 min-w-28"
             disabled={saving || !hasChanges}
             onClick={onSave}
           >
@@ -1031,14 +1031,14 @@ function MobileConfig({
         </span>
         <Button
           variant="outline"
-          className="h-9"
+          className="h-8"
           disabled={saving || !hasChanges}
           onClick={onReset}
         >
           重置
         </Button>
         <Button
-          className="h-9 flex-1 lg:h-8"
+          className="h-8 flex-1"
           disabled={saving || !hasChanges}
           onClick={onSave}
         >

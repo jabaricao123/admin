@@ -706,7 +706,7 @@ export function SettingsTable() {
               <Button
                 type="button"
                 variant="outline"
-                className="mr-auto h-9 lg:h-8"
+                className="mr-auto h-8"
                 onClick={() => void openHistory(form.key)}
               >
                 <HistoryIcon data-icon="inline-start" />
@@ -716,7 +716,7 @@ export function SettingsTable() {
             <Button
               type="button"
               variant="outline"
-              className="h-9 lg:h-8"
+              className="h-8"
               onClick={() => setFormOpen(false)}
               disabled={saving}
             >
@@ -724,7 +724,7 @@ export function SettingsTable() {
             </Button>
             <Button
               type="button"
-              className="h-9 lg:h-8"
+              className="h-8"
               onClick={() => void handleSave()}
               disabled={saving}
             >

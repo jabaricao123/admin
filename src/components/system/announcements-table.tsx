@@ -629,7 +629,7 @@ export function AnnouncementsTable() {
             <Button
               type="button"
               variant="outline"
-              className="h-9 lg:h-8"
+              className="h-8"
               onClick={() => setSheetOpen(false)}
               disabled={busy}
             >
@@ -641,7 +641,7 @@ export function AnnouncementsTable() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-9 lg:h-8"
+                  className="h-8"
                   onClick={() => void handleSave()}
                   disabled={busy}
                 >
@@ -657,7 +657,7 @@ export function AnnouncementsTable() {
                 </Button>
                 <Button
                   type="button"
-                  className="h-9 lg:h-8"
+                  className="h-8"
                   onClick={() => void handlePublish()}
                   disabled={busy}
                 >

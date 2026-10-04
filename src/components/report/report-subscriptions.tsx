@@ -806,7 +806,7 @@ export function ReportSubscriptions({
           <SheetFooter className="flex-row justify-end gap-2">
             <Button
               variant="outline"
-              className="h-9 lg:h-8"
+              className="h-8"
               onClick={closeSheet}
             >
               取消
@@ -814,7 +814,7 @@ export function ReportSubscriptions({
             <Button
               onClick={() => void handleSave()}
               disabled={saving}
-              className="h-9 lg:h-8"
+              className="h-8"
             >
               {saving ? (
                 <Loader2Icon

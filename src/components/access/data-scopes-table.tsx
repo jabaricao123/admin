@@ -322,7 +322,7 @@ export function DataScopesTable() {
 
   const renderSaveButton = (role: RoleInfo) => (
     <Button
-      className="h-9 lg:h-8"
+      className="h-8"
       disabled={!isDirty(role) || savingRoleId !== null}
       onClick={() => void handleSave(role)}
     >

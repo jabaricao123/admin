@@ -1281,7 +1281,7 @@ export function SyncTasksTable() {
             <Button
               variant="outline"
               onClick={step > 1 ? previousStep : closeSheet}
-              className="h-9 lg:h-8"
+              className="h-8"
             >
               {step > 1 ? (
                 <>
@@ -1301,7 +1301,7 @@ export function SyncTasksTable() {
               <Button
                 onClick={() => void handleSave()}
                 disabled={saving}
-                className="h-9 lg:h-8"
+                className="h-8"
               >
                 {saving ? (
                   <Loader2Icon

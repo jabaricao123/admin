@@ -793,7 +793,7 @@ export function DictionariesTable() {
             <Button
               type="button"
               variant="outline"
-              className="h-9 lg:h-8"
+              className="h-8"
               onClick={() => setItemOpen(false)}
               disabled={savingItem}
             >
@@ -801,7 +801,7 @@ export function DictionariesTable() {
             </Button>
             <Button
               type="button"
-              className="h-9 lg:h-8"
+              className="h-8"
               onClick={() => void handleSaveItem()}
               disabled={savingItem}
             >

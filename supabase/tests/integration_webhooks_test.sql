@@ -328,28 +328,35 @@ select is(
   'emit sync.run_finished 匹配 1 个 active 订阅'
 );
 select is(app.emit_event('unknown.event', '{}'::jsonb), 0, '无订阅事件匹配数为 0 但仍入队');
+-- 队列断言按本文件夹具事件过滤（抗并发 E2E 事件污染）
 select is(
-  (select count(*) from public.integration_events),
+  (select count(*) from public.integration_events
+    where event in ('approval.approved','org.user_changed','sync.run_finished','unknown.event')),
   4::bigint,
   '4 次 emit 入队 4 条'
 );
 select is(
-  (select event from public.integration_events order by id limit 1),
+  (select event from public.integration_events
+    where payload = '{"instance_id":"i-1"}'::jsonb),
   'approval.approved',
   '队列记录事件名'
 );
 select is(
-  (select payload from public.integration_events order by id limit 1),
+  (select payload from public.integration_events
+    where event = 'approval.approved' and payload ? 'instance_id'
+    order by id limit 1),
   '{"instance_id":"i-1"}'::jsonb,
   '队列记录 payload'
 );
 select is(
-  (select status from public.integration_events order by id limit 1),
+  (select status from public.integration_events
+    where payload = '{"instance_id":"i-1"}'::jsonb),
   'pending',
   '入队默认 status=pending'
 );
 select is(
-  (select attempts from public.integration_events order by id limit 1),
+  (select attempts from public.integration_events
+    where payload = '{"instance_id":"i-1"}'::jsonb),
   0,
   '入队默认 attempts=0'
 );

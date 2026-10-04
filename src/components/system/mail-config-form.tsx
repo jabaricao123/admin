@@ -493,7 +493,7 @@ export function MailConfigForm() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="h-9 w-full sm:w-auto lg:h-8"
+                className="h-8 w-full sm:w-auto"
               >
                 {saving ? (
                   <Loader2Icon

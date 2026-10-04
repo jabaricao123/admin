@@ -660,14 +660,14 @@ export function PositionsTable() {
             <Button
               variant="outline"
               onClick={closeSheet}
-              className="h-9 lg:h-8"
+              className="h-8"
             >
               取消
             </Button>
             <Button
               onClick={() => void handleSave()}
               disabled={saving}
-              className="h-9 lg:h-8"
+              className="h-8"
             >
               {saving ? (
                 <Loader2Icon

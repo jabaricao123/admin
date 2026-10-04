@@ -70,7 +70,7 @@ select lives_ok(
 select results_eq(
   $$ select actor_id, module, action, object_type, object_id, diff, ip, ua
        from public.audit_operations
-      where module = 'org' and action = 'update' $$,
+      where object_type = 'department' and object_id = '42' $$,
   $$ values (
        '11111111-1111-1111-1111-111111111111'::uuid,
        'org'::text, 'update'::text, 'department'::text, '42'::text,

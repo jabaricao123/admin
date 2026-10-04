@@ -205,9 +205,12 @@ select ok(
   '操作总量=3（窗口内 3 条，窗口外不计）'
 );
 select ok(
-  (select position('Engineer 测试' in file_content) > 0
+  (select position(
+       (select full_name from public.profiles
+         where id = '22222222-2222-2222-2222-222222220001')
+       in file_content) > 0
      from public.compliance_reports where id = :'r1'),
-  'Top 活跃用户含操作人姓名'
+  'Top 活跃用户含操作人姓名（按夹具用户当前姓名断言，抗并发改名）'
 );
 select ok(
   (select file_content like '%compliance_test%'
