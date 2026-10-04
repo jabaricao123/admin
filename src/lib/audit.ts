@@ -64,6 +64,11 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   enable: "启用",
   disable: "停用",
   cleanup: "清理",
+  publish: "发布",
+  unpublish: "取消发布",
+  register: "登记",
+  fail: "失败",
+  retry: "重试",
 };
 
 export function auditActionLabel(action: string | null | undefined): string {
@@ -75,7 +80,12 @@ export function auditActionLabel(action: string | null | undefined): string {
 
 /** 动作 Badge 配色：危险动作红 / 写操作绿·蓝 / 其余灰（配合 Badge variant="outline"） */
 export function auditActionBadgeClass(action: string): string {
-  if (action === "denied" || action === "delete" || action === "revoke") {
+  if (
+    action === "denied" ||
+    action === "delete" ||
+    action === "revoke" ||
+    action === "fail"
+  ) {
     return "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300";
   }
   if (action === "create" || action === "enable" || action === "approve") {
@@ -85,7 +95,11 @@ export function auditActionBadgeClass(action: string): string {
     action === "update" ||
     action === "upsert" ||
     action === "assign" ||
-    action === "verify"
+    action === "verify" ||
+    action === "publish" ||
+    action === "unpublish" ||
+    action === "register" ||
+    action === "retry"
   ) {
     return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300";
   }

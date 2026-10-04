@@ -293,10 +293,8 @@ export function OperationsTable() {
       toast.error(translateAuditErrorMessage(exportError.message));
       return;
     }
-    // 报表中心导出页（/report/exports）尚未上线：按工单约定以文案说明下载入口
-    toast.success(
-      "导出任务已创建，完成后到 /report/exports 下载（报表导出页尚未上线）",
-    );
+    // 报表中心导出页（/report/exports）已上线：引导到任务列表下载
+    toast.success("导出任务已创建，完成后到 /report/exports 下载");
   };
 
   const handleTimelineSearch = async (

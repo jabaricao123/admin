@@ -1464,6 +1464,102 @@ export type Database = {
           },
         ]
       }
+      system_announcements: {
+        Row: {
+          audience: string
+          content: string
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          id: string
+          pinned: boolean
+          published_at: string | null
+          published_by: string | null
+          starts_at: string | null
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          audience?: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          pinned?: boolean
+          published_at?: string | null
+          published_by?: string | null
+          starts_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          audience?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          id?: string
+          pinned?: boolean
+          published_at?: string | null
+          published_by?: string | null
+          starts_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      system_cron_registry: {
+        Row: {
+          created_at: string
+          cron_expr: string
+          id: number
+          job_name: string
+          last_result: string | null
+          last_run_at: string | null
+          module: string
+          owner_route: string
+          registered_by: string | null
+          status: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cron_expr: string
+          id?: never
+          job_name: string
+          last_result?: string | null
+          last_run_at?: string | null
+          module: string
+          owner_route: string
+          registered_by?: string | null
+          status?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cron_expr?: string
+          id?: never
+          job_name?: string
+          last_result?: string | null
+          last_run_at?: string | null
+          module?: string
+          owner_route?: string
+          registered_by?: string | null
+          status?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_dict_meta: {
         Row: {
           created_at: string
@@ -1779,6 +1875,42 @@ export type Database = {
           },
         ]
       }
+      published_announcements_v: {
+        Row: {
+          audience: string | null
+          content: string | null
+          ends_at: string | null
+          id: string | null
+          pinned: boolean | null
+          published_at: string | null
+          starts_at: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          audience?: string | null
+          content?: string | null
+          ends_at?: string | null
+          id?: string | null
+          pinned?: boolean | null
+          published_at?: string | null
+          starts_at?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          audience?: string | null
+          content?: string | null
+          ends_at?: string | null
+          id?: string | null
+          pinned?: boolean | null
+          published_at?: string | null
+          starts_at?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       roles_v: {
         Row: {
           code: string | null
@@ -1815,6 +1947,30 @@ export type Database = {
           status?: string | null
           updated_at?: string | null
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      system_cron_jobs_v: {
+        Row: {
+          created_at: string | null
+          cron_expr: string | null
+          expected_interval_minutes: number | null
+          failure_rate_24h: number | null
+          failures_24h: number | null
+          is_orphan: boolean | null
+          is_scheduled: boolean | null
+          job_name: string | null
+          last_result: string | null
+          last_run_at: string | null
+          module: string | null
+          overdue: boolean | null
+          owner_route: string | null
+          registered_by: string | null
+          registry_id: number | null
+          runs_24h: number | null
+          status: string | null
+          timezone: string | null
+          updated_at: string | null
         }
         Relationships: []
       }
@@ -2177,6 +2333,36 @@ export type Database = {
           updated_by: string
           value: Json
           value_type: string
+        }[]
+      }
+      get_announcements: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          audience: string
+          content: string
+          creator_name: string
+          ends_at: string
+          id: string
+          pinned: boolean
+          published_at: string
+          publisher_name: string
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+        }[]
+      }
+      get_cron_run_history: {
+        Args: { p_job_name?: string; p_limit?: number }
+        Returns: {
+          duration_ms: number
+          end_time: string
+          job_name: string
+          job_pid: number
+          return_message: string
+          runid: number
+          start_time: string
+          status: string
         }[]
       }
       get_dict: { Args: { p_dict_key: string }; Returns: Json }
@@ -2545,8 +2731,13 @@ export type Database = {
           title: string
         }[]
       }
+      offline_announcement: { Args: { p_id: string }; Returns: Json }
       position_headcount: { Args: { p_position_id: string }; Returns: number }
       preview_scope: { Args: { p_user_id: string }; Returns: Json }
+      publish_announcement: {
+        Args: { p_id: string; p_notify?: boolean }
+        Returns: Json
+      }
       publish_message_template: {
         Args: { p_id: string }
         Returns: {
@@ -2779,6 +2970,27 @@ export type Database = {
         }
       }
       trigger_sync_webhook: { Args: { p_token: string }; Returns: string }
+      unpublish_report_definition: {
+        Args: { p_def_id: string }
+        Returns: {
+          config: NonNullable<Json>
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          owner_id: string
+          source_view: string
+          updated_at: string
+          updated_by: string | null
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "report_definitions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       unread_count: { Args: Record<PropertyKey, never>; Returns: number }
       update_webhook: {
         Args: {
@@ -2788,6 +3000,18 @@ export type Database = {
           p_name: string
           p_retry_policy?: Json
           p_url: string
+        }
+        Returns: Json
+      }
+      upsert_announcement: {
+        Args: {
+          p_audience: string
+          p_content: string
+          p_ends_at: string
+          p_id?: string
+          p_pinned: boolean
+          p_starts_at: string
+          p_title: string
         }
         Returns: Json
       }

@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 路由 | /system/announcements |
-| 状态 | P1，待立项（admin 专用） |
+| 状态 | 已交付（system/013+014，admin 专用；dashboard/004 消费 published_announcements_v） |
 | 模块 | [system](../README.md#9-系统管理-systemp1) |
 
 ## 目的

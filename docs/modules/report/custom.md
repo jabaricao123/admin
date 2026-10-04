@@ -14,7 +14,7 @@
 
 1. 编辑器三步：数据源（白名单 `_v` 视图清单）→ 字段（维度/度量）→ 图表（表格/柱/折线/饼）。
 2. 筛选条件：字段 + 操作符（= / in / between / like），时间字段默认范围。
-3. 保存：命名、保存到「我的报表」；admin 可发布为「公共报表」。
+3. 保存：命名、保存到「我的报表」；admin 可发布为「公共报表」；已发布可由 admin 取消发布（`publish_report_definition` / `unpublish_report_definition`，public → private 幂等）。
 4. 分享：站内链接分享（接收人仍受自身 RLS 过滤，分享不越权）。
 
 ## 数据模型

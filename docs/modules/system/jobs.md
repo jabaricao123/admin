@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 路由 | /system/jobs |
-| 状态 | P1，待立项（admin 可见） |
+| 状态 | 已交付（system/011+012，admin 只读监控） |
 | 模块 | [system](../README.md#9-系统管理-systemp1) |
 
 ## 目的

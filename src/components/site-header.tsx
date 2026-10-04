@@ -21,6 +21,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/system/services/storage": "对象存储",
   "/system/settings": "参数配置",
   "/system/dictionaries": "字典管理",
+  "/system/jobs": "定时任务",
+  "/system/announcements": "公告管理",
   "/approval/todo": "我的待办",
   "/approval/mine": "我发起的",
   "/approval/cc": "抄送我的",
@@ -32,6 +34,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/sync/runs": "执行记录",
   "/sync/schedules": "调度管理",
   "/report/builtin": "预置报表",
+  "/report/custom": "自定义报表",
+  "/report/exports": "数据导出",
   "/integration/api-keys": "API 密钥",
   "/integration/webhooks": "Webhook",
 };

@@ -892,3 +892,140 @@ export function translateMessageTemplateErrorMessage(message: string): string {
     ) || message === "仅管理员可执行此操作";
   return isBusinessRule ? message : translateErrorMessage(message);
 }
+
+/* -------------------------------------------------------------------------- */
+/* 报表中心（report/004 + report/008）                                         */
+/* -------------------------------------------------------------------------- */
+
+/** 自定义报表 · 图表类型（config.chart，与 report_definitions check 对齐） */
+export type ReportChartType = "table" | "bar" | "line" | "pie";
+
+export const REPORT_CHART_LABELS: Record<ReportChartType, string> = {
+  table: "表格",
+  bar: "柱状图",
+  line: "折线图",
+  pie: "饼图",
+};
+
+/** 自定义报表 · 可见性（private 仅 owner/admin；public 全员可读） */
+export type ReportVisibility = "private" | "public";
+
+export const REPORT_VISIBILITY_LABELS: Record<ReportVisibility, string> = {
+  private: "私有",
+  public: "公共",
+};
+
+export const REPORT_VISIBILITY_BADGE_CLASSES: Record<ReportVisibility, string> = {
+  private:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+  public:
+    "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
+};
+
+/** 自定义报表 · 度量聚合（count/sum/avg；sum/avg 仅数值列） */
+export type ReportAgg = "count" | "sum" | "avg";
+
+export const REPORT_AGG_LABELS: Record<ReportAgg, string> = {
+  count: "计数",
+  sum: "求和",
+  avg: "平均",
+};
+
+/** 自定义报表 · 筛选操作符（编辑器提供 = / in / between / like） */
+export type ReportFilterOp = "=" | "in" | "between" | "like";
+
+export const REPORT_FILTER_OP_LABELS: Record<ReportFilterOp, string> = {
+  "=": "等于（=）",
+  in: "属于（in）",
+  between: "区间（between）",
+  like: "包含（like）",
+};
+
+/** 数据导出 · 任务状态（export_jobs.status 状态机） */
+export type ExportStatus = "queued" | "running" | "done" | "failed";
+
+export const EXPORT_STATUS_LABELS: Record<ExportStatus, string> = {
+  queued: "排队中",
+  running: "生成中",
+  done: "已完成",
+  failed: "失败",
+};
+
+/** 导出状态 Badge 配色：排队灰 / 生成蓝 / 完成绿 / 失败红 */
+export const EXPORT_STATUS_BADGE_CLASSES: Record<ExportStatus, string> = {
+  queued:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+  running:
+    "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
+  done:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  failed:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+};
+
+/** 导出源展示名（未登记来源回退原始 source） */
+export const EXPORT_SOURCE_LABELS: Record<string, string> = {
+  "org.users": "用户名单",
+  "audit.operations": "操作日志",
+};
+
+/** 系统管理 · 公告状态（system_announcements.status，状态机见 announcements.md） */
+export type AnnouncementStatus = "draft" | "published" | "offline" | "archived";
+
+export const ANNOUNCEMENT_STATUS_LABELS: Record<AnnouncementStatus, string> = {
+  draft: "草稿",
+  published: "已发布",
+  offline: "已下线",
+  archived: "已归档",
+};
+
+/** 公告状态 Badge 配色：草稿黄（待发布）/ 发布绿 / 下线灰 / 归档蓝 */
+export const ANNOUNCEMENT_STATUS_BADGE_CLASSES: Record<
+  AnnouncementStatus,
+  string
+> = {
+  draft:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+  published:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  offline:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+  archived:
+    "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
+};
+
+/** 数据库 status 收敛到已知公告状态；未知值按草稿展示（fail-safe） */
+export function asAnnouncementStatus(value: string): AnnouncementStatus {
+  return value === "published" || value === "offline" || value === "archived"
+    ? value
+    : "draft";
+}
+
+/** 公告范围展示：all→全员；role:<code>→角色：<中文名> */
+export function announcementAudienceLabel(audience: string): string {
+  if (audience === "all") {
+    return "全员";
+  }
+  if (audience.startsWith("role:")) {
+    const code = audience.slice(5) as UserRole;
+    return `角色：${ROLE_LABELS[code] ?? code}`;
+  }
+  return audience;
+}
+
+/** 公告范围选项：全员 + 7 个 user_role 枚举角色 */
+export const ANNOUNCEMENT_AUDIENCE_OPTIONS = [
+  { value: "all", label: "全员" },
+  ...ROLE_OPTIONS.map((role) => ({
+    value: `role:${role.value}`,
+    label: `角色：${role.label}`,
+  })),
+];
+
+/** 系统管理 · 公告 RPC 错误：业务拒绝信息已中文（部分带状态参数），原文透传；其余走通用映射 */
+export function translateAnnouncementErrorMessage(message: string): string {
+  const isBusinessRule =
+    /^(公告|生效时段)/.test(message) ||
+    /^(仅草稿|仅已发布|发布前请)/.test(message);
+  return isBusinessRule ? message : translateErrorMessage(message);
+}
