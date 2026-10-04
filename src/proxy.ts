@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { detectImWebViewProvider } from "@/lib/im/provider";
 import { updateSession } from "@/lib/supabase/proxy";
 
 /**
@@ -13,9 +14,9 @@ import { updateSession } from "@/lib/supabase/proxy";
  *    - profiles.status='inactive'（兜底，ban 未落 Auth 层时）；
  *    - 命中时经 record_denied_attempt('auth', path, 'user_banned') 留痕（best-effort）；
  *    RLS 数据侧由 app.current_role()（status='active' 才返回角色）兜底。
- * 5. 飞书移动端免登（im/003）：飞书内嵌 WebView（UA 含 Lark / Feishu）未登录访问 H5
- *    时，自动跳 im/002 的 OAuth 链路（WebView 内已登录飞书 → 静默授权，不出现登录页）；
- *    失败降级 /login 且用「失败计数 + 一次性 _im_fallback 标记」防环；
+ * 5. IM 移动端免登（im/003 飞书；im/005 扩展钉钉）：IM 内嵌 WebView（UA 含 Lark / Feishu /
+ *    DingTalk）未登录访问 H5 时，自动跳 IM OAuth 链路（WebView 内已登录 IM → 静默授权或
+ *    仅确认授权，不出现登录页）；失败降级 /login 且用「失败计数 + 一次性 _im_fallback 标记」防环；
  *    登录成功后按 redirect_to cookie 跳回免登前访问的原目标。
  */
 export async function proxy(request: NextRequest) {
@@ -25,9 +26,9 @@ export async function proxy(request: NextRequest) {
   const isLoginRoute = pathname.startsWith("/login");
   // IM / OAuth 回调（/auth/*）必须匿名可达；已登录会话也不拦截（扫码可换绑/重登）
   const isAuthFlowRoute = pathname.startsWith("/auth/");
-  // im/003：飞书内嵌 WebView（iOS / Android 的 UA 均含 `Lark/<版本>` 或 `Feishu/<版本>`）
-  const isFeishuWebView = FEISHU_WEBVIEW_UA.test(
-    request.headers.get("user-agent") ?? "",
+  // im/003 / im/005：IM 内嵌 WebView（飞书 Lark/Feishu、钉钉 DingTalk）自动免登
+  const imWebViewProvider = detectImWebViewProvider(
+    request.headers.get("user-agent"),
   );
 
   // Auth 层封禁：GoTrue 403 user_banned（Admin API ban 的即时效果）
@@ -54,9 +55,9 @@ export async function proxy(request: NextRequest) {
     }
 
     if (!isLoginRoute && !isAuthFlowRoute) {
-      // im/003：飞书 WebView 未登录 → 自动免登（或命中防环后降级 /login）
-      if (isFeishuWebView) {
-        return feishuWebViewRedirect(request, supabaseResponse);
+      // im/003 / im/005：IM WebView 未登录 → 自动免登（或命中防环后降级 /login）
+      if (imWebViewProvider) {
+        return imWebViewRedirect(request, supabaseResponse, imWebViewProvider);
       }
 
       const url = request.nextUrl.clone();
@@ -64,9 +65,9 @@ export async function proxy(request: NextRequest) {
       return carryCookies(NextResponse.redirect(url), supabaseResponse);
     }
 
-    // im/003：免登失败（回调回跳 /login?error=im_*）→ 累计失败次数 + 补一次性降级标记
-    if (isLoginRoute && isFeishuWebView && isImCallbackError(request)) {
-      const tracked = trackFeishuWebViewFailure(request, supabaseResponse);
+    // im/003 / im/005：免登失败（回调回跳 /login?error=im_*）→ 累计失败次数 + 补一次性降级标记
+    if (isLoginRoute && imWebViewProvider && isImCallbackError(request)) {
+      const tracked = trackImWebViewFailure(request, supabaseResponse);
       if (tracked) {
         return tracked;
       }
@@ -145,18 +146,16 @@ function carryCookies(target: NextResponse, source: NextResponse) {
   return target;
 }
 
-// ===== im/003 飞书移动端免登（H5 内嵌） =====
+// ===== im/003 飞书 / im/005 钉钉 移动端免登（H5 内嵌） =====
 //
 // 识别与安全边界：
 // - 仅按 UA 标记识别内嵌 WebView（不引入 IP / 设备指纹）；Safari / Chrome 等外部
-//   浏览器 UA 不含 Lark / Feishu，不进入本分支，仍走原密码 / 扫码登录。
-// - 免登复用 im/002 链路（/auth/im/feishu/start + /auth/callback/feishu）：WebView 内
-//   用户已登录飞书，授权端点静默 302 回回调，同样校验一次性 state，不降低安全等级。
+//   浏览器 UA 不含 Lark / Feishu / DingTalk，不进入本分支，仍走原密码 / 扫码登录。
+// - 免登复用各厂商 OAuth 链路（/auth/im/<provider>/start + /auth/callback/<provider>）：
+//   WebView 内用户已登录 IM，授权端点直接回回调（飞书静默 / 钉钉仅确认授权），
+//   同样校验一次性 state，不降低安全等级。
 // - 防环双保险：①失败计数 cookie 达上限后不再自动重试；②URL 一次性 _im_fallback 标记
 //   （本文件补在 /login 上）出现即降级。失败计数在成功登录后清除。
-
-/** 飞书内嵌 WebView UA：iOS / Android 均带 `Lark/<版本>` 或 `Feishu/<版本>` 标记 */
-const FEISHU_WEBVIEW_UA = /\b(?:lark|feishu)\b/i;
 
 /** 免登前访问的原目标（相对路径；登录成功后一次性消费，供 redirect_to 透传） */
 const IM_WEBVIEW_REDIRECT_COOKIE = "im_h5_redirect_to";
@@ -170,12 +169,13 @@ const IM_WEBVIEW_MAX_FAILURES = 2;
 const IM_WEBVIEW_COOKIE_MAX_AGE = 30 * 60;
 
 /**
- * 未登录 + 飞书 WebView：自动免登；命中防环条件则降级 `/login?_im_fallback=1`。
+ * 未登录 + IM WebView（飞书 / 钉钉）：自动免登；命中防环条件则降级 `/login?_im_fallback=1`。
  * 两条路径都记录原目标，登录成功后（无论免登还是手动登录）跳回。
  */
-function feishuWebViewRedirect(
+function imWebViewRedirect(
   request: NextRequest,
   supabaseResponse: NextResponse,
+  provider: "feishu" | "dingtalk",
 ): NextResponse {
   const { searchParams } = request.nextUrl;
   const shouldFallback =
@@ -184,7 +184,7 @@ function feishuWebViewRedirect(
 
   const url = shouldFallback
     ? new URL("/login", request.nextUrl)
-    : new URL("/auth/im/feishu/start", request.nextUrl);
+    : new URL(`/auth/im/${provider}/start`, request.nextUrl);
   if (shouldFallback) {
     url.searchParams.set(IM_WEBVIEW_FALLBACK_QUERY, "1");
   }
@@ -194,11 +194,11 @@ function feishuWebViewRedirect(
 }
 
 /**
- * 免登失败到达 `/login?error=im_*`（im/003）：累计失败次数并补一次性降级标记。
+ * 免登失败到达 `/login?error=im_*`（im/003 / im/005）：累计失败次数并补一次性降级标记。
  * 回调路由保持原样（不在本单改动范围）只带 error；标记由这里补上，
  * 带标记的后续请求直接放行，不重复计数（避免重定向环）。
  */
-function trackFeishuWebViewFailure(
+function trackImWebViewFailure(
   request: NextRequest,
   supabaseResponse: NextResponse,
 ): NextResponse | null {

@@ -51,7 +51,7 @@ src/
 ├── hooks/                # 通用 hooks
 ├── lib/
 │   ├── supabase/         # client / server / proxy（@supabase/ssr）
-│   ├── im/               # IM 登录：厂商注册表（feishu/wecom）+ 回调编排 + state
+│   ├── im/               # IM 登录：厂商注册表（feishu/wecom/dingtalk）+ 回调编排 + state
 │   ├── dictionaries.ts   # 角色 / 状态字典
 │   └── database.types.ts # supabase gen types 产物
 └── proxy.ts              # Next.js 16 网络边界：会话续期 + 登录拦截
@@ -71,6 +71,7 @@ supabase/
 - [x] 设计评审与修复：对比度、移动导航、追溯护栏（`updated_by`）、断点、错误边界
 - [x] IM 扫码登录（飞书，im/002）：`/login` 扫码 Tab、OAuth 全链路、未绑定拒绝留痕、state 防代扫
 - [x] 企业微信扫码 + App 内免登（im/004）：PC `qrConnect`、App 内 `oauth2/authorize`（免登）、access_token 加密缓存、两薄包装按厂商分派
+- [x] 钉钉扫码 + WebView 免登（im/005）：PC 与端内同一 `oauth2/auth` 授权端点、绑定键取 `unionId`、两薄包装按厂商分派（签名不变）
 
 ## 权限模型速览
 
@@ -79,21 +80,23 @@ supabase/
 - 菜单可见性：用户管理菜单仅管理员可见；页面内服务端二次校验角色
 - 新建用户：后续提供邀请流程；当前可在 Supabase Dashboard 创建（或 Admin API），再到用户管理页分配角色
 
-## IM 扫码登录（飞书 / 企业微信）
+## IM 扫码登录（飞书 / 企业微信 / 钉钉）
 
 登录页「扫码登录」Tab 走当前启用厂商的 OAuth（`im_auth_configs.enabled` 部署级单选，切换即生效）：已绑定用户完成授权后由后端签发标准 Supabase session（与密码登录同一会话 / RLS / 登出链路，ADR-003）。厂商凭据解密、授权 URL 构造、code 换 token、userinfo 与绑定匹配全部在 Postgres 内完成（`im_start_auth` / `im_handle_callback` 按厂商分派）：**厂商 secret 不出库，全链路不使用 service_role**（INDEX 规则 10 / ADR-001）。
 
 - 飞书（im/002）：PC 扫码；App 内 H5 免登见 im/003。
 - 企业微信（im/004）：PC 扫码（`wwopen/sso/qrConnect`）与 App 内免登（`oauth2/authorize`，`scope=snsapi_privateinfo`）。
+- 钉钉（im/005）：PC 扫码与端内 WebView 免登共用 `login.dingtalk.com/oauth2/auth`（`scope=openid`、`prompt=consent`）；绑定键取 `unionId`（见下）。
 
 ### 部署硬前提
 
 | 项 | 要求 |
 |---|---|
-| `NEXT_PUBLIC_IM_CALLBACK_BASE` | 公网可达的 HTTPS 域名（如 `https://admin.example.com`），回调地址为 `<base>/auth/callback/<provider>`（`feishu` / `wecom`） |
+| `NEXT_PUBLIC_IM_CALLBACK_BASE` | 公网可达的 HTTPS 域名（如 `https://admin.example.com`），回调地址为 `<base>/auth/callback/<provider>`（`feishu` / `wecom` / `dingtalk`） |
 | `IM_BACKEND_JWT` | role=`im_backend` 的最小角色 JWT（仅可执行两个 IM 包装 RPC），签发方式见下节 |
 | 飞书开发者后台 | 该回调地址需登记在「安全设置 → 重定向 URL」白名单中（精确匹配） |
 | 企业微信管理后台 | 「企业微信授权登录 → Web 网页」授权回调域 + 「网页授权及 JS-SDK」可信域名均需包含 `NEXT_PUBLIC_IM_CALLBACK_BASE` 域名（见企业微信配置步骤） |
+| 钉钉开发者后台 | 「钉钉登录与分享 → 回调域名」需包含 `<NEXT_PUBLIC_IM_CALLBACK_BASE>/auth/callback/dingtalk`（见钉钉配置步骤） |
 | 多实例部署 | state 落 httpOnly cookie（无 Redis）；多副本共享同一域名时需 sticky session，或后续升级为 Redis 存储 |
 
 ### IM 后端最小角色（im_backend）
@@ -202,9 +205,54 @@ select public.im_admin_set_userid(
 | access_token | `qyapi.weixin.qq.com/cgi-bin/gettoken` | 按 `corp_id:sha256(secret)` 加密缓存 7200s，避免每次登录都换 token |
 | code → userid | `qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo` | 返回 `userid`（旧版 `user/getuserinfo` 的 `UserId` 同样兼容） |
 
+### 钉钉配置步骤（im/005）
+
+1. 打开 <https://open-dev.dingtalk.com/>，创建「企业内部应用」（H5 微应用 / 网页应用均可）。
+2. 「凭证与基础信息」获取 **Client ID（旧称 AppKey）** 与 **Client Secret（旧称 AppSecret）**。
+3. 「权限管理 → 个人权限」申请 **通讯录个人信息读权限（`Contact.User.Read`）**；权限范围选全部员工或目标成员。
+4. 「钉钉登录与分享 → 回调域名」登记 `<NEXT_PUBLIC_IM_CALLBACK_BASE>/auth/callback/dingtalk`（`redirect_uri` 必须与登记地址一致）。
+5. 发布 / 发布版本，确保参与登录的成员在应用可见范围内。
+6. 若「开发管理」配置了**服务器出口 IP** 白名单，需加入数据库主机出站 IP（code 换 token / 取用户信息发生在 Postgres 内，ADR-004）。
+7. 系统侧写入凭据与用户绑定：
+
+```sql
+-- Supabase SQL Editor 以管理员身份执行（临时通道；im/006 将提供配置页）
+select set_config(
+  'request.jwt.claims',
+  json_build_object(
+    'sub', (select id::text from public.profiles where role = 'admin' limit 1),
+    'role', 'authenticated'
+  )::text,
+  true
+);
+select public.im_upsert_config(
+  'dingtalk',
+  '{"app_key":"ding_xxx","app_secret":"yyy"}'::jsonb,
+  true  -- 启用钉钉（全局单选取代其他厂商）
+);
+select public.im_admin_set_userid(
+  (select id from public.profiles where email = 'user@example.com'),
+  'dingtalk',
+  '钉钉 unionId'
+);
+```
+
+> **绑定键为 `unionId`**：新版钉钉 `contact/users/me`（userAccessToken 身份）不返回 userid；取 userid 需额外应用级凭据与通讯录权限。`unionId` 企业内唯一且稳定，`openId` 仅应用内唯一、不采用。详见迁移 `20261006170000_im_dingtalk_login.sql` 头部注释。
+> **免登形态**：端内 WebView 打开系统时 `src/proxy.ts` 按 UA（含 `DingTalk`）自动跳授权链路；钉钉端内已登录，用户在授权页仅需确认（无需账号密码）。完全静默需接入钉钉授权组件 SDK（JSAPI `openAuth`），不在本系统「凭据不出库」的 HTTPS 出站模型内。
+
+钉钉侧的 OAuth 细节（均由 Postgres 内完成，Next.js 不接触 secret）：
+
+| 场景 | 端点 | 说明 |
+|---|---|---|
+| PC 扫码 / 端内免登 | `login.dingtalk.com/oauth2/auth` | `client_id`（= 配置的 `app_key`）+ `scope=openid` + `prompt=consent`；端内 / 端外同一端点，由 start 路由按 UA（含 `DingTalk`）标记 state `m.` |
+| code → 用户 token | `api.dingtalk.com/v1.0/oauth2/userAccessToken` | JSON body `{clientId: app_key, clientSecret: app_secret, code, grantType}`；`expireIn` 7200s；**无缓存**（code 单次直换，无 client_credential 中间层） |
+| 用户身份 | `api.dingtalk.com/v1.0/contact/users/me` | Header `x-acs-dingtalk-access-token`；取 `unionId` 作为 `profiles.dingtalk_userid`（`openId` 应用内唯一，不采用） |
+
+> 凭据键与 im/006 配置页一致：`app_key` / `app_secret`（兼容别名 `client_id` / `client_secret` / `app_id` / `secret`）。
+
 ### 本地联调
 
-- 飞书 / 企业微信均要求回调公网可达：本地起 `cloudflared tunnel --url http://localhost:3000`（或 ngrok），把得到的 HTTPS 域名写入 `.env.local` 的 `NEXT_PUBLIC_IM_CALLBACK_BASE`，并在对应厂商后台登记回调域 / 可信域名。
+- 飞书 / 企业微信 / 钉钉均要求回调公网可达：本地起 `cloudflared tunnel --url http://localhost:3000`（或 ngrok），把得到的 HTTPS 域名写入 `.env.local` 的 `NEXT_PUBLIC_IM_CALLBACK_BASE`，并在对应厂商后台登记回调域 / 可信域名。
 - 本地栈还需 `IM_BACKEND_JWT`：用本地默认 JWT secret 签发后写入 `.env.local`：
 
 ```bash

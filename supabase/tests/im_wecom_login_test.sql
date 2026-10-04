@@ -220,11 +220,12 @@ select throws_ok(
        'javascript:alert(1)', 'teststate_0123456789abcdef') $$,
   '22023', null, '回调地址非法被拒'
 );
+-- im/005 起 dingtalk 已接入：未启用钉钉配置时经薄包装返回 42501（凭据缺失），不再是不支持
 select throws_ok(
   $$ select public.im_start_auth(
        'dingtalk', 'https://admin.example.com/auth/callback/dingtalk',
        'teststate_0123456789abcdef') $$,
-  '22023', null, '未接入厂商（dingtalk）经薄包装被拒'
+  '42501', null, '未启用钉钉时经薄包装被拒（im/005 已接入）'
 );
 
 -- ===========================================================================
@@ -404,10 +405,12 @@ select is(
   'im_backend 经薄包装回调未启用企业微信 → im_unavailable'
 );
 reset role;
-select throws_ok(
-  $$ select public.im_handle_callback(
-       'dingtalk', 'anything', 'https://admin.example.com/auth/callback/dingtalk') $$,
-  '22023', null, '未接入厂商（dingtalk）回调经薄包装被拒'
+-- im/005 起 dingtalk 已接入：未启用钉钉配置时回调薄包装返回 im_unavailable（不出站）
+select is(
+  public.im_handle_callback(
+    'dingtalk', 'anything', 'https://admin.example.com/auth/callback/dingtalk') ->> 'error',
+  'im_unavailable'::text,
+  '未启用钉钉回调经薄包装 → im_unavailable（im/005 已接入）'
 );
 
 -- 企业微信打点通道：匿名未绑定拒绝留痕 via=im_wecom
