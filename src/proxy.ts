@@ -13,6 +13,10 @@ import { updateSession } from "@/lib/supabase/proxy";
  *    - profiles.status='inactive'（兜底，ban 未落 Auth 层时）；
  *    - 命中时经 record_denied_attempt('auth', path, 'user_banned') 留痕（best-effort）；
  *    RLS 数据侧由 app.current_role()（status='active' 才返回角色）兜底。
+ * 5. 飞书移动端免登（im/003）：飞书内嵌 WebView（UA 含 Lark / Feishu）未登录访问 H5
+ *    时，自动跳 im/002 的 OAuth 链路（WebView 内已登录飞书 → 静默授权，不出现登录页）；
+ *    失败降级 /login 且用「失败计数 + 一次性 _im_fallback 标记」防环；
+ *    登录成功后按 redirect_to cookie 跳回免登前访问的原目标。
  */
 export async function proxy(request: NextRequest) {
   const { supabaseResponse, supabase, user, userError } =
@@ -21,6 +25,10 @@ export async function proxy(request: NextRequest) {
   const isLoginRoute = pathname.startsWith("/login");
   // IM / OAuth 回调（/auth/*）必须匿名可达；已登录会话也不拦截（扫码可换绑/重登）
   const isAuthFlowRoute = pathname.startsWith("/auth/");
+  // im/003：飞书内嵌 WebView（iOS / Android 的 UA 均含 `Lark/<版本>` 或 `Feishu/<版本>`）
+  const isFeishuWebView = FEISHU_WEBVIEW_UA.test(
+    request.headers.get("user-agent") ?? "",
+  );
 
   // Auth 层封禁：GoTrue 403 user_banned（Admin API ban 的即时效果）
   const authBanned =
@@ -46,9 +54,22 @@ export async function proxy(request: NextRequest) {
     }
 
     if (!isLoginRoute && !isAuthFlowRoute) {
+      // im/003：飞书 WebView 未登录 → 自动免登（或命中防环后降级 /login）
+      if (isFeishuWebView) {
+        return feishuWebViewRedirect(request, supabaseResponse);
+      }
+
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return carryCookies(NextResponse.redirect(url), supabaseResponse);
+    }
+
+    // im/003：免登失败（回调回跳 /login?error=im_*）→ 累计失败次数 + 补一次性降级标记
+    if (isLoginRoute && isFeishuWebView && isImCallbackError(request)) {
+      const tracked = trackFeishuWebViewFailure(request, supabaseResponse);
+      if (tracked) {
+        return tracked;
+      }
     }
 
     return supabaseResponse;
@@ -66,13 +87,25 @@ export async function proxy(request: NextRequest) {
     return bannedRedirect(request, supabaseResponse, isLoginRoute);
   }
 
+  // im/003：登录态就绪 → 一次性消费免登前记录的原目标（redirect_to 透传）
+  const imTarget = readImWebViewTarget(request);
+  if (imTarget && !isImTargetCurrent(imTarget, request.nextUrl)) {
+    return clearImWebViewCookies(
+      request,
+      carryCookies(NextResponse.redirect(imTarget), supabaseResponse),
+    );
+  }
+
   if (isLoginRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    return carryCookies(NextResponse.redirect(url), supabaseResponse);
+    return clearImWebViewCookies(
+      request,
+      carryCookies(NextResponse.redirect(url), supabaseResponse),
+    );
   }
 
-  return supabaseResponse;
+  return clearImWebViewCookies(request, supabaseResponse);
 }
 
 /** 清当前浏览器的 Supabase 会话 Cookie（含分片 .0/.1）
@@ -110,6 +143,156 @@ function carryCookies(target: NextResponse, source: NextResponse) {
     target.cookies.set(cookie);
   });
   return target;
+}
+
+// ===== im/003 飞书移动端免登（H5 内嵌） =====
+//
+// 识别与安全边界：
+// - 仅按 UA 标记识别内嵌 WebView（不引入 IP / 设备指纹）；Safari / Chrome 等外部
+//   浏览器 UA 不含 Lark / Feishu，不进入本分支，仍走原密码 / 扫码登录。
+// - 免登复用 im/002 链路（/auth/im/feishu/start + /auth/callback/feishu）：WebView 内
+//   用户已登录飞书，授权端点静默 302 回回调，同样校验一次性 state，不降低安全等级。
+// - 防环双保险：①失败计数 cookie 达上限后不再自动重试；②URL 一次性 _im_fallback 标记
+//   （本文件补在 /login 上）出现即降级。失败计数在成功登录后清除。
+
+/** 飞书内嵌 WebView UA：iOS / Android 均带 `Lark/<版本>` 或 `Feishu/<版本>` 标记 */
+const FEISHU_WEBVIEW_UA = /\b(?:lark|feishu)\b/i;
+
+/** 免登前访问的原目标（相对路径；登录成功后一次性消费，供 redirect_to 透传） */
+const IM_WEBVIEW_REDIRECT_COOKIE = "im_h5_redirect_to";
+/** 连续免登失败次数；达到上限后不再自动免登（防环） */
+const IM_WEBVIEW_FALLBACK_COOKIE = "im_h5_fallback";
+/** 一次性降级标记：补在 /login URL 上，出现即不再自动免登 */
+const IM_WEBVIEW_FALLBACK_QUERY = "_im_fallback";
+/** 连续失败上限：两次失败后第三次访问起直接降级 /login */
+const IM_WEBVIEW_MAX_FAILURES = 2;
+/** cookie 有效期：覆盖一轮 OAuth（state 5 分钟）与失败后手动登录的停留时间 */
+const IM_WEBVIEW_COOKIE_MAX_AGE = 30 * 60;
+
+/**
+ * 未登录 + 飞书 WebView：自动免登；命中防环条件则降级 `/login?_im_fallback=1`。
+ * 两条路径都记录原目标，登录成功后（无论免登还是手动登录）跳回。
+ */
+function feishuWebViewRedirect(
+  request: NextRequest,
+  supabaseResponse: NextResponse,
+): NextResponse {
+  const { searchParams } = request.nextUrl;
+  const shouldFallback =
+    searchParams.has(IM_WEBVIEW_FALLBACK_QUERY) ||
+    imWebViewFailureCount(request) >= IM_WEBVIEW_MAX_FAILURES;
+
+  const url = shouldFallback
+    ? new URL("/login", request.nextUrl)
+    : new URL("/auth/im/feishu/start", request.nextUrl);
+  if (shouldFallback) {
+    url.searchParams.set(IM_WEBVIEW_FALLBACK_QUERY, "1");
+  }
+
+  const response = carryCookies(NextResponse.redirect(url), supabaseResponse);
+  return rememberImWebViewTarget(request, response);
+}
+
+/**
+ * 免登失败到达 `/login?error=im_*`（im/003）：累计失败次数并补一次性降级标记。
+ * 回调路由保持原样（不在本单改动范围）只带 error；标记由这里补上，
+ * 带标记的后续请求直接放行，不重复计数（避免重定向环）。
+ */
+function trackFeishuWebViewFailure(
+  request: NextRequest,
+  supabaseResponse: NextResponse,
+): NextResponse | null {
+  if (request.nextUrl.searchParams.has(IM_WEBVIEW_FALLBACK_QUERY)) {
+    return null;
+  }
+
+  const failures = Math.min(
+    imWebViewFailureCount(request) + 1,
+    IM_WEBVIEW_MAX_FAILURES,
+  );
+  const url = request.nextUrl.clone();
+  url.searchParams.set(IM_WEBVIEW_FALLBACK_QUERY, "1");
+  const response = carryCookies(NextResponse.redirect(url), supabaseResponse);
+  response.cookies.set(IM_WEBVIEW_FALLBACK_COOKIE, String(failures), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: url.protocol === "https:",
+    path: "/",
+    maxAge: IM_WEBVIEW_COOKIE_MAX_AGE,
+  });
+  return response;
+}
+
+/** 记录免登前访问的原目标（相对路径，剔除防环标记），供登录成功后跳回 */
+function rememberImWebViewTarget(
+  request: NextRequest,
+  response: NextResponse,
+): NextResponse {
+  const target = new URL(request.nextUrl);
+  target.searchParams.delete(IM_WEBVIEW_FALLBACK_QUERY);
+  response.cookies.set(
+    IM_WEBVIEW_REDIRECT_COOKIE,
+    `${target.pathname}${target.search}`,
+    {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:",
+      path: "/",
+      maxAge: IM_WEBVIEW_COOKIE_MAX_AGE,
+    },
+  );
+  return response;
+}
+
+/**
+ * 读取免登原目标 cookie → 同源 URL；非法值（绝对地址 / 协议相对 / 跨源）返回 null。
+ * cookie 虽为 httpOnly，仍按不可信输入处理，防止开放重定向。
+ */
+function readImWebViewTarget(request: NextRequest): URL | null {
+  const raw = request.cookies.get(IM_WEBVIEW_REDIRECT_COOKIE)?.value;
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const target = new URL(raw, request.nextUrl);
+    return target.origin === request.nextUrl.origin ? target : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 原目标是否就是当前请求路径（相同则免一跳，直接渲染） */
+function isImTargetCurrent(target: URL, current: URL): boolean {
+  return (
+    target.pathname === current.pathname && target.search === current.search
+  );
+}
+
+/** 登录态就绪后清免登 cookie（原目标已消费 / 失败计数已失效） */
+function clearImWebViewCookies(
+  request: NextRequest,
+  response: NextResponse,
+): NextResponse {
+  [IM_WEBVIEW_REDIRECT_COOKIE, IM_WEBVIEW_FALLBACK_COOKIE].forEach((name) => {
+    if (request.cookies.has(name)) {
+      response.cookies.set(name, "", { maxAge: 0, path: "/" });
+    }
+  });
+  return response;
+}
+
+/** 读取连续免登失败次数（非法 / 负数 / 超限一律归一） */
+function imWebViewFailureCount(request: NextRequest): number {
+  const value = Number(request.cookies.get(IM_WEBVIEW_FALLBACK_COOKIE)?.value);
+  return Number.isInteger(value) && value > 0
+    ? Math.min(value, IM_WEBVIEW_MAX_FAILURES)
+    : 0;
+}
+
+/** 是否回调失败错误（`/login?error=im_*`） */
+function isImCallbackError(request: NextRequest): boolean {
+  return /^im_/.test(request.nextUrl.searchParams.get("error") ?? "");
 }
 
 export const config = {
