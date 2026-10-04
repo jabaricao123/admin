@@ -1,16 +1,17 @@
 -- 权限管理 · 数据范围 role_data_scopes + scope helper + 管理/预检 RPC（access/009-010）pgTAP 测试
 -- 运行：supabase db reset && supabase test db
--- 覆盖：结构/约束/RLS/授权 / 存量 seed 7 行 all / 四档行为（self/dept/dept_tree/all，按真实会话）/
+-- 覆盖：结构/约束/RLS/授权 / 存量 seed 7 行（内部角色 all / 外部角色 self）/
+--       四档行为（self/dept/dept_tree/all，按真实会话）/
 --       无会话空集 / 非 active 与角色未配置 fail-closed / 无部门 scope 退化为仅本人 /
 --       upsert_data_scope 越权与 all 白名单 / 审计写入 / preview_scope 结构与计数 / 改配即时生效。
 -- 说明：夹具仅在事务内生效，finish 后 rollback，不污染其他测试文件。
 
 begin;
 
-select plan(70);
+select plan(71);
 
 -- ===========================================================================
--- 1. 结构 / 约束 / RLS / 授权 / 存量 seed（28）
+-- 1. 结构 / 约束 / RLS / 授权 / 存量 seed（29）
 -- ===========================================================================
 select has_table('public', 'role_data_scopes', 'role_data_scopes 表存在');
 select has_column('public', 'role_data_scopes', 'role_id', 'role_id 列存在');
@@ -114,9 +115,20 @@ select is(
      from public.role_data_scopes s
      join public.roles r on r.id = s.role_id
     where r.is_builtin
+      and r.code in ('admin', 'engineer', 'planner', 'buyer', 'quality')
       and s.scope = 'all'),
-  7::bigint,
-  '存量角色初始 scope 显式 = all（禁止默认 self，防可见范围静默收窄）'
+  5::bigint,
+  '内部角色存量 scope 显式 = all（禁止默认 self，防可见范围静默收窄）'
+);
+select is(
+  (select count(*)
+     from public.role_data_scopes s
+     join public.roles r on r.id = s.role_id
+    where r.is_builtin
+      and r.code in ('supplier', 'customer')
+      and s.scope = 'self'),
+  2::bigint,
+  '外部角色存量 scope = self（access 批次 1 安全默认，仅本人）'
 );
 
 -- ===========================================================================

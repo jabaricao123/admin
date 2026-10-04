@@ -88,7 +88,7 @@ export function LoginForm({ initialError }: { initialError?: string }) {
                 id="email"
                 type="email"
                 autoComplete="email"
-                placeholder="you@company.com"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 aria-invalid={error !== null}

@@ -230,10 +230,26 @@ export const DATA_SCOPE_OPTIONS = (
   Object.keys(DATA_SCOPE_LABELS) as DataScope[]
 ).map((value) => ({ value, label: DATA_SCOPE_LABELS[value] }));
 
+/** 权限管理 · 零授权 fallback / 数据范围未配置的警示色（amber） */
+export const FALLBACK_BADGE_CLASS =
+  "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300";
+
+/** 权限管理 · 未保存变更等提示态的提示色（sky） */
+export const PENDING_BADGE_CLASS =
+  "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/60 dark:text-sky-300";
+
+/** 数据范围档位 Badge 配色：全部红（高危）/ 其余受限档位与提示态共用 sky */
+export const DATA_SCOPE_BADGE_CLASSES: Record<DataScope, string> = {
+  self: PENDING_BADGE_CLASS,
+  dept: PENDING_BADGE_CLASS,
+  dept_tree: PENDING_BADGE_CLASS,
+  all: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+};
+
 /** 权限管理 · 数据范围 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
 export function translateDataScopeErrorMessage(message: string): string {
   const isBusinessRule =
-    /^(角色不存在|非法数据范围)：/.test(message) ||
+    /^(角色不存在|非法数据范围|用户不存在)：/.test(message) ||
     [
       "仅管理员可执行此操作",
       "仅系统管理员角色可配置「全部」数据范围",

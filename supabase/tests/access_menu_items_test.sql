@@ -449,7 +449,8 @@ select throws_ok(
 
 -- ===========================================================================
 -- 5. RLS 读范围：menu_items 全员可读；role_menu_grants 仅 admin + 本角色（9）
---    装置：engineer /org/users + planner /report/builtin
+--    装置：engineer /org/users + planner /report/builtin；
+--    计数含内置角色默认授权 seed（内部各 10 条、外部各 3 条）。
 -- ===========================================================================
 reset role;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
@@ -468,8 +469,8 @@ set local role authenticated;
 
 select is(
   (select count(*) from public.role_menu_grants),
-  1::bigint,
-  'engineer 仅见本角色授权行（1 条）'
+  11::bigint,
+  'engineer 仅见本角色授权行（seed 10 + 装置 1 = 11 条）'
 );
 select ok(
   exists (select 1 from public.role_menu_grants where menu_key = '/org/users'),
@@ -491,8 +492,8 @@ set local role authenticated;
 
 select is(
   (select count(*) from public.role_menu_grants),
-  1::bigint,
-  'planner 仅见本角色授权行（1 条）'
+  11::bigint,
+  'planner 仅见本角色授权行（seed 10 + 装置 1 = 11 条）'
 );
 select ok(
   exists (select 1 from public.role_menu_grants where menu_key = '/report/builtin')
@@ -506,8 +507,8 @@ set local role authenticated;
 
 select is(
   (select count(*) from public.role_menu_grants),
-  0::bigint,
-  'buyer 无任何授权行（空集）'
+  10::bigint,
+  'buyer 见本角色默认授权行（seed 10 条）'
 );
 
 reset role;
@@ -516,8 +517,8 @@ set local role authenticated;
 
 select is(
   (select count(*) from public.role_menu_grants),
-  2::bigint,
-  'admin 可见全部授权行（2 条）'
+  48::bigint,
+  'admin 可见全部授权行（seed 46 + 装置 2 = 48 条）'
 );
 select ok(
   exists (select 1 from public.role_menu_grants where menu_key = '/org/users')

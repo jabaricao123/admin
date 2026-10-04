@@ -54,6 +54,8 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Database } from "@/lib/database.types";
 import {
+  FALLBACK_BADGE_CLASS,
+  PENDING_BADGE_CLASS,
   ROLE_BADGE_CLASSES,
   ROLE_KIND_BADGE_CLASSES,
   ROLE_STATUS_BADGE_CLASSES,
@@ -90,11 +92,6 @@ type SaveOp = {
 type SaveFailure = SaveOp & { message: string };
 
 const EMPTY_KEYS: ReadonlySet<string> = new Set();
-
-const FALLBACK_BADGE_CLASS =
-  "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300";
-const PENDING_BADGE_CLASS =
-  "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/60 dark:text-sky-300";
 
 function compareBySortOrder(a: MenuItem, b: MenuItem) {
   if (a.sort_order !== b.sort_order) {
@@ -299,11 +296,6 @@ export function PermissionsMatrix() {
     [menuItems],
   );
 
-  /** 矩阵中全部可配置列（子菜单 key，按渲染顺序） */
-  const columnKeys = React.useMemo(
-    () => groups.flatMap((group) => group.children.map((child) => child.key)),
-    [groups],
-  );
   /** 注册表全量 key（含顶级目录），用于预览的可见数量分母与 fail-open 全集 */
   const allKeys = React.useMemo(
     () => new Set(menuItems.map((item) => item.key)),
@@ -914,7 +906,7 @@ function MobileConfig({
           disabled={roles.length === 0}
         >
           <SelectTrigger
-            className="h-11 w-full text-base"
+            className="min-h-11 w-full text-base lg:min-h-8"
             aria-label="选择要配置的角色"
           >
             <SelectValue placeholder="选择角色" />
@@ -1151,7 +1143,7 @@ function PreviewCard({
             disabled={roles.length === 0}
           >
             <SelectTrigger
-              className="h-11 w-full sm:w-56 lg:h-8"
+              className="w-full sm:w-56 min-h-11 lg:min-h-8"
               aria-label="选择要预览的角色"
             >
               <SelectValue placeholder="选择角色" />

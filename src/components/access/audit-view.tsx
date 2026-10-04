@@ -9,6 +9,7 @@
 // 导出：request_export('audit.operations')（report 统一导出管道），toast 引导 /report/exports。
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   DownloadIcon,
   FileClockIcon,
@@ -108,6 +109,7 @@ function MetaItem({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function AccessAuditView() {
   const isMobile = useIsMobile();
+  const router = useRouter();
 
   const [ops, setOps] = React.useState<OperationRow[]>([]);
   const [opsLoading, setOpsLoading] = React.useState(true);
@@ -284,7 +286,12 @@ export function AccessAuditView() {
       toast.error(translateAuditErrorMessage(exportError.message));
       return;
     }
-    toast.success("导出任务已创建，完成后到 /report/exports 下载");
+    toast.success("导出任务已创建", {
+      action: {
+        label: "前往下载",
+        onClick: () => router.push("/report/exports"),
+      },
+    });
   };
 
   const renderOpsList = () => {
@@ -385,7 +392,9 @@ export function AccessAuditView() {
               <TableRow
                 key={row.id}
                 className="cursor-pointer"
+                role="button"
                 tabIndex={0}
+                aria-label={`查看权限变更详情：${row.actor_name ?? "系统/后台"} · ${formatDateTime(row.created_at)}`}
                 onClick={() => setDetail(row)}
                 onKeyDown={(event) => {
                   if (event.target !== event.currentTarget) {
@@ -549,7 +558,7 @@ export function AccessAuditView() {
           <div className="flex flex-wrap items-center gap-2">
             <Select value={actorFilter} onValueChange={setActorFilter}>
               <SelectTrigger
-                className="h-11 w-full sm:w-36 lg:h-8"
+                className="w-full sm:w-36 min-h-11 lg:min-h-8"
                 aria-label="按操作人筛选"
               >
                 <SelectValue placeholder="全部操作人" />
@@ -569,7 +578,7 @@ export function AccessAuditView() {
               onValueChange={setObjectTypeFilter}
             >
               <SelectTrigger
-                className="h-11 w-full sm:w-36 lg:h-8"
+                className="w-full sm:w-36 min-h-11 lg:min-h-8"
                 aria-label="按对象类型筛选"
               >
                 <SelectValue placeholder="全部对象" />
@@ -689,7 +698,7 @@ export function AccessAuditView() {
                 onValueChange={setDeniedModuleFilter}
               >
                 <SelectTrigger
-                  className="h-11 w-full sm:w-36 lg:h-8"
+                  className="w-full sm:w-36 min-h-11 lg:min-h-8"
                   aria-label="按模块筛选越权记录"
                 >
                   <SelectValue placeholder="全部模块" />

@@ -329,7 +329,7 @@ export function RolesTable() {
             </div>
             <Select value={kindFilter} onValueChange={setKindFilter}>
               <SelectTrigger
-                className="h-11 w-full sm:w-32 lg:h-8"
+                className="w-full sm:w-32 min-h-11 lg:min-h-8"
                 aria-label="按类型筛选"
               >
                 <SelectValue placeholder="全部类型" />
@@ -345,7 +345,7 @@ export function RolesTable() {
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger
-                className="h-11 w-full sm:w-32 lg:h-8"
+                className="w-full sm:w-32 min-h-11 lg:min-h-8"
                 aria-label="按状态筛选"
               >
                 <SelectValue placeholder="全部状态" />
@@ -608,6 +608,7 @@ export function RolesTable() {
                   setForm((prev) => ({ ...prev, name: event.target.value }))
                 }
                 placeholder="如：生产主管"
+                className="h-11 lg:h-8"
               />
               {editing?.isBuiltin ? (
                 <FieldDescription>内置角色名称不可修改</FieldDescription>
@@ -623,7 +624,7 @@ export function RolesTable() {
                   setForm((prev) => ({ ...prev, code: event.target.value }))
                 }
                 placeholder="如：prod_manager"
-                className="font-mono"
+                className="h-11 font-mono lg:h-8"
               />
               <FieldDescription>
                 {editing?.isBuiltin
@@ -663,7 +664,10 @@ export function RolesTable() {
                 }
                 disabled={editing?.isBuiltin ?? false}
               >
-                <SelectTrigger id="role-status" className="w-full">
+                <SelectTrigger
+                  id="role-status"
+                  className="w-full min-h-11 lg:min-h-8"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -741,10 +745,18 @@ export function RolesTable() {
             ) : null}
           </div>
           <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="outline" onClick={closeSheet}>
+            <Button
+              variant="outline"
+              onClick={closeSheet}
+              className="h-11 lg:h-8"
+            >
               取消
             </Button>
-            <Button onClick={() => void handleSave()} disabled={saving}>
+            <Button
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className="h-11 lg:h-8"
+            >
               {saving ? (
                 <Loader2Icon
                   className="animate-spin"

@@ -1,10 +1,12 @@
 -- 权限管理 · visible_menus RPC（access/006）pgTAP 测试
 -- 运行：supabase db reset && supabase test db
 -- 覆盖：函数存在性 / SECURITY DEFINER + search_path 固定 / GRANT（authenticated 有、anon 无）/
---       admin 全量且 fallback=false / 其他角色零授权 fail-open 全量且 fallback=true /
+--       admin 全量且 fallback=false / 角色零授权 fail-open 全量且 fallback=true /
 --       部分授权仅回授权集 + 祖先链且 fallback=false（叶子上溯；仅授权顶层不带出子级）/
 --       无角色（档案停用）fail-closed 空集 / public 包装与 app 实现一致 / anon 调用被拒。
--- 说明：夹具（授权、停用档案）只在事务内生效，finish 后 rollback，不污染其他测试文件。
+-- 说明：内置角色已有默认授权 seed（access 批次 1）；本文件在事务内清除 engineer/planner
+--       的授权以验证「零授权兜底」与「部分授权」机制保留。夹具（授权、停用档案）只在
+--       事务内生效，finish 后 rollback，不污染其他测试文件。
 
 begin;
 
@@ -82,9 +84,13 @@ select results_eq(
 );
 
 -- ===========================================================================
--- 3. 其他角色零授权：fail-open 全量 + fallback=true（3）
+-- 3. 角色零授权：fail-open 全量 + fallback=true（3）
+--    内置角色已有默认授权 seed；清除 engineer 授权以验证兜底机制保留。
 -- ===========================================================================
 reset role;
+delete from public.role_menu_grants
+ where role_id = (select id from public.roles where code = 'engineer');
+
 set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222220001","role":"authenticated"}';
 set local role authenticated;
 
@@ -94,7 +100,7 @@ select is(
      join public.roles r on r.id = g.role_id
     where r.code = 'engineer'),
   0::bigint,
-  '前置：engineer 零授权记录'
+  '前置：engineer 授权已清除（模拟未配置授权的角色）'
 );
 select is(
   (select count(*) from public.visible_menus()),
@@ -109,9 +115,13 @@ select results_eq(
 
 -- ===========================================================================
 -- 4. 部分授权：只回授权集 + 祖先链，fallback=false（7）
---    planner 被授予叶子 /org/users + /system/jobs，另单独验证「仅授权顶层」。
+--    清除 planner 默认授权后，授予叶子 /org/users + /system/jobs，
+--    另单独验证「仅授权顶层」。
 -- ===========================================================================
 reset role;
+delete from public.role_menu_grants
+ where role_id = (select id from public.roles where code = 'planner');
+
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
 set local role authenticated;
 

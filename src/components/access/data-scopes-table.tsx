@@ -46,10 +46,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { Database } from "@/lib/database.types";
 import {
+  DATA_SCOPE_BADGE_CLASSES,
   DATA_SCOPE_LABELS,
   DATA_SCOPE_OPTIONS,
+  FALLBACK_BADGE_CLASS,
   ROLE_KIND_BADGE_CLASSES,
   ROLE_STATUS_BADGE_CLASSES,
   translateDataScopeErrorMessage,
@@ -146,7 +147,8 @@ export function DataScopesTable() {
         .order("full_name"),
     ]);
 
-    const loadError = roleResult.error ?? scopeResult.error;
+    const loadError =
+      roleResult.error ?? scopeResult.error ?? userResult.error;
     if (loadError) {
       setError(loadError.message);
       setRoles([]);
@@ -293,7 +295,7 @@ export function DataScopesTable() {
       >
         <SelectTrigger
           id={`${idPrefix}-${role.id}`}
-          className="w-full min-w-40"
+          className="w-full min-w-40 min-h-11 lg:min-h-8"
           aria-label={`${role.name} 的数据范围`}
         >
           <SelectValue placeholder="未配置（当前不可见任何数据）" />
@@ -311,9 +313,6 @@ export function DataScopesTable() {
               }
             >
               {option.label}
-              {option.value === "all" && lockedAdminOption
-                ? "（仅管理员角色）"
-                : ""}
             </SelectItem>
           ))}
         </SelectContent>
@@ -341,29 +340,13 @@ export function DataScopesTable() {
   const scopeBadge = (scope: DataScope | null) => {
     if (!scope) {
       return (
-        <Badge
-          variant="outline"
-          className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300"
-        >
+        <Badge variant="outline" className={FALLBACK_BADGE_CLASS}>
           未配置 · 空集
         </Badge>
       );
     }
-    if (scope === "all") {
-      return (
-        <Badge
-          variant="outline"
-          className="border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300"
-        >
-          {DATA_SCOPE_LABELS.all}
-        </Badge>
-      );
-    }
     return (
-      <Badge
-        variant="outline"
-        className="border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/60 dark:text-sky-300"
-      >
+      <Badge variant="outline" className={DATA_SCOPE_BADGE_CLASSES[scope]}>
         {DATA_SCOPE_LABELS[scope]}
       </Badge>
     );
@@ -536,7 +519,7 @@ export function DataScopesTable() {
               disabled={loading || users.length === 0}
             >
               <SelectTrigger
-                className="h-11 w-full text-base sm:max-w-sm lg:h-8 lg:text-sm"
+                className="w-full text-base sm:max-w-sm min-h-11 lg:min-h-8 lg:text-sm"
                 aria-label="选择要预检的用户"
               >
                 <SelectValue placeholder="选择用户（按姓名排序）" />
