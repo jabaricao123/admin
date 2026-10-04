@@ -11,11 +11,14 @@ export function formatDateTime(value: string | null | undefined): string {
   return new Date(value).toLocaleString("zh-CN", { hour12: false });
 }
 
-/** audit 页面 RPC 错误：业务拒绝信息已中文（部分带来源名），原文透传；其余走通用映射 */
+/** audit 页面 RPC 错误：业务拒绝信息已中文（部分带来源名/表名），原文透传；其余走通用映射 */
 export function translateAuditErrorMessage(message: string): string {
   const isBusinessRule =
     /^(仅管理员可导出该来源|导出源已停用|导出源不存在)：/.test(message) ||
-    message === "进行中的导出任务已达上限（3），请等待完成后再试";
+    message === "进行中的导出任务已达上限（3），请等待完成后再试" ||
+    /^表 .+ 不在数据变更白名单中$/.test(message) ||
+    /^表名(不合法|不能为空)/.test(message) ||
+    message === "记录标识不能为空";
   return isBusinessRule ? message : translateErrorMessage(message);
 }
 
@@ -206,4 +209,67 @@ export function summarizeDiff(diff: Json | null | undefined): string {
   }
   const parts = keys.slice(0, 3).map((key) => `${key}=${formatShort(diff[key])}`);
   return parts.join("、") + (keys.length > 3 ? ` 等 ${keys.length} 项` : "");
+}
+
+// ---------------------------------------------------------------------------
+// 数据变更（audit/007）：表名 / 快照字段 / 变更类型 展示配置
+// ---------------------------------------------------------------------------
+
+/** audit_row_versions.table_name → 展示名；未知表回退原始表名 */
+export const ROW_VERSION_TABLE_LABELS: Record<string, string> = {
+  profiles: "用户档案",
+  departments: "部门",
+  positions: "岗位",
+};
+
+export function rowVersionTableLabel(table: string | null | undefined): string {
+  if (!table) {
+    return "—";
+  }
+  return ROW_VERSION_TABLE_LABELS[table] ?? table;
+}
+
+/** 行快照字段 → 展示名；未知字段回退原始 key */
+export const ROW_VERSION_FIELD_LABELS: Record<string, string> = {
+  id: "ID",
+  full_name: "姓名",
+  department: "部门（文本）",
+  department_id: "部门 ID",
+  position_id: "岗位 ID",
+  role: "角色",
+  status: "状态",
+  created_by: "创建人",
+  updated_by: "更新人",
+  created_at: "创建时间",
+  updated_at: "更新时间",
+  name: "名称",
+  parent_id: "上级部门 ID",
+  leader_id: "负责人 ID",
+  sort_order: "排序号",
+  code: "编码",
+  headcount: "编制数",
+  description: "描述",
+};
+
+export function rowVersionFieldLabel(key: string): string {
+  return ROW_VERSION_FIELD_LABELS[key] ?? key;
+}
+
+/** 版本变更类型（RPC 推断：insert/update/delete）→ 展示名 */
+export const ROW_VERSION_CHANGE_LABELS: Record<string, string> = {
+  insert: "新建",
+  update: "修改",
+  delete: "删除",
+};
+
+export function rowVersionChangeLabel(changeType: string | null | undefined): string {
+  if (!changeType) {
+    return "—";
+  }
+  return ROW_VERSION_CHANGE_LABELS[changeType] ?? changeType;
+}
+
+/** 版本变更类型 Badge 配色（复用动作配色：insert→create） */
+export function rowVersionChangeBadgeClass(changeType: string): string {
+  return auditActionBadgeClass(changeType === "insert" ? "create" : changeType);
 }

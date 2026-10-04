@@ -1464,6 +1464,60 @@ export type Database = {
           },
         ]
       }
+      system_dict_meta: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          dict_key: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description: string
+          dict_key: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          dict_key?: string
+        }
+        Relationships: []
+      }
+      system_dictionaries: {
+        Row: {
+          color_class: string | null
+          dict_key: string
+          label: string
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          color_class?: string | null
+          dict_key: string
+          label: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          color_class?: string | null
+          dict_key?: string
+          label?: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       system_services: {
         Row: {
           config: NonNullable<Json>
@@ -1491,6 +1545,63 @@ export type Database = {
           updated_by?: string | null
           verified_at?: string | null
           verify_status?: string
+        }
+        Relationships: []
+      }
+      system_setting_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: number
+          key: string
+          new_value: NonNullable<Json>
+          old_value: Json | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: never
+          key: string
+          new_value: NonNullable<Json>
+          old_value?: Json | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: never
+          key?: string
+          new_value?: NonNullable<Json>
+          old_value?: Json | null
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          description: string
+          group_name: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: NonNullable<Json>
+          value_type: string
+        }
+        Insert: {
+          description: string
+          group_name: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: NonNullable<Json>
+          value_type: string
+        }
+        Update: {
+          description?: string
+          group_name?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: NonNullable<Json>
+          value_type?: string
         }
         Relationships: []
       }
@@ -1937,6 +2048,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      disable_dict_item: {
+        Args: { p_dict_key: string; p_value: string }
+        Returns: Json
+      }
       disable_position: {
         Args: { p_id: string }
         Returns: {
@@ -2052,12 +2167,58 @@ export type Database = {
         }
       }
       enable_webhook: { Args: { p_id: string }; Returns: Json }
+      get_all_settings: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          description: string
+          group_name: string
+          key: string
+          updated_at: string
+          updated_by: string
+          value: Json
+          value_type: string
+        }[]
+      }
+      get_dict: { Args: { p_dict_key: string }; Returns: Json }
+      get_dict_catalog: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active_count: number
+          description: string
+          dict_key: string
+          item_count: number
+        }[]
+      }
+      get_dict_items: {
+        Args: { p_dict_key: string }
+        Returns: {
+          color_class: string
+          label: string
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string
+          value: string
+        }[]
+      }
       get_role_user_counts: {
         Args: Record<PropertyKey, never>
         Returns: {
           role_code: string
           role_id: string
           user_count: number
+        }[]
+      }
+      get_row_versions: {
+        Args: { p_record_id: string; p_table: string }
+        Returns: {
+          change_type: string
+          changed_at: string
+          changed_by: string
+          changed_by_name: string
+          data: Json
+          id: number
+          version: number
         }[]
       }
       get_service_status: {
@@ -2070,6 +2231,19 @@ export type Database = {
           updated_by: string
           verified_at: string
           verify_status: string
+        }[]
+      }
+      get_setting: { Args: { p_key: string }; Returns: Json }
+      get_setting_history: {
+        Args: { p_key: string }
+        Returns: {
+          changed_at: string
+          changed_by: string
+          changed_by_name: string
+          id: number
+          key: string
+          new_value: Json
+          old_value: Json
         }[]
       }
       get_storage_usage: {
@@ -2245,6 +2419,18 @@ export type Database = {
         }[]
       }
       issue_api_token: { Args: { p_key: string }; Returns: Json }
+      list_recent_versions: {
+        Args: { p_limit?: number; p_table: string }
+        Returns: {
+          changed_at: string
+          changed_by: string
+          changed_by_name: string
+          data: Json
+          id: number
+          record_id: string
+          version: number
+        }[]
+      }
       mark_all_read: { Args: Record<PropertyKey, never>; Returns: number }
       mark_cc_read: { Args: { p_instance_id: string }; Returns: string }
       mark_notification_read: {
@@ -2647,6 +2833,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      upsert_dict_item: {
+        Args: {
+          p_color_class: string
+          p_dict_key: string
+          p_label: string
+          p_sort_order: number
+          p_status: string
+          p_value: string
+        }
+        Returns: Json
+      }
+      upsert_dict_meta: {
+        Args: { p_description: string; p_dict_key: string }
+        Returns: Json
+      }
       upsert_message_template: {
         Args: {
           p_body_tpl: string
@@ -2731,8 +2932,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      upsert_row_version_whitelist: {
+        Args: { p_enabled: boolean; p_table: string }
+        Returns: Json
+      }
       upsert_service_config: {
         Args: { p_config: Json; p_credentials: string; p_service: string }
+        Returns: Json
+      }
+      upsert_setting: {
+        Args: {
+          p_description: string
+          p_group_name: string
+          p_key: string
+          p_value: Json
+          p_value_type: string
+        }
         Returns: Json
       }
       upsert_sync_schedule: {

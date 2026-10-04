@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 路由 | /system/dictionaries |
-| 状态 | P1，待立项（admin 专用） |
+| 状态 | 已交付（system/009，admin 专用；dictionaries.ts 读取层改造在 system/010） |
 | 模块 | [system](../README.md#9-系统管理-systemp1) |
 
 ## 目的

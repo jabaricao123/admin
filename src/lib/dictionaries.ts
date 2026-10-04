@@ -274,7 +274,12 @@ export function translateSystemErrorMessage(message: string): string {
   const isBusinessRule =
     message === "测试收件邮箱不能为空" ||
     message === "邮件配置不存在，请先保存配置" ||
-    message === "对象存储配置不存在，请先保存配置";
+    message === "对象存储配置不存在，请先保存配置" ||
+    message === "参数值不能为 NULL" ||
+    message === "仅管理员可执行此操作" ||
+    /^(参数 key 不能为空|参数分组不能为空|参数说明不能为空|未知参数类型|参数值类型与 |字典标识不能为空|字典用途说明不能为空|字典项 value 不能为空|字典项 label 不能为空|非法字典项状态|字典项不存在|字典 .+ 尚未登记用途说明)/.test(
+      message,
+    );
   return isBusinessRule ? message : translateErrorMessage(message);
 }
 

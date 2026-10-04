@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 路由 | /system/settings |
-| 状态 | P1，待立项（admin 专用） |
+| 状态 | 已交付（system/007+008，admin 专用） |
 | 模块 | [system](../README.md#9-系统管理-systemp1) |
 
 ## 目的
