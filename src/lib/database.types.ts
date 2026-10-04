@@ -670,6 +670,30 @@ export type Database = {
         }
         Relationships: []
       }
+      im_auth_configs: {
+        Row: {
+          credentials: string | null
+          enabled: boolean
+          provider: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          credentials?: string | null
+          enabled?: boolean
+          provider: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          credentials?: string | null
+          enabled?: boolean
+          provider?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       integration_call_logs: {
         Row: {
           created_at: string
@@ -1283,7 +1307,9 @@ export type Database = {
           created_at: string
           department: string | null
           department_id: string | null
+          dingtalk_userid: string | null
           email: string | null
+          feishu_userid: string | null
           full_name: string | null
           id: string
           position_id: string | null
@@ -1292,12 +1318,15 @@ export type Database = {
           status: Database["public"]["Enums"]["profile_status"]
           updated_at: string
           updated_by: string | null
+          wecom_userid: string | null
         }
         Insert: {
           created_at?: string
           department?: string | null
           department_id?: string | null
+          dingtalk_userid?: string | null
           email?: string | null
+          feishu_userid?: string | null
           full_name?: string | null
           id: string
           position_id?: string | null
@@ -1306,12 +1335,15 @@ export type Database = {
           status?: Database["public"]["Enums"]["profile_status"]
           updated_at?: string
           updated_by?: string | null
+          wecom_userid?: string | null
         }
         Update: {
           created_at?: string
           department?: string | null
           department_id?: string | null
+          dingtalk_userid?: string | null
           email?: string | null
+          feishu_userid?: string | null
           full_name?: string | null
           id?: string
           position_id?: string | null
@@ -1320,6 +1352,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["profile_status"]
           updated_at?: string
           updated_by?: string | null
+          wecom_userid?: string | null
         }
         Relationships: [
           {
@@ -3196,6 +3229,17 @@ export type Database = {
           updated_by: string
           url: string
         }[]
+      }
+      im_admin_set_userid: {
+        Args: { p_provider: string; p_user_id: string; p_userid: string }
+        Returns: Json
+      }
+      im_bind_self: { Args: { p_provider: string; p_userid: string }; Returns: Json }
+      im_get_enabled_provider: { Args: Record<PropertyKey, never>; Returns: string }
+      im_unbind: { Args: { p_provider: string; p_user_id: string }; Returns: Json }
+      im_upsert_config: {
+        Args: { p_credentials: Json; p_enabled: boolean; p_provider: string }
+        Returns: Json
       }
       grant_menu: {
         Args: { p_menu_key: string; p_role_id: string }
