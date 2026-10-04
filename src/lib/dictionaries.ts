@@ -941,6 +941,94 @@ export const REPORT_FILTER_OP_LABELS: Record<ReportFilterOp, string> = {
   like: "包含（like）",
 };
 
+/* -------------------------------------------------------------------------- */
+/* 报表中心 · 报表订阅（report/005 + report/006）                               */
+/* -------------------------------------------------------------------------- */
+
+/** 订阅频率预设（页面只给预设，cron 由 upsert_report_subscription 映射落表） */
+export type ReportSubscriptionPreset = "hourly" | "daily" | "weekly";
+
+export const REPORT_SUBSCRIPTION_PRESET_LABELS: Record<
+  ReportSubscriptionPreset,
+  string
+> = {
+  hourly: "每小时",
+  daily: "每天",
+  weekly: "每周",
+};
+
+export const REPORT_SUBSCRIPTION_PRESET_OPTIONS = (
+  ["hourly", "daily", "weekly"] as ReportSubscriptionPreset[]
+).map((value) => ({ value, label: REPORT_SUBSCRIPTION_PRESET_LABELS[value] }));
+
+/** 订阅状态（report_subscriptions.status；逻辑删行不出现在列表） */
+export type ReportSubscriptionStatus = "active" | "disabled";
+
+export const REPORT_SUBSCRIPTION_STATUS_LABELS: Record<
+  ReportSubscriptionStatus,
+  string
+> = {
+  active: "启用",
+  disabled: "停用",
+};
+
+export const REPORT_SUBSCRIPTION_STATUS_BADGE_CLASSES: Record<
+  ReportSubscriptionStatus,
+  string
+> = {
+  active:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  disabled:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+export function asReportSubscriptionStatus(
+  value: string,
+): ReportSubscriptionStatus {
+  return value === "disabled" ? "disabled" : "active";
+}
+
+/** 订阅执行状态（report_subscription_runs.status） */
+export type ReportSubscriptionRunStatus = "running" | "success" | "failed";
+
+export const REPORT_SUBSCRIPTION_RUN_STATUS_LABELS: Record<
+  ReportSubscriptionRunStatus,
+  string
+> = {
+  running: "执行中",
+  success: "成功",
+  failed: "失败",
+};
+
+export const REPORT_SUBSCRIPTION_RUN_STATUS_BADGE_CLASSES: Record<
+  ReportSubscriptionRunStatus,
+  string
+> = {
+  running:
+    "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
+  success:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  failed:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+};
+
+export function asReportSubscriptionRunStatus(
+  value: string,
+): ReportSubscriptionRunStatus {
+  return value === "success" || value === "failed" ? value : "running";
+}
+
+/** 投递渠道（channels；email 经 message 渠道分发降级，本工单不直发） */
+export type ReportChannel = "inbox" | "email";
+
+export const REPORT_CHANNEL_LABELS: Record<ReportChannel, string> = {
+  inbox: "站内信",
+  email: "邮件",
+};
+
+/** 星期（与 sync 调度共用一套 0=周日 的取值） */
+export const REPORT_WEEKDAY_LABELS = SYNC_WEEKDAY_LABELS;
+
 /** 数据导出 · 任务状态（export_jobs.status 状态机） */
 export type ExportStatus = "queued" | "running" | "done" | "failed";
 
@@ -967,6 +1055,7 @@ export const EXPORT_STATUS_BADGE_CLASSES: Record<ExportStatus, string> = {
 export const EXPORT_SOURCE_LABELS: Record<string, string> = {
   "org.users": "用户名单",
   "audit.operations": "操作日志",
+  "integration.logs": "调用日志",
 };
 
 /** 系统管理 · 公告状态（system_announcements.status，状态机见 announcements.md） */
@@ -1028,4 +1117,63 @@ export function translateAnnouncementErrorMessage(message: string): string {
     /^(公告|生效时段)/.test(message) ||
     /^(仅草稿|仅已发布|发布前请)/.test(message);
   return isBusinessRule ? message : translateErrorMessage(message);
+}
+
+// ---------------------------------------------------------------------------
+// 接口/集成 · 调用日志（integration/007-008）
+// ---------------------------------------------------------------------------
+
+/** 调用类型（integration_call_logs.kind） */
+export type CallLogKind = "api" | "webhook";
+
+export const CALL_LOG_KIND_LABELS: Record<CallLogKind, string> = {
+  api: "API",
+  webhook: "Webhook",
+};
+
+export const CALL_LOG_KIND_BADGE_CLASSES: Record<CallLogKind, string> = {
+  api: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
+  webhook:
+    "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/60 dark:text-violet-300",
+};
+
+export function asCallLogKind(value: string): CallLogKind {
+  return value === "webhook" ? "webhook" : "api";
+}
+
+/** 状态码 Badge 配色：2xx 绿 / 4xx 黄 / 5xx 红 / 其他（含无响应）灰 */
+export function callStatusCodeBadgeClass(code: number | null): string {
+  if (code === null) {
+    return "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400";
+  }
+  if (code >= 500) {
+    return "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300";
+  }
+  if (code >= 400) {
+    return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300";
+  }
+  if (code >= 200 && code < 300) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300";
+  }
+  return "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400";
+}
+
+export function callStatusLabel(code: number | null): string {
+  return code === null ? "无响应" : String(code);
+}
+
+/** 调用日志筛选：状态码档位（一键 ≥400 为 failed） */
+export type CallStatusFilter = "all" | "failed" | "2xx" | "4xx" | "5xx";
+
+export const CALL_STATUS_FILTER_OPTIONS = [
+  { value: "all", label: "全部状态" },
+  { value: "failed", label: "失败（≥400）" },
+  { value: "2xx", label: "2xx 成功" },
+  { value: "4xx", label: "4xx 客户端错误" },
+  { value: "5xx", label: "5xx 服务端错误" },
+] as const;
+
+/** 导出源 integration.logs 的错误透传（业务提示已是中文） */
+export function translateIntegrationLogsErrorMessage(message: string): string {
+  return translateIntegrationErrorMessage(message);
 }

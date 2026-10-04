@@ -287,3 +287,46 @@ export function rowVersionChangeLabel(changeType: string | null | undefined): st
 export function rowVersionChangeBadgeClass(changeType: string): string {
   return auditActionBadgeClass(changeType === "insert" ? "create" : changeType);
 }
+
+// ---------------------------------------------------------------------------
+// 合规报告（audit/008）：周期/范围 展示配置
+// ---------------------------------------------------------------------------
+
+export type CompliancePeriod = "week" | "month" | "quarter";
+
+export const COMPLIANCE_PERIOD_LABELS: Record<CompliancePeriod, string> = {
+  week: "周报",
+  month: "月报",
+  quarter: "季度报",
+};
+
+export const COMPLIANCE_PERIOD_OPTIONS = (
+  Object.keys(COMPLIANCE_PERIOD_LABELS) as CompliancePeriod[]
+).map((value) => ({ value, label: COMPLIANCE_PERIOD_LABELS[value] }));
+
+export function compliancePeriodLabel(period: string | null | undefined): string {
+  if (!period) {
+    return "—";
+  }
+  return COMPLIANCE_PERIOD_LABELS[period as CompliancePeriod] ?? period;
+}
+
+/** 报告范围：all=全系统；其余为模块标识（复用 AUDIT_MODULE_LABELS 展示） */
+export function complianceRangeLabel(range: string | null | undefined): string {
+  if (!range) {
+    return "—";
+  }
+  if (range === "all") {
+    return "全系统";
+  }
+  return AUDIT_MODULE_LABELS[range] ?? range;
+}
+
+/** 范围下拉：全系统 + 已知模块（值=module 标识，与 audit_operations.module 对齐） */
+export const COMPLIANCE_RANGE_OPTIONS = [
+  { value: "all", label: "全系统" },
+  ...Object.entries(AUDIT_MODULE_LABELS).map(([value, label]) => ({
+    value,
+    label,
+  })),
+];

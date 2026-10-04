@@ -34,6 +34,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_docs: {
+        Row: {
+          changelog: string | null
+          created_at: string
+          id: string
+          published_by: string | null
+          spec: NonNullable<Json>
+          version: string
+        }
+        Insert: {
+          changelog?: string | null
+          created_at?: string
+          id?: string
+          published_by?: string | null
+          spec: NonNullable<Json>
+          version: string
+        }
+        Update: {
+          changelog?: string | null
+          created_at?: string
+          id?: string
+          published_by?: string | null
+          spec?: NonNullable<Json>
+          version?: string
+        }
+        Relationships: []
+      }
       api_keys: {
         Row: {
           created_at: string
@@ -454,6 +481,33 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_reports: {
+        Row: {
+          created_at: string
+          file_content: string
+          generated_by: string | null
+          id: string
+          period: string
+          range: string
+        }
+        Insert: {
+          created_at?: string
+          file_content: string
+          generated_by?: string | null
+          id?: string
+          period: string
+          range?: string
+        }
+        Update: {
+          created_at?: string
+          file_content?: string
+          generated_by?: string | null
+          id?: string
+          period?: string
+          range?: string
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           created_at: string
@@ -616,6 +670,180 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_call_logs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          id: number
+          key_id: string | null
+          kind: string
+          method_event: string
+          request_excerpt: string | null
+          response_excerpt: string | null
+          status_code: number | null
+          webhook_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: never
+          key_id?: string | null
+          kind: string
+          method_event: string
+          request_excerpt?: string | null
+          response_excerpt?: string | null
+          status_code?: number | null
+          webhook_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: never
+          key_id?: string | null
+          kind?: string
+          method_event?: string
+          request_excerpt?: string | null
+          response_excerpt?: string | null
+          status_code?: number | null
+          webhook_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_call_logs_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_call_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_call_logs_2026_10: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          id: number
+          key_id: string | null
+          kind: string
+          method_event: string
+          request_excerpt: string | null
+          response_excerpt: string | null
+          status_code: number | null
+          webhook_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: never
+          key_id?: string | null
+          kind: string
+          method_event: string
+          request_excerpt?: string | null
+          response_excerpt?: string | null
+          status_code?: number | null
+          webhook_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: never
+          key_id?: string | null
+          kind?: string
+          method_event?: string
+          request_excerpt?: string | null
+          response_excerpt?: string | null
+          status_code?: number | null
+          webhook_id?: string | null
+        }
+        Relationships: []
+      }
+      integration_call_logs_2026_11: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          id: number
+          key_id: string | null
+          kind: string
+          method_event: string
+          request_excerpt: string | null
+          response_excerpt: string | null
+          status_code: number | null
+          webhook_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: never
+          key_id?: string | null
+          kind: string
+          method_event: string
+          request_excerpt?: string | null
+          response_excerpt?: string | null
+          status_code?: number | null
+          webhook_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: never
+          key_id?: string | null
+          kind?: string
+          method_event?: string
+          request_excerpt?: string | null
+          response_excerpt?: string | null
+          status_code?: number | null
+          webhook_id?: string | null
+        }
+        Relationships: []
+      }
+      integration_call_stats_daily: {
+        Row: {
+          avg_duration_ms: number | null
+          day: string
+          failed: number
+          kind: string
+          ref_id: string
+          ref_name: string | null
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          avg_duration_ms?: number | null
+          day: string
+          failed?: number
+          kind: string
+          ref_id?: string
+          ref_name?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          avg_duration_ms?: number | null
+          day?: string
+          failed?: number
+          kind?: string
+          ref_id?: string
+          ref_name?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       integration_events: {
         Row: {
           attempts: number
@@ -683,6 +911,165 @@ export type Database = {
             referencedColumns: ["key"]
           },
         ]
+      }
+      message_deliveries: {
+        Row: {
+          attempts: number
+          channel: string
+          created_at: string
+          error: string | null
+          event_key: string
+          id: number
+          idempotency_key: string
+          message_id: number
+          recipient_id: string
+          rendered_body: string | null
+          rendered_subject: string | null
+          response: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          channel: string
+          created_at?: string
+          error?: string | null
+          event_key: string
+          id?: never
+          idempotency_key: string
+          message_id: number
+          recipient_id: string
+          rendered_body?: string | null
+          rendered_subject?: string | null
+          response?: string | null
+          status: string
+        }
+        Update: {
+          attempts?: number
+          channel?: string
+          created_at?: string
+          error?: string | null
+          event_key?: string
+          id?: never
+          idempotency_key?: string
+          message_id?: number
+          recipient_id?: string
+          rendered_body?: string | null
+          rendered_subject?: string | null
+          response?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_deliveries_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_deliveries_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_deliveries_202610: {
+        Row: {
+          attempts: number
+          channel: string
+          created_at: string
+          error: string | null
+          event_key: string
+          id: number
+          idempotency_key: string
+          message_id: number
+          recipient_id: string
+          rendered_body: string | null
+          rendered_subject: string | null
+          response: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          channel: string
+          created_at?: string
+          error?: string | null
+          event_key: string
+          id?: never
+          idempotency_key: string
+          message_id: number
+          recipient_id: string
+          rendered_body?: string | null
+          rendered_subject?: string | null
+          response?: string | null
+          status: string
+        }
+        Update: {
+          attempts?: number
+          channel?: string
+          created_at?: string
+          error?: string | null
+          event_key?: string
+          id?: never
+          idempotency_key?: string
+          message_id?: number
+          recipient_id?: string
+          rendered_body?: string | null
+          rendered_subject?: string | null
+          response?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      message_deliveries_202611: {
+        Row: {
+          attempts: number
+          channel: string
+          created_at: string
+          error: string | null
+          event_key: string
+          id: number
+          idempotency_key: string
+          message_id: number
+          recipient_id: string
+          rendered_body: string | null
+          rendered_subject: string | null
+          response: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          channel: string
+          created_at?: string
+          error?: string | null
+          event_key: string
+          id?: never
+          idempotency_key: string
+          message_id: number
+          recipient_id: string
+          rendered_body?: string | null
+          rendered_subject?: string | null
+          response?: string | null
+          status: string
+        }
+        Update: {
+          attempts?: number
+          channel?: string
+          created_at?: string
+          error?: string | null
+          event_key?: string
+          id?: never
+          idempotency_key?: string
+          message_id?: number
+          recipient_id?: string
+          rendered_body?: string | null
+          rendered_subject?: string | null
+          response?: string | null
+          status?: string
+        }
+        Relationships: []
       }
       message_event_registry: {
         Row: {
@@ -1062,6 +1449,105 @@ export type Database = {
           },
           {
             foreignKeyName: "report_definitions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_subscription_runs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          id: number
+          status: string
+          subscription_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: never
+          status?: string
+          subscription_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          id?: never
+          status?: string
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_subscription_runs_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "report_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_subscriptions: {
+        Row: {
+          channels: string[]
+          created_at: string
+          created_by: string
+          cron_expr: string
+          id: string
+          is_deleted: boolean
+          recipients: string
+          report_def_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          channels?: string[]
+          created_at?: string
+          created_by: string
+          cron_expr: string
+          id?: string
+          is_deleted?: boolean
+          recipients?: string
+          report_def_id: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          channels?: string[]
+          created_at?: string
+          created_by?: string
+          cron_expr?: string
+          id?: string
+          is_deleted?: boolean
+          recipients?: string
+          report_def_id?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_subscriptions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_subscriptions_report_def_id_fkey"
+            columns: ["report_def_id"]
+            isOneToOne: false
+            referencedRelation: "report_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_subscriptions_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2139,6 +2625,10 @@ export type Database = {
         Args: { p_def_id: string }
         Returns: undefined
       }
+      delete_report_subscription: {
+        Args: { p_subscription_id: string }
+        Returns: undefined
+      }
       delete_role: {
         Args: { p_id: string }
         Returns: {
@@ -2323,6 +2813,10 @@ export type Database = {
         }
       }
       enable_webhook: { Args: { p_id: string }; Returns: Json }
+      generate_compliance_report: {
+        Args: { p_period: string; p_range?: string }
+        Returns: string
+      }
       get_all_settings: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -2385,6 +2879,25 @@ export type Database = {
           updated_at: string
           updated_by: string
           value: string
+        }[]
+      }
+      get_report_subscriptions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          channels: string[]
+          created_at: string
+          cron_expr: string
+          id: string
+          last_run_at: string
+          last_run_duration_ms: number
+          last_run_status: string
+          next_run_at: string
+          recipients: string
+          report_def_id: string
+          report_name: string
+          report_visibility: string
+          status: string
+          updated_at: string
         }[]
       }
       get_role_user_counts: {
@@ -2738,6 +3251,10 @@ export type Database = {
         Args: { p_id: string; p_notify?: boolean }
         Returns: Json
       }
+      publish_api_doc: {
+        Args: { p_changelog?: string; p_spec: Json; p_version: string }
+        Returns: string
+      }
       publish_message_template: {
         Args: { p_id: string }
         Returns: {
@@ -2854,6 +3371,30 @@ export type Database = {
         Args: { p_sample?: Json; p_task_id: string }
         Returns: string
       }
+      resend_delivery: {
+        Args: { p_delivery_id: number }
+        Returns: {
+          attempts: number
+          channel: string
+          created_at: string
+          error: string | null
+          event_key: string
+          id: number
+          idempotency_key: string
+          message_id: number
+          recipient_id: string
+          rendered_body: string | null
+          rendered_subject: string | null
+          response: string | null
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "message_deliveries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       resolve_sync_conflict: {
         Args: { p_conflict_id: string; p_resolution: string }
         Returns: Json
@@ -2898,6 +3439,10 @@ export type Database = {
       }
       rollback_sync_task: { Args: { p_task_id: string }; Returns: Json }
       run_report: { Args: { p_def_id: string }; Returns: Json }
+      run_report_subscription_now: {
+        Args: { p_subscription_id: string }
+        Returns: number
+      }
       run_scheduled_sync: { Args: { p_task_id: string }; Returns: string }
       run_sync_task: {
         Args: { p_sample?: Json; p_task_id: string }
@@ -2925,6 +3470,28 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "report_definitions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_report_subscription_status: {
+        Args: { p_status: string; p_subscription_id: string }
+        Returns: {
+          channels: string[]
+          created_at: string
+          created_by: string
+          cron_expr: string
+          id: string
+          is_deleted: boolean
+          recipients: string
+          report_def_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "report_subscriptions"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -3129,6 +3696,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      upsert_report_subscription: {
+        Args: {
+          p_channels?: string[]
+          p_id: string
+          p_preset: string
+          p_recipients?: string
+          p_report_def_id: string
+          p_time?: string
+          p_weekday?: number
+        }
+        Returns: {
+          channels: string[]
+          created_at: string
+          created_by: string
+          cron_expr: string
+          id: string
+          is_deleted: boolean
+          recipients: string
+          report_def_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "report_subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_role: {
         Args: {
           p_code: string
@@ -3302,12 +3899,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3329,12 +3926,13 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3353,12 +3951,13 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3377,12 +3976,13 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3395,11 +3995,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

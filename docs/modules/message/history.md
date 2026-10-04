@@ -3,7 +3,7 @@
 | 项 | 值 |
 |---|---|
 | 路由 | /message/history |
-| 状态 | P2，待立项 |
+| 状态 | P2，开发中（message/007+008+009 已交付） |
 | 模块 | [message](../README.md#10-消息中心-messagep2) |
 
 ## 目的
