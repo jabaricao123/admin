@@ -125,6 +125,12 @@ export function LoginForm({
       );
       if (allowedError || allowed !== true) {
         await supabase.auth.signOut();
+        // im/008：密码登录关闭时的被拒尝试留痕（已签出 → 匿名通道仅记失败，ADR-002）
+        await supabase.rpc("record_login_attempt", {
+          p_email: email.trim(),
+          p_success: false,
+          p_fail_reason: "password_login_disabled",
+        });
         setError("密码登录已关闭，请使用扫码登录或联系管理员");
         setLoading(false);
         return;

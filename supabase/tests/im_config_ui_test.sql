@@ -10,12 +10,13 @@
 --   7) im_clear_all_bindings：非 admin 拒绝 / 三家清空计数 / 审计
 --   8) im_get_login_options：anon 可读且返回三键
 --   9) im_password_login_allowed：开关开恒 true / 关闭后仅名单内且 role=admin 放行
+--  10) im/008：密码登录关闭失败留痕（fail_reason=password_login_disabled）；auth.sessions 哨兵
 -- 运行：supabase db reset && supabase test db
 -- 说明：真实出站（extensions.http）不在 pgTAP 覆盖（本地栈无外网 mock）；出站成功路径为
 --       纯解析函数 + 界面证据。夹具只在本事务内生效，finish 后 rollback。
 begin;
 
-select plan(70);
+select plan(74);
 
 -- ---------------------------------------------------------------------------
 -- 0. 夹具清理（事务内，finish 后 rollback）：共享本地库里可能有他单 / 人工留下的
@@ -497,6 +498,34 @@ select lives_ok(
   $$ select public.upsert_setting('password_login_enabled', 'true'::jsonb, '安全', 'bool', '密码登录全局开关（测试）') $$,
   '恢复密码登录开关为开启（夹具清理）'
 );
+
+-- ===========================================================================
+-- 8. im/008：密码登录关闭失败留痕（R2）+ auth.sessions 存在性哨兵（S3）
+-- ===========================================================================
+-- R2：客户端在 !password_login_allowed 分支 signOut 后以匿名通道写失败留痕；
+--     此处验证 RPC 契约与归档值（界面分支见 docs/evidence/im-008）。
+reset role;
+select set_config('request.jwt.claims', '', true);
+set local role anon;
+select lives_ok(
+  $$ select public.record_login_attempt('engineer@example.com', false, 'password_login_disabled') $$,
+  'anon 可写密码登录关闭失败留痕（im/008 R2）'
+);
+reset role;
+select is(
+  (select fail_reason from public.audit_logins
+    where email = 'engineer@example.com'
+      and success = false
+      and fail_reason = 'password_login_disabled'
+    order by id desc
+    limit 1),
+  'password_login_disabled',
+  '被拒尝试归档 fail_reason=password_login_disabled（im/008 R2）'
+);
+
+-- S3：im_switch_provider 全局签出依赖 auth.sessions；GoTrue 大版本升级时先在此红
+select has_table('auth', 'sessions', 'auth.sessions 表存在（im/008 S3 哨兵）');
+select has_column('auth', 'sessions', 'id', 'auth.sessions.id 列存在（im/008 S3 哨兵）');
 
 select * from finish();
 rollback;

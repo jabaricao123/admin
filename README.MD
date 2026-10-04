@@ -82,7 +82,7 @@ supabase/
 
 ## IM 扫码登录（飞书 / 企业微信 / 钉钉）
 
-登录页「扫码登录」Tab 走当前启用厂商的 OAuth（`im_auth_configs.enabled` 部署级单选，切换即生效）：已绑定用户完成授权后由后端签发标准 Supabase session（与密码登录同一会话 / RLS / 登出链路，ADR-003）。厂商凭据解密、授权 URL 构造、code 换 token、userinfo 与绑定匹配全部在 Postgres 内完成（`im_start_auth` / `im_handle_callback` 按厂商分派）：**厂商 secret 不出库，全链路不使用 service_role**（INDEX 规则 10 / ADR-001）。
+登录页「扫码登录」Tab 走当前启用厂商的 OAuth（`im_auth_configs.enabled` 部署级单选，切换即生效）：已绑定用户完成授权后由后端签发标准 Supabase session（与密码登录同一会话 / RLS / 登出链路，ADR-003）。厂商凭据解密、授权 URL 构造、code 换 token、userinfo 与绑定匹配全部在 Postgres 内完成（`im_start_auth` / `im_handle_callback` 按厂商分派）：**厂商 secret 不出库，数据面不使用 service_role**（凭据解密 / OAuth 均在 Postgres 内）；Auth Admin（会话签发 generateLink / 用户封禁 ban）属 ADR-001 例外（INDEX 规则 10 / ADR-001）。
 
 - 飞书（im/002）：PC 扫码；App 内 H5 免登见 im/003。
 - 企业微信（im/004）：PC 扫码（`wwopen/sso/qrConnect`）与 App 内免登（`oauth2/authorize`，`scope=snsapi_privateinfo`）。

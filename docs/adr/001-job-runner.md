@@ -16,6 +16,11 @@
 
 全局禁令：**任何路径不得使用 service_role 执行后台任务**（BYPASSRLS 破坏「数据库层权限兜底」原则）。
 
+例外（Auth Admin，im/008 补充）：service_role 仅限 Supabase Auth Admin 调用（会话签发 `generateLink`、用户封禁 `ban` / 解封），禁止任何数据面（业务表 / RPC）读写；数据面访问仍走 SECURITY DEFINER wrapper + 最小角色。现使用点两处，均仅调 Auth Admin API、符合本例外：
+
+- `src/lib/im/callback.ts`（`createAuthAdminClient`）：`admin.getUserById`（取权威邮箱 / 封禁态）与 `admin.generateLink(magiclink)`（签发会话链接，再由 `verifyOtp` 落地标准 session）；
+- `src/app/(admin)/org/users/actions.ts`（`createAdminClient`）：`admin.updateUserById({ ban_duration })`（停用 / 启用用户的 Auth 层封禁）。
+
 ### 2. 出站运行时选型
 
 选择 **pg_net + pg_cron**（数据库内出站 HTTP + 调度），不引入 Edge Function 常驻投递器：
@@ -35,7 +40,7 @@
 ## 影响
 
 - sync/005、report/005/007、integration/005、message/009 按本 ADR 实现执行身份与出站。
-- pgTAP 必须覆盖：属主注入后 RLS 过滤正确（owner 外数据不可见）、service_role 零使用（审查项）。
+- pgTAP 必须覆盖：属主注入后 RLS 过滤正确（owner 外数据不可见）、service_role 数据面零使用（审查项；Auth Admin 例外见 §1）。
 - 若未来引入 Edge Function 投递器，需新 ADR 替代本节运行时部分。
 
 ## 状态：已落地（写入 docs/adr/001-job-runner.md）
