@@ -45,8 +45,8 @@ export async function GET(
   }
 
   const base = imCallbackBase(request);
-  // 企业微信 App 内嵌 WebView（UA 含 wxwork）→ 免登授权端点；PC 浏览器 → 扫码端点。
-  // im_start_auth 签名不变，模式经 state 的 `m.` 前缀传入 Postgres（im/004）。
+  // IM 端内 WebView（企业微信 UA 含 wxwork；钉钉 UA 含 DingTalk）→ 免登模式。
+  // im_start_auth 签名不变，模式经 state 的 `m.` 前缀传入 Postgres（im/004 / im/005）。
   const state =
     imStartStatePrefix(provider, request.headers.get("user-agent")) +
     createImState();

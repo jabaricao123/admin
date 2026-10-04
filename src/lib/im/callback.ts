@@ -129,7 +129,8 @@ export async function handleImCallback(
     return fail("im_denied");
   }
 
-  const code = searchParams.get("code");
+  // 钉钉回调把授权码放在 authCode（官方文档示例 ?authCode=…&state=…；与 code 同值，取任一）
+  const code = searchParams.get("code") ?? searchParams.get("authCode");
   if (!code) {
     return fail("im_failed");
   }

@@ -3,10 +3,11 @@
 
 import { BANNED_ACCOUNT_MESSAGE } from "@/lib/dictionaries";
 
-/** 已接入的 IM 厂商展示名；登录页据此决定是否渲染「扫码登录」Tab（im/004 追加企业微信） */
+/** 已接入的 IM 厂商展示名；登录页据此决定是否渲染「扫码登录」Tab（im/004 企业微信、im/005 钉钉） */
 export const IM_PROVIDER_LABELS: Record<string, string> = {
   feishu: "飞书",
   wecom: "企业微信",
+  dingtalk: "钉钉",
 };
 
 /** 厂商未知（查询失败 / 配置刚切换）时的通用文案，不出现「未绑定 undefined 账号」 */
