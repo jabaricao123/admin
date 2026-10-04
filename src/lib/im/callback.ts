@@ -23,7 +23,9 @@ import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createImBackendClient } from "./backend";
+import { imLoginErrorMessage } from "./messages";
 import type { ImProvider } from "./provider";
+import { isImQrTicket } from "./qr";
 import {
   imStateCookieName,
   IM_STATE_COOKIE_PATH,
@@ -48,8 +50,9 @@ export function imCallbackBase(request: NextRequest): string {
  * service role 客户端：仅用于 Supabase Auth Admin（generateLink / getUserById）。
  * 未配置返回 null（调用方按失败处理，不抛 500 细节）。
  * 厂商凭据读取与 OAuth 出站不经过此客户端（im/002 修复）。
+ * 导出供 /auth/qr/exchange 复用（im/007）。
  */
-function createAuthAdminClient(): SupabaseClient | null {
+export function createAuthAdminClient(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) {
@@ -62,16 +65,8 @@ function createAuthAdminClient(): SupabaseClient | null {
 
 type CookieStore = Awaited<ReturnType<typeof cookies>>;
 
-/**
- * 回调内使用的匿名（cookie 会话）客户端：
- * - 未登录时以 anon 身份写失败留痕；
- * - verifyOtp 成功后同一实例持有会话，继续写成功留痕；
- * - 转发浏览器 IP / UA，让 PostgREST 的 request.headers 采集到真实来源。
- */
-function createRouteAuthClient(
-  cookieStore: CookieStore,
-  request: NextRequest,
-): SupabaseClient {
+/** 转发浏览器 IP / UA，让 PostgREST 的 request.headers 采集到真实来源（审计留痕用） */
+export function forwardedHeaders(request: NextRequest): Record<string, string> {
   const forwarded: Record<string, string> = {};
   const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) {
@@ -81,12 +76,25 @@ function createRouteAuthClient(
   if (userAgent) {
     forwarded["user-agent"] = userAgent;
   }
+  return forwarded;
+}
 
+/**
+ * 回调内使用的匿名（cookie 会话）客户端：
+ * - 未登录时以 anon 身份写失败留痕；
+ * - verifyOtp 成功后同一实例持有会话，继续写成功留痕；
+ * - 转发浏览器 IP / UA，让 PostgREST 的 request.headers 采集到真实来源。
+ * 导出供 /auth/qr/exchange 复用（im/007）。
+ */
+export function createRouteAuthClient(
+  cookieStore: CookieStore,
+  request: NextRequest,
+): SupabaseClient {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: { headers: forwarded },
+      global: { headers: forwardedHeaders(request) },
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -102,11 +110,53 @@ function createRouteAuthClient(
   );
 }
 
+/**
+ * 未签发会话的失败留痕（ticket 回调 / ticket 换 session 失败路径用，im/007）：
+ * 匿名身份调 record_im_login_attempt（仅失败可写，身份由绑定推导）。
+ */
+export async function recordImLoginFailure(
+  request: NextRequest,
+  providerId: string,
+  imUserId: string | null,
+  failReason: string,
+): Promise<void> {
+  if (!imUserId) {
+    return;
+  }
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: forwardedHeaders(request) },
+    },
+  );
+  const { error } = await supabase.rpc("record_im_login_attempt", {
+    p_provider: providerId,
+    p_im_userid: imUserId,
+    p_success: false,
+    p_fail_reason: failReason,
+  });
+  if (error) {
+    console.error(`[im/${providerId}] 登录留痕失败`, error.message);
+  }
+}
+
 export async function handleImCallback(
   request: NextRequest,
   provider: ImProvider,
 ): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
+
+  // 分流（im/007）：state 以 `qr.` 开头 = ticket 轮询路径（跨设备 PC 扫码）；
+  // 其余 = 既有 state cookie 路径（同浏览器：移动端 H5 免登 / 桌面直登）。
+  // 两路径无歧义：createImState 的随机段为 base64url（不含点），cookie state 不可能
+  // 以 `qr.` 开头（见 src/lib/im/qr.ts 文件头）。
+  const state = searchParams.get("state");
+  if (isImQrTicket(state)) {
+    return handleImQrCallback(request, provider, state);
+  }
+
   const cookieStore = await cookies();
   const cookieName = imStateCookieName(provider.id);
   const redirectUri = `${imCallbackBase(request)}/auth/callback/${provider.id}`;
@@ -253,4 +303,142 @@ export async function handleImCallback(
   await audit(imUserId, true, null);
 
   return NextResponse.redirect(new URL("/", imCallbackBase(request)));
+}
+
+/** 手机端回调结果页（ticket 模式；自包含 HTML，无外部资源） */
+function qrCallbackHtml(options: {
+  tone: "ok" | "error";
+  title: string;
+  message: string;
+  hint?: string;
+}): NextResponse {
+  const { tone, title, message, hint } = options;
+  const accent = tone === "ok" ? "#16a34a" : "#dc2626";
+  const icon = tone === "ok" ? "✓" : "!";
+  const html = `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>${title}</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+         background: #f4f4f5; padding: 24px; box-sizing: border-box;
+         font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .card { background: #fff; border: 1px solid #e4e4e7; border-radius: 16px; padding: 40px 28px;
+          width: 100%; max-width: 360px; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,.06); }
+  .icon { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center;
+          justify-content: center; margin: 0 auto 20px; font-size: 30px; font-weight: 700;
+          color: #fff; background: ${accent}; }
+  h1 { font-size: 20px; margin: 0 0 10px; color: #18181b; }
+  p { margin: 0; color: #52525b; font-size: 14px; line-height: 1.6; }
+  .hint { margin-top: 14px; color: #a1a1aa; font-size: 12px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">${icon}</div>
+    <h1>${title}</h1>
+    <p>${message}</p>
+    ${hint ? `<p class="hint">${hint}</p>` : ""}
+  </div>
+</body>
+</html>`;
+  return new NextResponse(html, {
+    status: 200,
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
+}
+
+/**
+ * ticket 模式回调（im/007）：手机扫码后厂商重定向到本系统（跨设备，不依赖 state cookie）。
+ * 只做「把 ticket 标记为已确认」：换 session 由 PC 端 /auth/qr/exchange 完成（ADR-003 §3）。
+ * - 成功：手机看到「扫码成功，请回电脑」；
+ * - 未绑定 / 停用：作废 ticket（PC 轮询得到原因）+ 匿名失败留痕；
+ * - 取消授权（error=access_denied）：作废 ticket；
+ * - ticket 非法 / 过期 / 已消费：拒绝且不触发出站。
+ */
+async function handleImQrCallback(
+  request: NextRequest,
+  provider: ImProvider,
+  ticket: string,
+): Promise<NextResponse> {
+  const { searchParams } = new URL(request.url);
+  const redirectUri = `${imCallbackBase(request)}/auth/callback/${provider.id}`;
+
+  const denied = searchParams.get("error") === "access_denied";
+  // 钉钉回调把授权码放在 authCode（同 code；im/005 兼容逻辑一致）
+  const code = searchParams.get("code") ?? searchParams.get("authCode");
+
+  const htmlError = (error: string) =>
+    qrCallbackHtml({
+      tone: "error",
+      title: "扫码登录失败",
+      message:
+        imLoginErrorMessage(error, provider.id) ??
+        "扫码登录失败，请返回电脑重试",
+      hint: "请返回电脑端刷新二维码后重试",
+    });
+
+  if (!denied && !code) {
+    console.error(`[im/${provider.id}] 扫码回调缺少授权码`);
+    return htmlError("im_failed");
+  }
+
+  const backend = createImBackendClient();
+  if (!backend) {
+    console.error(
+      `[im/${provider.id}] 缺少 IM_BACKEND_JWT（ticket 回调用）`,
+    );
+    return htmlError("im_failed");
+  }
+
+  const { data: result, error } = await backend.rpc("im_qr_complete_login", {
+    p_provider: provider.id,
+    p_ticket: ticket,
+    // 取消授权：无 code，Postgres 侧按「手机取消」作废 ticket
+    p_code: denied ? null : code,
+    p_redirect_uri: redirectUri,
+  });
+  if (error || !result || typeof result !== "object") {
+    console.error(
+      `[im/${provider.id}] 扫码 ticket 回调处理失败`,
+      error?.message ?? "响应为空",
+    );
+    return htmlError("im_failed");
+  }
+
+  if (result.ok !== true) {
+    const errorCode =
+      typeof result.error === "string" ? result.error : "im_failed";
+    const imUserId =
+      typeof result.im_userid === "string" ? result.im_userid : null;
+    if (errorCode === "im_not_bound" || errorCode === "im_banned") {
+      await recordImLoginFailure(
+        request,
+        provider.id,
+        imUserId,
+        errorCode === "im_banned" ? "user_banned" : "im_not_bound",
+      );
+    }
+    if (errorCode === "im_denied") {
+      return qrCallbackHtml({
+        tone: "error",
+        title: "已取消授权",
+        message:
+          imLoginErrorMessage("im_denied", provider.id) ??
+          "已取消本次扫码登录",
+        hint: "请返回电脑端刷新二维码后重试",
+      });
+    }
+    return htmlError(errorCode);
+  }
+
+  return qrCallbackHtml({
+    tone: "ok",
+    title: "扫码成功",
+    message: "请在电脑上继续完成登录",
+    hint: "电脑端将自动跳转，无需刷新",
+  });
 }

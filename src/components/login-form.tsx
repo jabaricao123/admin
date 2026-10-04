@@ -6,11 +6,11 @@ import {
   CopyIcon,
   Loader2Icon,
   LogInIcon,
-  QrCodeIcon,
   ShieldAlertIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ImQrLogin } from "@/components/im-qr-login";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -199,22 +199,24 @@ export function LoginForm({
     </form>
   );
 
-  const scanPanel = (
-    <div className="flex flex-col items-center gap-4 py-2 text-center">
-      <div className="flex size-16 items-center justify-center rounded-2xl border bg-muted">
-        <QrCodeIcon className="size-8 text-muted-foreground" />
-      </div>
-      <p className="text-sm text-muted-foreground">
-        使用{providerLabel} App 扫码并确认，即可登录系统
-      </p>
-      <Button asChild className="w-full">
-        <a href={`/auth/im/${enabledProvider}/start`}>
-          <QrCodeIcon data-icon="inline-start" />
-          {providerLabel}扫码登录
+  // im/007：PC 扫码 = 真二维码（ticket 轮询）+ 同浏览器直登兜底链接。
+  // 移动端 H5 免登不经本 Tab（proxy.ts 按 UA 直接跳 /auth/im/<provider>/start）。
+  const scanPanel =
+    enabledProvider && providerLabel ? (
+      <div className="flex flex-col items-center gap-1">
+        <ImQrLogin
+          provider={enabledProvider}
+          providerLabel={providerLabel}
+          adminContact={adminContact}
+        />
+        <a
+          className="text-xs text-muted-foreground underline underline-offset-2"
+          href={`/auth/im/${enabledProvider}/start`}
+        >
+          无法扫码？在本机浏览器直接登录
         </a>
-      </Button>
-    </div>
-  );
+      </div>
+    ) : null;
 
   // im/006：im_not_bound 时展示管理员联系方式 + 一键复制（联系方式在配置页维护）
   const notBoundBanner = notBound ? (

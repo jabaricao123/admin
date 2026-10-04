@@ -3236,10 +3236,25 @@ export type Database = {
       }
       im_bind_self: { Args: { p_provider: string; p_userid: string }; Returns: Json }
       im_clear_all_bindings: { Args: Record<PropertyKey, never>; Returns: Json }
+      im_exchange_qr_ticket: { Args: { p_ticket: string }; Returns: Json }
       im_get_config: { Args: { p_provider: string }; Returns: Json }
       im_get_enabled_provider: { Args: Record<PropertyKey, never>; Returns: string }
       im_get_login_options: { Args: Record<PropertyKey, never>; Returns: Json }
       im_password_login_allowed: { Args: { p_email: string }; Returns: boolean }
+      im_poll_qr_login: { Args: { p_ticket: string }; Returns: Json }
+      im_qr_complete_login: {
+        Args: {
+          p_code: string
+          p_provider: string
+          p_redirect_uri: string
+          p_ticket: string
+        }
+        Returns: Json
+      }
+      im_start_qr_login: {
+        Args: { p_provider: string; p_redirect_uri: string }
+        Returns: Json
+      }
       im_switch_provider: { Args: { p_provider: string }; Returns: Json }
       im_test_config: {
         Args: { p_credentials?: Json; p_provider: string }
