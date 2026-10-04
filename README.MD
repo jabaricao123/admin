@@ -80,15 +80,28 @@ supabase/
 
 ## IM 扫码登录（飞书）
 
-登录页「扫码登录」Tab 走飞书 OAuth：已绑定用户扫码后由后端签发标准 Supabase session（与密码登录同一会话 / RLS / 登出链路，ADR-003）。
+登录页「扫码登录」Tab 走飞书 OAuth：已绑定用户扫码后由后端签发标准 Supabase session（与密码登录同一会话 / RLS / 登出链路，ADR-003）。厂商凭据解密、授权 URL 构造、code 换 token、userinfo 与绑定匹配全部在 Postgres 内完成（`im_start_auth` / `im_handle_callback`）：**app_secret 不出库，全链路不使用 service_role**（INDEX 规则 10 / ADR-001）。
 
 ### 部署硬前提
 
 | 项 | 要求 |
 |---|---|
 | `NEXT_PUBLIC_IM_CALLBACK_BASE` | 公网可达的 HTTPS 域名（如 `https://admin.example.com`），回调地址为 `<base>/auth/callback/feishu` |
+| `IM_BACKEND_JWT` | role=`im_backend` 的最小角色 JWT（仅可执行两个 IM 包装 RPC），签发方式见下节 |
 | 飞书开发者后台 | 该回调地址需登记在「安全设置 → 重定向 URL」白名单中（精确匹配） |
 | 多实例部署 | state 落 httpOnly cookie（无 Redis）；多副本共享同一域名时需 sticky session，或后续升级为 Redis 存储 |
+
+### IM 后端最小角色（im_backend）
+
+两个包装 RPC 仅授权给数据库最小角色 `im_backend`（nologin、非 BYPASSRLS、无任何表权限）；部署方用项目 JWT secret **离线签发**该角色 JWT：
+
+```bash
+SUPABASE_JWT_SECRET=<Dashboard → Project Settings → API → JWT secret> \
+  npm run im:backend-token        # 默认约 10 年；可传有效期秒数
+```
+
+把输出配置为部署环境变量 `IM_BACKEND_JWT`（JWT secret 只用于签发、绝不进应用运行时）。本地开发用 `supabase status` 的 JWT secret 签发后写入 `.env.local`。轮换：重新签发 → 更新环境变量 → 重启部署。
+
 
 ### 飞书开放平台配置步骤
 
@@ -124,4 +137,12 @@ select public.im_admin_set_userid(
 ### 本地联调
 
 - 飞书要求回调公网可达：本地起 `cloudflared tunnel --url http://localhost:3000`（或 ngrok），把得到的 HTTPS 域名写入 `.env.local` 的 `NEXT_PUBLIC_IM_CALLBACK_BASE`，并在飞书后台登记回调地址。
+- 本地栈还需 `IM_BACKEND_JWT`：用本地默认 JWT secret 签发后写入 `.env.local`：
+
+```bash
+# JWT secret 取 `supabase status` 显示的 JWT_SECRET（本地栈固定默认值）
+SUPABASE_JWT_SECRET=<JWT_SECRET> \
+  npm run im:backend-token   # 输出写入 .env.local 的 IM_BACKEND_JWT
+```
+
 - 登录页扫码开始前由服务端下发一次性 state（httpOnly cookie，5 分钟有效，读后作废）；登录成功 / 未绑定拒绝均落 `audit_logins`（`via='im_feishu'`，见 `/audit/logins`）。

@@ -4,7 +4,7 @@
 import type { NextRequest } from "next/server";
 
 import { handleImCallback } from "@/lib/im/callback";
-import { feishuProvider } from "@/lib/im/feishu";
+import { feishuProvider } from "@/lib/im/provider";
 
 export async function GET(request: NextRequest) {
   return handleImCallback(request, feishuProvider);

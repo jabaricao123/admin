@@ -2,16 +2,17 @@
 //
 // 链路（ADR-003 §3/§4）：
 //   1. 校验一次性 state cookie（5 分钟 + 读后作废，防代扫 / 重放）；
-//   2. 后端读 im_auth_configs 凭据（im_get_provider_config，仅 service_role，secret 不出后端）；
-//   3. code 换 user_access_token → user_info 取 IM userid（provider 实现）；
-//   4. 按 profiles.<provider>_userid 预绑定匹配：
-//      未命中 → audit_logins(via='im_<provider>', fail_reason='im_not_bound') + 回 /login 提示；
-//   5. 命中且在职 → Supabase Auth admin generateLink(magiclink) + 服务端 verifyOtp：
+//   2. 经 im_backend 最小角色调 public.im_handle_callback：code 换 token / 取 userid /
+//      预绑定匹配全部在 Postgres 内完成（厂商 secret 不出库；见迁移
+//      20261006153000_im_feishu_login.sql §4）：
+//      未命中 → audit_logins(via='im_<provider>', fail_reason='im_not_bound') + 回 /login；
+//   3. 命中且在职 → Supabase Auth admin generateLink(magiclink) + 服务端 verifyOtp：
 //      签发标准 Supabase session（与密码登录同一会话 / RLS / 登出链路，不另立体系）；
-//   6. 成功写 audit_logins(via='im_<provider>', success=true)。
+//   4. 成功写 audit_logins(via='im_<provider>', success=true)。
 //
-// 安全边界：service role key 仅服务端读取；session cookie 经 @supabase/ssr 正常写入；
-// 凭据明文只在本函数作用域内出现，绝不进入响应体 / 日志。
+// 安全边界（im/002 修复）：厂商凭据解密与出站只在 Postgres 内（INDEX 规则 10、
+// ADR-001 全局禁 service_role）；service role key 仅服务端读取，且只用于 Auth Admin
+// （generateLink / getUserById），不再用于读取厂商凭据。
 
 import { createServerClient } from "@supabase/ssr";
 import {
@@ -21,7 +22,8 @@ import {
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 
-import type { ImCredentials, ImProvider } from "./provider";
+import { createImBackendClient } from "./backend";
+import type { ImProvider } from "./provider";
 import {
   imStateCookieName,
   IM_STATE_COOKIE_PATH,
@@ -42,8 +44,12 @@ export function imCallbackBase(request: NextRequest): string {
   return new URL(request.url).origin;
 }
 
-/** service role 客户端：未配置返回 null（调用方按失败处理，不抛 500 细节） */
-function createServiceRoleClient(): SupabaseClient | null {
+/**
+ * service role 客户端：仅用于 Supabase Auth Admin（generateLink / getUserById）。
+ * 未配置返回 null（调用方按失败处理，不抛 500 细节）。
+ * 厂商凭据读取与 OAuth 出站不经过此客户端（im/002 修复）。
+ */
+function createAuthAdminClient(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) {
@@ -128,59 +134,29 @@ export async function handleImCallback(
     return fail("im_failed");
   }
 
-  const service = createServiceRoleClient();
+  const service = createAuthAdminClient();
   if (!service) {
-    console.error(`[im/${provider.id}] 缺少 SUPABASE_SERVICE_ROLE_KEY`);
+    console.error(`[im/${provider.id}] 缺少 SUPABASE_SERVICE_ROLE_KEY（Auth Admin 签发会话用）`);
+    return fail("im_failed");
+  }
+
+  const backend = createImBackendClient();
+  if (!backend) {
+    console.error(`[im/${provider.id}] 缺少 IM_BACKEND_JWT（或 Supabase URL / anon key）`);
     return fail("im_failed");
   }
 
   const auth = createRouteAuthClient(cookieStore, request);
 
-  const { data: config, error: configError } = await service.rpc(
-    "im_get_provider_config",
-    { p_provider: provider.id },
-  );
-  if (
-    configError ||
-    !config ||
-    config.enabled !== true ||
-    !config.credentials
-  ) {
-    console.error(
-      `[im/${provider.id}] 厂商配置不可用`,
-      configError?.message ?? "未启用或凭据缺失",
-    );
-    return fail("im_unavailable");
-  }
-
-  let accessToken: string;
-  try {
-    ({ accessToken } = await provider.exchangeCode({
-      credentials: config.credentials as ImCredentials,
-      code,
-      redirectUri,
-    }));
-  } catch (error) {
-    console.error(`[im/${provider.id}] code 换 token 失败`, error);
-    return fail("im_failed");
-  }
-
-  let imUserId: string | null;
-  try {
-    ({ imUserId } = await provider.fetchUser({ accessToken }));
-  } catch (error) {
-    console.error(`[im/${provider.id}] 获取用户信息失败`, error);
-    return fail("im_failed");
-  }
-  if (!imUserId) {
-    console.error(
-      `[im/${provider.id}] 未取得 userid（检查应用权限是否包含 user_id 字段）`,
-    );
-    return fail("im_failed");
-  }
-
-  /** 登录留痕（ADR-002 通道）：失败不阻断登录交互 */
-  const audit = async (success: boolean, failReason: string | null) => {
+  /** 登录留痕（ADR-002 通道）：失败不阻断登录交互；im_userid 来自 Postgres 已验证的厂商响应 */
+  const audit = async (
+    imUserId: string | null,
+    success: boolean,
+    failReason: string | null,
+  ) => {
+    if (!imUserId) {
+      return;
+    }
     const { error } = await auth.rpc("record_im_login_attempt", {
       p_provider: provider.id,
       p_im_userid: imUserId,
@@ -192,42 +168,65 @@ export async function handleImCallback(
     }
   };
 
-  // 预绑定匹配：只认 profiles.<provider>_userid，不按邮箱 / 手机号兜底（ADR-003 §1）
-  const { data: profile, error: profileError } = await service
-    .from("profiles")
-    .select("id, status")
-    .eq(`${provider.id}_userid`, imUserId)
-    .maybeSingle();
-
-  if (profileError) {
-    console.error(`[im/${provider.id}] 绑定查询失败`, profileError.message);
+  // Postgres 内完成：code 换 token → 取 userid → profiles 预绑定匹配
+  const { data: result, error: resultError } = await backend.rpc(
+    "im_handle_callback",
+    {
+      p_provider: provider.id,
+      p_code: code,
+      p_redirect_uri: redirectUri,
+    },
+  );
+  if (resultError || !result || typeof result !== "object") {
+    console.error(
+      `[im/${provider.id}] 回调处理失败`,
+      resultError?.message ?? "响应为空",
+    );
     return fail("im_failed");
   }
-  if (!profile) {
-    await audit(false, "im_not_bound");
-    return fail("im_not_bound");
-  }
-  if (profile.status !== "active") {
-    await audit(false, "user_banned");
-    return fail("im_banned");
+
+  if (result.ok !== true) {
+    const errorCode = typeof result.error === "string" ? result.error : "im_failed";
+    const imUserId = typeof result.im_userid === "string" ? result.im_userid : null;
+    if (errorCode === "im_not_bound" || errorCode === "im_banned") {
+      await audit(
+        imUserId,
+        false,
+        errorCode === "im_banned" ? "user_banned" : "im_not_bound",
+      );
+      return fail(errorCode);
+    }
+    console.error(
+      `[im/${provider.id}] 厂商认证失败`,
+      typeof result.detail === "string" ? result.detail : errorCode,
+    );
+    return fail(errorCode === "im_unavailable" ? "im_unavailable" : "im_failed");
   }
 
-  // 取权威邮箱 + Auth 层封禁检查（profiles.status 之外的兜底）
+  const imUserId = typeof result.im_userid === "string" ? result.im_userid : null;
+  const userId = typeof result.user_id === "string" ? result.user_id : null;
+  if (!imUserId || !userId) {
+    console.error(`[im/${provider.id}] 回调响应缺少 user_id / im_userid`);
+    await audit(imUserId, false, "other");
+    return fail("im_failed");
+  }
+
+  // 取权威邮箱 + Auth 层封禁检查（user_id 来自 Postgres 已验证的绑定匹配）
   const { data: userData, error: userError } =
-    await service.auth.admin.getUserById(profile.id);
+    await service.auth.admin.getUserById(userId);
   const email = userData?.user?.email;
   const bannedUntil = userData?.user?.banned_until;
   if (userError || !email) {
-    await audit(false, "other");
+    await audit(imUserId, false, "other");
     return fail("im_failed");
   }
   if (bannedUntil && new Date(bannedUntil).getTime() > Date.now()) {
-    await audit(false, "user_banned");
+    await audit(imUserId, false, "user_banned");
     return fail("im_banned");
   }
 
   // 会话签发：admin generateLink(magiclink) → 服务端 verifyOtp
-  // 与密码登录同一 GoTrue 会话体系；service role 只用于生成链接，不直签 session。
+  // 与密码登录同一 GoTrue 会话体系（ADR-003 §3）；service role 只用于生成链接，不直签 session。
   const { data: link, error: linkError } =
     await service.auth.admin.generateLink({ type: "magiclink", email });
   const hashedToken = link?.properties?.hashed_token;
@@ -236,7 +235,7 @@ export async function handleImCallback(
       `[im/${provider.id}] 会话链接生成失败`,
       linkError?.message ?? "缺少 hashed_token",
     );
-    await audit(false, "other");
+    await audit(imUserId, false, "other");
     return fail("im_failed");
   }
 
@@ -246,11 +245,11 @@ export async function handleImCallback(
   });
   if (verifyError) {
     console.error(`[im/${provider.id}] 会话签发失败`, verifyError.message);
-    await audit(false, "other");
+    await audit(imUserId, false, "other");
     return fail("im_failed");
   }
 
-  await audit(true, null);
+  await audit(imUserId, true, null);
 
   return NextResponse.redirect(new URL("/", imCallbackBase(request)));
 }
