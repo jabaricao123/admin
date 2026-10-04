@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### Added
+- IM 登录数据底座（im/001）：profiles 三列 IM userid 预绑定（UNIQUE + 格式 CHECK）、im_auth_configs 全局单选启用 + 凭据 pgcrypto 加密、5 个 RPC（im_bind_self / im_unbind / im_admin_set_userid / im_upsert_config / im_get_enabled_provider）
 - docs/modules/ 模块开发文档体系 v1.4.3：10 模块 46 份规格 + 10 份 AGENT.md 执行卡 + INDEX 边界/契约/M0 底座/共享工件规则
 - approval/engine.md：审批引擎核心表与 submit_instance 契约
 - supabase/seeds/ 按模块多文件 seed（admin + 4 个内部角色测试账号）
