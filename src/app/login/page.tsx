@@ -3,22 +3,40 @@ import { BoxesIcon } from "lucide-react";
 
 import { LoginForm } from "@/components/login-form";
 import { BANNED_ACCOUNT_MESSAGE } from "@/lib/dictionaries";
+import { imLoginErrorMessage } from "@/lib/im/messages";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "登录",
 };
 
+function pickParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+  return value ?? null;
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reason?: string | string[] }>;
+  searchParams: Promise<{
+    reason?: string | string[];
+    error?: string | string[];
+  }>;
 }) {
   const params = await searchParams;
-  const reason = Array.isArray(params.reason)
-    ? params.reason[0]
-    : params.reason;
+  const reason = pickParam(params.reason);
+  const error = pickParam(params.error);
   const initialError =
     reason === "banned" ? BANNED_ACCOUNT_MESSAGE : undefined;
+  const notice = imLoginErrorMessage(error);
+
+  // 当前启用厂商（打开 IM 登录时注入登录页，Tab 仅在启用且已接入的厂商时展示）
+  const supabase = await createClient();
+  const { data: enabledProvider } = await supabase.rpc(
+    "im_get_enabled_provider",
+  );
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
@@ -31,7 +49,11 @@ export default async function LoginPage({
             <div className="text-lg font-semibold">企业管理系统</div>
           </div>
         </div>
-        <LoginForm initialError={initialError} />
+        <LoginForm
+          initialError={initialError}
+          notice={notice}
+          enabledProvider={enabledProvider ?? null}
+        />
       </div>
     </div>
   );
