@@ -16,6 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/access/roles": "角色管理",
   "/access/permissions": "菜单权限",
   "/access/data-scopes": "数据权限",
+  "/access/audit": "权限审计",
   "/message/inbox": "站内信",
   "/message/templates": "通知模板",
   "/message/history": "发送记录",

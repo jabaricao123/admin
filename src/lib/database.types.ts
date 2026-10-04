@@ -2695,6 +2695,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      department_headcount: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          department_id: string
+          headcount: number
+          name: string
+          path: string
+          position_headcount: number
+        }[]
+      }
       department_tree: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -3392,6 +3402,7 @@ export type Database = {
         }
       }
       offline_announcement: { Args: { p_id: string }; Returns: Json }
+      org_stats: { Args: Record<PropertyKey, never>; Returns: Json }
       position_headcount: { Args: { p_position_id: string }; Returns: number }
       preview_scope: { Args: { p_user_id: string }; Returns: Json }
       publish_announcement: {
