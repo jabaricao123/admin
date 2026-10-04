@@ -51,7 +51,7 @@ src/
 ├── hooks/                # 通用 hooks
 ├── lib/
 │   ├── supabase/         # client / server / proxy（@supabase/ssr）
-│   ├── im/               # IM 登录：provider 抽象 + feishu 实现 + 回调编排 + state
+│   ├── im/               # IM 登录：厂商注册表（feishu/wecom）+ 回调编排 + state
 │   ├── dictionaries.ts   # 角色 / 状态字典
 │   └── database.types.ts # supabase gen types 产物
 └── proxy.ts              # Next.js 16 网络边界：会话续期 + 登录拦截
@@ -70,6 +70,7 @@ supabase/
 - [x] 工作台（统计卡片 / 注册趋势 / 最近更新）+ 用户管理（列表 / 搜索 / 筛选 / 角色分配 / 启停用，仅管理员）
 - [x] 设计评审与修复：对比度、移动导航、追溯护栏（`updated_by`）、断点、错误边界
 - [x] IM 扫码登录（飞书，im/002）：`/login` 扫码 Tab、OAuth 全链路、未绑定拒绝留痕、state 防代扫
+- [x] 企业微信扫码 + App 内免登（im/004）：PC `qrConnect`、App 内 `oauth2/authorize`（免登）、access_token 加密缓存、两薄包装按厂商分派
 
 ## 权限模型速览
 
@@ -78,17 +79,21 @@ supabase/
 - 菜单可见性：用户管理菜单仅管理员可见；页面内服务端二次校验角色
 - 新建用户：后续提供邀请流程；当前可在 Supabase Dashboard 创建（或 Admin API），再到用户管理页分配角色
 
-## IM 扫码登录（飞书）
+## IM 扫码登录（飞书 / 企业微信）
 
-登录页「扫码登录」Tab 走飞书 OAuth：已绑定用户扫码后由后端签发标准 Supabase session（与密码登录同一会话 / RLS / 登出链路，ADR-003）。厂商凭据解密、授权 URL 构造、code 换 token、userinfo 与绑定匹配全部在 Postgres 内完成（`im_start_auth` / `im_handle_callback`）：**app_secret 不出库，全链路不使用 service_role**（INDEX 规则 10 / ADR-001）。
+登录页「扫码登录」Tab 走当前启用厂商的 OAuth（`im_auth_configs.enabled` 部署级单选，切换即生效）：已绑定用户完成授权后由后端签发标准 Supabase session（与密码登录同一会话 / RLS / 登出链路，ADR-003）。厂商凭据解密、授权 URL 构造、code 换 token、userinfo 与绑定匹配全部在 Postgres 内完成（`im_start_auth` / `im_handle_callback` 按厂商分派）：**厂商 secret 不出库，全链路不使用 service_role**（INDEX 规则 10 / ADR-001）。
+
+- 飞书（im/002）：PC 扫码；App 内 H5 免登见 im/003。
+- 企业微信（im/004）：PC 扫码（`wwopen/sso/qrConnect`）与 App 内免登（`oauth2/authorize`，`scope=snsapi_privateinfo`）。
 
 ### 部署硬前提
 
 | 项 | 要求 |
 |---|---|
-| `NEXT_PUBLIC_IM_CALLBACK_BASE` | 公网可达的 HTTPS 域名（如 `https://admin.example.com`），回调地址为 `<base>/auth/callback/feishu` |
+| `NEXT_PUBLIC_IM_CALLBACK_BASE` | 公网可达的 HTTPS 域名（如 `https://admin.example.com`），回调地址为 `<base>/auth/callback/<provider>`（`feishu` / `wecom`） |
 | `IM_BACKEND_JWT` | role=`im_backend` 的最小角色 JWT（仅可执行两个 IM 包装 RPC），签发方式见下节 |
 | 飞书开发者后台 | 该回调地址需登记在「安全设置 → 重定向 URL」白名单中（精确匹配） |
+| 企业微信管理后台 | 「企业微信授权登录 → Web 网页」授权回调域 + 「网页授权及 JS-SDK」可信域名均需包含 `NEXT_PUBLIC_IM_CALLBACK_BASE` 域名（见企业微信配置步骤） |
 | 多实例部署 | state 落 httpOnly cookie（无 Redis）；多副本共享同一域名时需 sticky session，或后续升级为 Redis 存储 |
 
 ### IM 后端最小角色（im_backend）
@@ -152,9 +157,54 @@ select public.im_admin_set_userid(
 > 免登不改变账号匹配规则（仍按 `profiles.feishu_userid` 预绑定，ADR-003 §1），未绑定用户不会被自动建号；上述配置项截图需在真实飞书后台操作时补充。
 > 本地 / 预览环境验证：Chrome DevTools → Network conditions 把 UA 改成带 `Lark/7.x` 的值，或直接用 curl `-A`，观察受保护页面 302 到 `/auth/im/feishu/start`。
 
+### 企业微信配置步骤（im/004）
+
+1. 打开 <https://work.weixin.qq.com/>，用管理员企业微信扫码进入管理后台。
+2. 「我的企业 → 企业信息」底部获取 **企业 ID（CorpID，`ww` / `wx` 开头）**。
+3. 「应用管理 → 应用 → 自建 → 创建应用」；在应用详情获取 **AgentId** 与 **Secret**（Secret 仅显示一次，可重置）。
+4. 应用详情「企业微信授权登录 → 设置」→「Web 网页」→ 授权回调域填 `NEXT_PUBLIC_IM_CALLBACK_BASE` 的域名（PC 扫码用；需精确到域名，如 `admin.example.com`）。
+5. 应用详情「网页授权及 JS-SDK」→ 设置可信域名（App 内免登 `oauth2/authorize` 用；需按提示完成域名归属验证）。
+6. 若企业在「应用管理 → 企业可信 IP」配置了白名单，需把**服务端出站 IP**（`gettoken` / `getuserinfo` 由 Postgres 发起，即数据库主机出站 IP）加入；未配置则跳过。
+7. 确保参与登录的成员在应用可见范围内（`snsapi_privateinfo` 要求成员可见；`qrConnect` 扫码时不可见的成员会提示无权限）。
+8. 系统侧写入凭据与用户绑定：
+
+```sql
+-- Supabase SQL Editor 以管理员身份执行（临时通道；im/006 将提供配置页）
+select set_config(
+  'request.jwt.claims',
+  json_build_object(
+    'sub', (select id::text from public.profiles where role = 'admin' limit 1),
+    'role', 'authenticated'
+  )::text,
+  true
+);
+select public.im_upsert_config(
+  'wecom',
+  '{"corp_id":"ww_xxx","agent_id":"1000002","secret":"yyy"}'::jsonb,
+  true  -- 启用企业微信（全局单选取代其他厂商）
+);
+select public.im_admin_set_userid(
+  (select id from public.profiles where email = 'user@example.com'),
+  'wecom',
+  '企业微信 userid'
+);
+```
+
+> 关于 scope：本实现按工单指定使用 `snsapi_privateinfo`（属手动授权，成员首次需在企业微信内确认）。
+> 若仅需 userid、要求完全静默，可改用 `snsapi_base`（改 `app.im_wecom_build_authorize_url` 中 scope 并同步 pgTAP）。
+
+企业微信侧的 OAuth 细节（均由 Postgres 内完成，Next.js 不接触 secret）：
+
+| 场景 | 端点 | 说明 |
+|---|---|---|
+| PC 扫码 | `open.work.weixin.qq.com/wwopen/sso/qrConnect` | `appid=corpid`、`agentid`、`redirect_uri`、`state` |
+| App 内免登 | `open.weixin.qq.com/connect/oauth2/authorize` | `scope=snsapi_privateinfo` + `agentid` + `#wechat_redirect`；由 start 路由按 UA（含 `wxwork`）自动选择 |
+| access_token | `qyapi.weixin.qq.com/cgi-bin/gettoken` | 按 `corp_id:sha256(secret)` 加密缓存 7200s，避免每次登录都换 token |
+| code → userid | `qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo` | 返回 `userid`（旧版 `user/getuserinfo` 的 `UserId` 同样兼容） |
+
 ### 本地联调
 
-- 飞书要求回调公网可达：本地起 `cloudflared tunnel --url http://localhost:3000`（或 ngrok），把得到的 HTTPS 域名写入 `.env.local` 的 `NEXT_PUBLIC_IM_CALLBACK_BASE`，并在飞书后台登记回调地址。
+- 飞书 / 企业微信均要求回调公网可达：本地起 `cloudflared tunnel --url http://localhost:3000`（或 ngrok），把得到的 HTTPS 域名写入 `.env.local` 的 `NEXT_PUBLIC_IM_CALLBACK_BASE`，并在对应厂商后台登记回调域 / 可信域名。
 - 本地栈还需 `IM_BACKEND_JWT`：用本地默认 JWT secret 签发后写入 `.env.local`：
 
 ```bash

@@ -30,13 +30,14 @@ export default async function LoginPage({
   const error = pickParam(params.error);
   const initialError =
     reason === "banned" ? BANNED_ACCOUNT_MESSAGE : undefined;
-  const notice = imLoginErrorMessage(error);
 
-  // 当前启用厂商（打开 IM 登录时注入登录页，Tab 仅在启用且已接入的厂商时展示）
+  // 当前启用厂商（打开 IM 登录时注入登录页，Tab 仅在启用且已接入的厂商时展示；
+  // 回调错误文案也据此带上厂商展示名）
   const supabase = await createClient();
   const { data: enabledProvider } = await supabase.rpc(
     "im_get_enabled_provider",
   );
+  const notice = imLoginErrorMessage(error, enabledProvider);
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
