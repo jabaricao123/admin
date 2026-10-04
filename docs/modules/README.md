@@ -30,7 +30,7 @@
 
 | 子菜单 | 路由 | 功能 | 状态 |
 |---|---|---|---|
-| 用户管理 | /org/users | 列表/搜索/筛选/角色分配/启停用 | ✅ 已上线（org/008 迁移完成，旧路径 301） |
+| 用户管理 | /org/users | 列表/搜索/筛选/角色分配/启停用 + IM 账号绑定（企业微信/飞书/钉钉 userid 录入/清空） | ✅ 已上线（org/008 迁移完成，旧路径 301；im/006 绑定区块） |
 | 部门管理 | /org/departments | 树形部门、负责人、排序、启停用 | 待立项 |
 | 岗位管理 | /org/positions | 岗位名录、编制数、所属部门 | 待立项 |
 | 组织架构图 | /org/chart | 可视化树形图、按部门下钻人员 | P1 |
@@ -102,7 +102,7 @@
 | 对象存储 | /system/services/storage | S3/Supabase Storage：endpoint、bucket、密钥（加密）、签名 URL 有效期 |
 | 短信服务 | /system/services/sms | 服务商、AccessKey（加密）、签名、模板 ID（预留） |
 | 消息推送 | /system/services/push | 企业微信/钉钉机器人 Webhook（预留） |
-| 身份认证 | /system/services/auth | 密码策略/会话时长/OAuth 状态展示与控制台配置指引（只读） |
+| 身份认证 | /system/services/auth | 密码策略/会话时长/OAuth 状态展示 + IM 登录（企业微信/飞书/钉钉）凭据配置与启用切换（已上线） |
 | 参数配置 | /system/settings | 全局开关、业务参数（键值对+分组） |
 | 字典管理 | /system/dictionaries | 枚举码表维护 |
 | 定时任务 | /system/jobs | pg_cron 平台登记处只读监控（启停回各模块调度页）、执行历史 |
