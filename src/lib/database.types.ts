@@ -2525,6 +2525,8 @@ export type Database = {
       }
       admin_update_profile: {
         Args: {
+          p_clear_department?: boolean
+          p_clear_position?: boolean
           p_department?: string
           p_department_id?: string
           p_full_name?: string

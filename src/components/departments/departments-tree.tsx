@@ -448,7 +448,7 @@ export function DepartmentsTree() {
 
     if (action === "delete") {
       const confirmed = window.confirm(
-        `确定删除部门「${node.name}」？删除后不可恢复（逻辑删除），仅空部门（无子部门、无在职人员）可删除。`,
+        `确定删除部门「${node.name}」？删除后不可恢复（逻辑删除），仅空部门（无子部门、无岗位、无在职人员）可删除。`,
       );
       if (!confirmed) {
         return;

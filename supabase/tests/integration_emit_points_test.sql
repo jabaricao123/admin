@@ -129,7 +129,7 @@ reset role;
 
 select case
   when pg_get_functiondef(
-         'public.admin_update_profile(uuid,text,text,public.user_role,public.profile_status,uuid,uuid)'::regprocedure
+         'public.admin_update_profile(uuid,text,text,public.user_role,public.profile_status,uuid,uuid,boolean,boolean)'::regprocedure
        ) like '%org.user_changed%'
     or exists (
          select 1 from public.integration_events

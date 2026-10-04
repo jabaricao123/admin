@@ -42,13 +42,14 @@ insert into auth.users (id, email, raw_app_meta_data) values
 -- ===========================================================================
 select has_function(
   'public', 'admin_update_profile',
-  array['uuid', 'text', 'text', 'user_role', 'profile_status', 'uuid', 'uuid'],
-  'admin_update_profile 新签名（7 参）存在'
+  array['uuid', 'text', 'text', 'user_role', 'profile_status', 'uuid', 'uuid',
+        'boolean', 'boolean'],
+  'admin_update_profile 新签名（9 参：含 clear 参数）存在'
 );
 select hasnt_function(
   'public', 'admin_update_profile',
-  array['uuid', 'text', 'text', 'user_role', 'profile_status'],
-  '旧 5 参签名已 drop（避免 PostgREST 具名参数重载歧义）'
+  array['uuid', 'text', 'text', 'user_role', 'profile_status', 'uuid', 'uuid'],
+  '旧 7 参签名已 drop（避免 PostgREST 具名参数重载歧义）'
 );
 select is(
   (select count(*)
@@ -70,7 +71,7 @@ select ok(
 select ok(
   has_function_privilege(
     'authenticated',
-    'public.admin_update_profile(uuid,text,text,public.user_role,public.profile_status,uuid,uuid)',
+    'public.admin_update_profile(uuid,text,text,public.user_role,public.profile_status,uuid,uuid,boolean,boolean)',
     'EXECUTE'
   ),
   'authenticated 可执行（RPC 内部再校验 admin）'
@@ -78,7 +79,7 @@ select ok(
 select ok(
   not has_function_privilege(
     'anon',
-    'public.admin_update_profile(uuid,text,text,public.user_role,public.profile_status,uuid,uuid)',
+    'public.admin_update_profile(uuid,text,text,public.user_role,public.profile_status,uuid,uuid,boolean,boolean)',
     'EXECUTE'
   ),
   'anon 不可执行'

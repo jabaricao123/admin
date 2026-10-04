@@ -374,7 +374,8 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
     }
 
     // admin_update_profile 负责姓名/部门/岗位/状态（角色已收窄，不再传 p_role）；
-    // org/009：部门/岗位走 id 参数（触发器回写部门文本），仅在变更时传参
+    // org/009：部门/岗位走 id 参数（触发器回写部门文本），仅在变更时传参；
+    // 批次 3：选中「未指定」时传对应 clear 参数显式清空（触发器 null→null 回写文本）
     const departmentChanged =
       form.departmentId !== (editing.department_id ?? NONE);
     const positionChanged = form.positionId !== (editing.position_id ?? NONE);
@@ -382,11 +383,15 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
       p_user_id: editing.id,
       p_full_name: form.full_name.trim() || undefined,
       p_status: form.status,
-      ...(departmentChanged && form.departmentId !== NONE
-        ? { p_department_id: form.departmentId }
+      ...(departmentChanged
+        ? form.departmentId === NONE
+          ? { p_clear_department: true }
+          : { p_department_id: form.departmentId }
         : {}),
-      ...(positionChanged && form.positionId !== NONE
-        ? { p_position_id: form.positionId }
+      ...(positionChanged
+        ? form.positionId === NONE
+          ? { p_clear_position: true }
+          : { p_position_id: form.positionId }
         : {}),
     });
     setSaving(false);
@@ -737,6 +742,7 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
                   <SelectValue placeholder="未指定" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NONE}>未指定</SelectItem>
                   {departmentOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.label}
@@ -757,6 +763,7 @@ export function UsersTable({ currentUserId }: { currentUserId: string }) {
                   <SelectValue placeholder="未指定" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NONE}>未指定</SelectItem>
                   {positionOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.label}

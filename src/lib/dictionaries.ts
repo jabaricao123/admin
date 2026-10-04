@@ -112,7 +112,7 @@ export const DEPARTMENT_STATUS_BADGE_CLASSES: Record<DepartmentStatus, string> =
  */
 export function translateOrgErrorMessage(message: string): string {
   const isBusinessRule =
-    /^该部门下仍有 \d+ (名在职人员|个子部门)，无法(停用|删除)$/.test(message) ||
+    /^该部门下仍有 \d+ (名在职人员|个子部门|个岗位)，无法(停用|删除)$/.test(message) ||
     /^不能将部门移动到/.test(message);
   return isBusinessRule ? message : translateErrorMessage(message);
 }
