@@ -143,9 +143,6 @@ const asText = (value: unknown): string => {
   return typeof value === "string" ? value : String(value);
 };
 
-/** 与服务端掩码规则一致：**** + 明文尾 4 位 */
-const maskSecret = (secret: string): string => `****${secret.slice(-4)}`;
-
 export function SmsConfigPanel() {
   // ---- 通道配置 ----
   const [loading, setLoading] = React.useState(true);
@@ -276,7 +273,12 @@ export function SmsConfigPanel() {
     );
     setConfigured(true);
     if (nextSecret !== "") {
-      setCredentialsMasked(maskSecret(nextSecret));
+      // 掩码只采用 RPC 返回值（≤8 位全掩码由服务端判定），不做本地拼接
+      const { data: statusRows } = await supabase.rpc("get_service_status");
+      const smsStatus = (statusRows ?? []).find(
+        (item) => item.service === "sms",
+      );
+      setCredentialsMasked(smsStatus?.credentials_masked ?? "****");
       setForm((prev) => ({ ...prev, secret: "" }));
     }
 
@@ -471,7 +473,7 @@ export function SmsConfigPanel() {
                 >
                   <SelectTrigger
                     id="sms-provider"
-                    className="h-11 w-full lg:h-8"
+                    className="min-h-11 w-full lg:min-h-8"
                   >
                     <SelectValue placeholder="选择短信服务商" />
                   </SelectTrigger>
@@ -623,7 +625,7 @@ export function SmsConfigPanel() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="h-8 w-full sm:w-auto"
+                className="h-11 w-full sm:w-auto lg:h-8"
               >
                 {saving ? (
                   <Loader2Icon
@@ -650,7 +652,12 @@ export function SmsConfigPanel() {
             </InfoHint>
           </CardTitle>
           <CardAction className="flex items-center gap-2">
-            <Button type="button" size="sm" onClick={openCreateTemplate}>
+            <Button
+              type="button"
+              size="sm"
+              className="h-11 lg:h-8"
+              onClick={openCreateTemplate}
+            >
               <PlusIcon data-icon="inline-start" />
               新增模板
             </Button>
@@ -815,6 +822,7 @@ export function SmsConfigPanel() {
                 }
                 placeholder="如：登录验证码"
                 autoComplete="off"
+                className="h-11 lg:h-8"
               />
             </Field>
             <Field>
@@ -830,6 +838,7 @@ export function SmsConfigPanel() {
                 }
                 placeholder="如：login_code / approval_notice"
                 autoComplete="off"
+                className="h-11 lg:h-8"
               />
             </Field>
             <Field>
@@ -845,7 +854,7 @@ export function SmsConfigPanel() {
                 }
                 placeholder="如：SMS_154950909"
                 autoComplete="off"
-                className="font-mono"
+                className="h-11 font-mono lg:h-8"
               />
             </Field>
             <Field>
@@ -859,7 +868,10 @@ export function SmsConfigPanel() {
                   }))
                 }
               >
-                <SelectTrigger id="sms-template-status" className="w-full">
+                <SelectTrigger
+                  id="sms-template-status"
+                  className="min-h-11 w-full lg:min-h-8"
+                >
                   <SelectValue placeholder="选择状态" />
                 </SelectTrigger>
                 <SelectContent>
@@ -879,7 +891,7 @@ export function SmsConfigPanel() {
                   variant="destructive"
                   onClick={() => void handleDisableTemplate()}
                   disabled={disablingTemplate || savingTemplate}
-                  className="sm:mr-auto"
+                  className="h-11 lg:h-8 sm:mr-auto"
                 >
                   {disablingTemplate ? (
                     <Loader2Icon
@@ -896,14 +908,14 @@ export function SmsConfigPanel() {
                 type="button"
                 variant="outline"
                 onClick={() => setSheetOpen(false)}
-                className="h-8"
+                className="h-11 lg:h-8"
               >
                 取消
               </Button>
               <Button
                 type="submit"
                 disabled={savingTemplate}
-                className="h-8"
+                className="h-11 lg:h-8"
               >
                 {savingTemplate ? (
                   <Loader2Icon

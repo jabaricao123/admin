@@ -394,7 +394,7 @@ export function StorageConfigForm() {
                 >
                   <SelectTrigger
                     id="storage-provider"
-                    className="h-11 w-full lg:h-8"
+                    className="min-h-11 w-full lg:min-h-8"
                     aria-label="存储 Provider"
                   >
                     <SelectValue placeholder="选择 Provider" />
@@ -614,7 +614,7 @@ export function StorageConfigForm() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="h-8 w-full sm:w-auto"
+                className="h-11 w-full sm:w-auto lg:h-8"
               >
                 {saving ? (
                   <Loader2Icon

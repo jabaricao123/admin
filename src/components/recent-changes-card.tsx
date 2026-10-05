@@ -33,9 +33,9 @@ export type RecentChange = {
 /** 最近更新（admin）：audit_row_versions 最近 10 条数据变更 */
 export function RecentChangesCard({ changes }: { changes: RecentChange[] }) {
   return (
-    <Card className="@container/card">
+    <Card className="@container/card gap-[5px]! py-[5px]! pilot-5">
       <CardHeader>
-        <CardTitle className="flex items-center gap-1.5">
+        <CardTitle className="flex items-center gap-[5px]">
           最近更新
           <InfoHint>最近 10 条关键表数据变更</InfoHint>
         </CardTitle>
@@ -47,13 +47,13 @@ export function RecentChangesCard({ changes }: { changes: RecentChange[] }) {
       </CardHeader>
       <CardContent>
         {changes.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-10 text-sm text-muted-foreground">
+          <div className="flex flex-col items-center gap-[5px] py-[5px] text-sm text-muted-foreground">
             <FileClockIcon className="size-8 opacity-60" />
             <span>暂无变更记录</span>
           </div>
         ) : (
           <>
-            <div className="hidden overflow-x-auto md:block">
+            <div className="hidden overflow-x-auto md:block [&_th]:p-[5px] [&_td]:p-[5px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -94,7 +94,7 @@ export function RecentChangesCard({ changes }: { changes: RecentChange[] }) {
               {changes.map((change) => (
                 <div
                   key={change.id}
-                  className="flex items-center justify-between gap-3 py-3"
+                  className="flex items-center justify-between gap-[5px] py-[5px]"
                 >
                   <div className="flex min-w-0 flex-col gap-1">
                     <span className="truncate text-sm font-medium">
@@ -124,14 +124,14 @@ export function RecentChangesCard({ changes }: { changes: RecentChange[] }) {
 /** 最近更新（非 admin）：audit_row_versions 仅 admin 可读，显式占位 */
 export function RecentChangesUnavailable() {
   return (
-    <Card className="@container/card">
+    <Card className="@container/card gap-[5px]! py-[5px]! pilot-5">
       <CardHeader>
-        <CardTitle className="flex items-center gap-1.5">
+        <CardTitle className="flex items-center gap-[5px]">
           最近更新
           <InfoHint>最近 10 条关键表数据变更</InfoHint>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+      <CardContent className="flex flex-col items-center gap-[5px] py-[5px] text-center">
         <ShieldXIcon className="size-10 text-muted-foreground" />
         <div className="text-lg font-medium">需要管理员权限</div>
         <p className="max-w-md text-sm text-muted-foreground">

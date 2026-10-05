@@ -49,8 +49,8 @@ select has_function('app', 'encrypt_secret', array['text'], 'app.encrypt_secret(
 select has_function('app', 'decrypt_secret', array['bytea'], 'app.decrypt_secret(bytea) 存在');
 select has_function('app', 'get_service_config', array['text'], 'app.get_service_config(text) 存在');
 select has_function(
-  'app', 'upsert_service_config', array['text', 'jsonb', 'text'],
-  'app.upsert_service_config(text,jsonb,text) 存在'
+  'app', 'upsert_service_config', array['text', 'jsonb', 'text', 'boolean'],
+  'app.upsert_service_config(text,jsonb,text,boolean) 存在'
 );
 select has_function(
   'app', 'mark_service_verified', array['text', 'boolean', 'text'],
@@ -58,7 +58,7 @@ select has_function(
 );
 select has_function('app', 'get_service_status', 'app.get_service_status() 存在');
 select has_function(
-  'public', 'upsert_service_config', array['text', 'jsonb', 'text'],
+  'public', 'upsert_service_config', array['text', 'jsonb', 'text', 'boolean'],
   'public.upsert_service_config 薄包装存在'
 );
 select has_function(
@@ -91,7 +91,7 @@ select ok(
 -- 3. GRANT 面（14）
 -- ===========================================================================
 select ok(
-  has_function_privilege('authenticated', 'app.upsert_service_config(text,jsonb,text)', 'EXECUTE'),
+  has_function_privilege('authenticated', 'app.upsert_service_config(text,jsonb,text,boolean)', 'EXECUTE'),
   'authenticated 可执行 app.upsert_service_config'
 );
 select ok(
@@ -103,7 +103,7 @@ select ok(
   'authenticated 可执行 app.get_service_status'
 );
 select ok(
-  has_function_privilege('authenticated', 'public.upsert_service_config(text,jsonb,text)', 'EXECUTE'),
+  has_function_privilege('authenticated', 'public.upsert_service_config(text,jsonb,text,boolean)', 'EXECUTE'),
   'authenticated 可执行 public.upsert_service_config'
 );
 select ok(
@@ -127,7 +127,7 @@ select ok(
   'anon 无 public.get_service_status 执行权'
 );
 select ok(
-  not has_function_privilege('anon', 'public.upsert_service_config(text,jsonb,text)', 'EXECUTE'),
+  not has_function_privilege('anon', 'public.upsert_service_config(text,jsonb,text,boolean)', 'EXECUTE'),
   'anon 无 public.upsert_service_config 执行权'
 );
 select ok(

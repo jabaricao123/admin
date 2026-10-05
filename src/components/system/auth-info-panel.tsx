@@ -41,9 +41,9 @@ import {
 import { InfoHint } from "@/components/info-hint";
 import { ImConfigPanel } from "@/components/system/im-config-panel";
 import { PasswordLoginPanel } from "@/components/system/password-login-panel";
+import { STATE_BADGE_CLASSES } from "@/lib/dictionaries";
 
-const EXTERNAL_BADGE_CLASS =
-  "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300";
+const EXTERNAL_BADGE_CLASS = STATE_BADGE_CLASSES.warning;
 
 /** 静态 OAuth 提供商清单（真源在控制台，本页不读 Admin API） */
 const OAUTH_PROVIDERS: { name: string; note: string }[] = [
@@ -60,7 +60,7 @@ type AuthConsoleInfo = {
   consoleBase: string;
 };
 
-function resolveConsoleInfo(): Omit<AuthConsoleInfo, "origin"> {
+function resolveConsoleInfo(hostname?: string): Omit<AuthConsoleInfo, "origin"> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   try {
     const url = new URL(supabaseUrl);
@@ -69,10 +69,12 @@ function resolveConsoleInfo(): Omit<AuthConsoleInfo, "origin"> {
       url.hostname === "localhost" ||
       url.protocol === "http:";
     if (isLocal) {
+      // 本地 Supabase Studio 跟随当前访问主机名（LAN / 远程访问时不写死 127.0.0.1）
+      const consoleHost = hostname && hostname !== "" ? hostname : "127.0.0.1";
       return {
         isLocal: true,
         projectRef: "local",
-        consoleBase: "http://127.0.0.1:54323/project/default",
+        consoleBase: `http://${consoleHost}:54323/project/default`,
       };
     }
     const projectRef = url.hostname.split(".")[0] ?? "";
@@ -113,10 +115,13 @@ function ConsoleLink({ href, label }: { href: string; label: string }) {
 
 export function AuthInfoPanel() {
   const [origin, setOrigin] = React.useState<string | null>(null);
-  const consoleInfo = React.useMemo(resolveConsoleInfo, []);
+  const [consoleInfo, setConsoleInfo] = React.useState(() =>
+    resolveConsoleInfo(),
+  );
 
   React.useEffect(() => {
     setOrigin(window.location.origin);
+    setConsoleInfo(resolveConsoleInfo(window.location.hostname));
   }, []);
 
   const copy = async (value: string, label: string) => {
@@ -131,11 +136,21 @@ export function AuthInfoPanel() {
   const callbackUrls = origin
     ? [
         { label: "站点 URL", value: origin },
-        { label: "OAuth 授权回调", value: `${origin}/auth/callback` },
+        {
+          label: "IM 扫码登录回调（飞书）",
+          value: `${origin}/auth/callback/feishu`,
+        },
+        {
+          label: "IM 扫码登录回调（企业微信）",
+          value: `${origin}/auth/callback/wecom`,
+        },
+        {
+          label: "IM 扫码登录回调（钉钉）",
+          value: `${origin}/auth/callback/dingtalk`,
+        },
         { label: "IM 绑定回调（飞书）", value: `${origin}/settings/profile/bind/feishu/callback` },
         { label: "IM 绑定回调（企业微信）", value: `${origin}/settings/profile/bind/wecom/callback` },
         { label: "IM 绑定回调（钉钉）", value: `${origin}/settings/profile/bind/dingtalk/callback` },
-        { label: "邮件确认 / 密码重置", value: `${origin}/auth/confirm` },
         { label: "开发期通配", value: `${origin}/**` },
       ]
     : [];
@@ -196,7 +211,7 @@ export function AuthInfoPanel() {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="size-8"
+                  className="size-11 lg:size-8"
                   aria-label="复制站点 URL"
                   onClick={() => void copy(origin, "站点 URL")}
                 >
@@ -354,6 +369,7 @@ export function AuthInfoPanel() {
                   type="button"
                   variant="ghost"
                   size="sm"
+                  className="h-11 lg:h-8"
                   onClick={() => void copy(item.value, item.label)}
                 >
                   <CopyIcon data-icon="inline-start" />

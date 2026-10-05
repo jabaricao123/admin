@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { InfoHint } from "@/components/info-hint";
+import { STATE_BADGE_CLASSES } from "@/lib/dictionaries";
 import { createClient } from "@/lib/supabase/client";
 
 const ENABLED_KEY = "password_login_enabled";
@@ -151,17 +152,11 @@ export function PasswordLoginPanel() {
         </CardTitle>
         <CardAction>
           {enabled ? (
-            <Badge
-              variant="outline"
-              className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300"
-            >
+            <Badge variant="outline" className={STATE_BADGE_CLASSES.success}>
               已开启
             </Badge>
           ) : (
-            <Badge
-              variant="outline"
-              className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300"
-            >
+            <Badge variant="outline" className={STATE_BADGE_CLASSES.warning}>
               已关闭
             </Badge>
           )}

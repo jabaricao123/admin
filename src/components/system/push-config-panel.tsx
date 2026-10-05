@@ -105,9 +105,6 @@ const asText = (value: unknown): string => {
 const formatDateTime = (value: string) =>
   new Date(value).toLocaleString("zh-CN", { hour12: false });
 
-/** 与服务端掩码规则一致：**** + 明文尾 4 位 */
-const maskSecret = (secret: string): string => `****${secret.slice(-4)}`;
-
 export function PushConfigPanel() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -176,6 +173,7 @@ export function PushConfigPanel() {
       return;
     }
 
+    const wasVerified = verifyStatus === "verified";
     setSavingChannel(channel);
     const supabase = createClient();
     // 生成物未表达 text 参数可为 NULL（NULL=不修改 secret），运行时允许传 null
@@ -201,13 +199,19 @@ export function PushConfigPanel() {
       webhook_url?: unknown;
       enabled?: unknown;
     } | null;
+    // 掩码只采用 RPC 返回值（≤8 位全掩码由服务端判定），不做本地拼接
+    let secretMasked = form.secretMasked;
+    if (form.secret !== "") {
+      const { data: statusRows } = await supabase.rpc("get_push_status");
+      const statusRow = (statusRows ?? []).find((item) => item.channel === channel);
+      secretMasked = statusRow?.secret_masked ?? "****";
+    }
     patchForm(channel, {
       webhookUrl: asText(channelConfig?.webhook_url ?? webhookUrl),
       enabled: channelConfig?.enabled === true,
       configured: asText(channelConfig?.webhook_url ?? webhookUrl) !== "",
       secret: "",
-      secretMasked:
-        form.secret === "" ? form.secretMasked : maskSecret(form.secret),
+      secretMasked,
     });
     setVerifyStatus(asServiceVerifyStatus(result?.verify_status ?? ""));
     setVerifiedAt(
@@ -215,7 +219,8 @@ export function PushConfigPanel() {
     );
 
     toast.success(`${PUSH_CHANNEL_LABELS[channel]}配置已保存`);
-    if (result?.verify_status === "unverified") {
+    // 仅保存前已验证、保存后降级为待验证时提示；首次保存不再误弹
+    if (wasVerified && result?.verify_status === "unverified") {
       toast.info("配置内容已变更，验证状态已降为「待验证」，请重新测试");
     }
   };
@@ -383,7 +388,7 @@ export function PushConfigPanel() {
                     variant="outline"
                     onClick={() => void handleTest(channel)}
                     disabled={testing || saving || !form.configured}
-                    className="h-8"
+                    className="h-11 lg:h-8"
                   >
                     {testing ? (
                       <Loader2Icon
@@ -399,7 +404,7 @@ export function PushConfigPanel() {
                     type="button"
                     onClick={() => void handleSave(channel)}
                     disabled={saving || testing}
-                    className="h-8"
+                    className="h-11 lg:h-8"
                   >
                     {saving ? (
                       <Loader2Icon

@@ -128,3 +128,8 @@
     @apply font-sans;
     }
 }
+
+/* 5px 间距试点（工作台 / 数据权限两页；验收后连同 pilot-5 类一起删除） */
+.pilot-5 {
+  --card-spacing: 5px;
+}

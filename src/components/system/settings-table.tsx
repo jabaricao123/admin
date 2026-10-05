@@ -158,7 +158,7 @@ function parseFormValue(form: SettingForm): ParsedValue {
       return { ok: true, value: form.boolValue };
     case "number": {
       const text = form.numberValue.trim();
-      if (text === "" || Number.isNaN(Number(text))) {
+      if (text === "" || !Number.isFinite(Number(text))) {
         return { ok: false, message: "请输入有效数字" };
       }
       return { ok: true, value: Number(text) };
@@ -392,7 +392,12 @@ export function SettingsTable() {
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex items-center justify-end gap-2">
-            <Button type="button" size="sm" onClick={openCreate}>
+            <Button
+              type="button"
+              size="sm"
+              className="h-11 lg:h-8"
+              onClick={openCreate}
+            >
               <PlusIcon data-icon="inline-start" />
               新增参数
             </Button>
@@ -456,7 +461,12 @@ export function SettingsTable() {
                               }}
                             >
                               <TableCell className="text-left font-mono text-xs">
-                                {row.key}
+                                <span
+                                  className="inline-block max-w-[180px] truncate align-middle xl:max-w-none"
+                                  title={row.key}
+                                >
+                                  {row.key}
+                                </span>
                               </TableCell>
                               <TableCell className="text-center">
                                 {valueType === "bool" ? (
@@ -484,10 +494,15 @@ export function SettingsTable() {
                                   {VALUE_TYPE_LABELS[valueType]}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-center text-muted-foreground">
-                                {row.description}
+                              <TableCell
+                                className="whitespace-normal text-center text-muted-foreground"
+                                title={row.description}
+                              >
+                                <div className="mx-auto max-w-[130px] truncate xl:max-w-[280px]">
+                                  {row.description}
+                                </div>
                               </TableCell>
-                              <TableCell className="text-center text-xs text-muted-foreground">
+                              <TableCell className="w-36 text-center text-xs text-muted-foreground">
                                 {formatDateTime(row.updated_at)}
                               </TableCell>
                             </TableRow>
@@ -634,7 +649,7 @@ export function SettingsTable() {
                   >
                     <SelectTrigger
                       id="setting-value-type"
-                      className="h-11 w-full lg:h-8"
+                      className="min-h-11 w-full lg:min-h-8"
                       aria-label="参数类型"
                     >
                       <SelectValue placeholder="选择类型" />
@@ -706,7 +721,7 @@ export function SettingsTable() {
               <Button
                 type="button"
                 variant="outline"
-                className="mr-auto h-8"
+                className="mr-auto h-11 lg:h-8"
                 onClick={() => void openHistory(form.key)}
               >
                 <HistoryIcon data-icon="inline-start" />
@@ -716,7 +731,7 @@ export function SettingsTable() {
             <Button
               type="button"
               variant="outline"
-              className="h-8"
+              className="h-11 lg:h-8"
               onClick={() => setFormOpen(false)}
               disabled={saving}
             >
@@ -724,7 +739,7 @@ export function SettingsTable() {
             </Button>
             <Button
               type="button"
-              className="h-8"
+              className="h-11 lg:h-8"
               onClick={() => void handleSave()}
               disabled={saving}
             >

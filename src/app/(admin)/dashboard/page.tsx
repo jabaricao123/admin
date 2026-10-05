@@ -136,9 +136,9 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-2 py-4">
+    <div className="flex flex-col gap-[5px] py-[5px]">
       {errors.length > 0 ? (
-        <div className="px-4 lg:px-6">
+        <div className="px-[5px] lg:px-[5px]">
           <p className="text-sm text-destructive">
             加载工作台数据失败：{errors.join("；")}
           </p>
@@ -146,10 +146,10 @@ export default async function DashboardPage() {
       ) : null}
       <AnnouncementBanner announcements={announcementResult.data ?? []} />
       <SectionCards stats={stats ?? { isAdmin: false, pendingTodos: 0 }} />
-      <div className="px-4 lg:px-6">
+      <div className="px-[5px] lg:px-[5px]">
         <UserGrowthChart data={trendResult.data ?? []} isAdmin={isAdmin} />
       </div>
-      <div className="px-4 lg:px-6">
+      <div className="px-[5px] lg:px-[5px]">
         {isAdmin ? (
           <RecentChangesCard changes={changes} />
         ) : (

@@ -238,6 +238,27 @@ export const FALLBACK_BADGE_CLASS =
 export const PENDING_BADGE_CLASS =
   "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/60 dark:text-sky-300";
 
+/**
+ * 通用语义状态 Badge 配色（Tailwind 类名）。
+ * 状态色统一收口：新页面优先复用这组语义色，避免同色值在各处硬编码后漂移。
+ */
+export const STATE_BADGE_CLASSES = {
+  /** 成功 / 启用 / 已验证（emerald） */
+  success:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  /** 警示 / 待验证 / 待处理（amber） */
+  warning:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+  /** 危险 / 失败 / 删除（red） */
+  danger:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+  /** 进行中 / 信息（blue） */
+  info: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
+  /** 中性 / 停用 / 归档（zinc） */
+  neutral:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+} as const;
+
 /** 数据范围档位 Badge 配色：全部红（高危）/ 其余受限档位与提示态共用 sky */
 export const DATA_SCOPE_BADGE_CLASSES: Record<DataScope, string> = {
   self: PENDING_BADGE_CLASS,
@@ -1370,6 +1391,26 @@ export function asSmsTemplateStatus(value: string): SmsTemplateStatus {
 }
 
 /* -------------------------------------------------------------------------- */
+/* 系统管理 · 定时任务监控（system/012）：状态色统一收口                          */
+/* -------------------------------------------------------------------------- */
+
+/** 任务登记/调度状态配色（system_cron_jobs_v.status） */
+export const CRON_JOB_STATUS_BADGE_CLASSES: Record<string, string> = {
+  active: STATE_BADGE_CLASSES.success,
+  paused: STATE_BADGE_CLASSES.neutral,
+  disabled: STATE_BADGE_CLASSES.neutral,
+  unscheduled: STATE_BADGE_CLASSES.warning,
+  orphan: STATE_BADGE_CLASSES.danger,
+};
+
+/** 执行结果配色（cron.job_run_details.status） */
+export const CRON_RUN_RESULT_BADGE_CLASSES: Record<string, string> = {
+  succeeded: STATE_BADGE_CLASSES.success,
+  failed: STATE_BADGE_CLASSES.danger,
+  running: STATE_BADGE_CLASSES.info,
+};
+
+/* -------------------------------------------------------------------------- */
 /* 字典读取层（system/010）：get_dict 优先、编译期常量兜底                        */
 /* -------------------------------------------------------------------------- */
 
@@ -1472,22 +1513,12 @@ function parseDictionaryRows(data: unknown): DictionaryItem[] {
   return items;
 }
 
-/** DB 行合并覆盖编译期默认：同 value 覆盖 label/排序/配色，DB 独有项追加 */
-function mergeDictionaryItems(
-  key: DictionaryKey,
-  rows: DictionaryItem[],
-): DictionaryItem[] {
-  if (rows.length === 0) {
-    return DEFAULT_DICTIONARIES[key];
-  }
-  const byValue = new Map<string, DictionaryItem>();
-  for (const item of DEFAULT_DICTIONARIES[key]) {
-    byValue.set(item.value, item);
-  }
-  for (const item of rows) {
-    byValue.set(item.value, item);
-  }
-  return Array.from(byValue.values()).sort((a, b) => {
+/**
+ * DB 成功返回即以 DB 为全集：get_dict 只下发 active 项，
+ * 不再 merge 编译期默认项（已停用项不会因默认快照而复活）；仅做稳定排序。
+ */
+function normalizeDictionaryItems(rows: DictionaryItem[]): DictionaryItem[] {
+  return [...rows].sort((a, b) => {
     if (a.sort_order !== b.sort_order) {
       return a.sort_order - b.sort_order;
     }
@@ -1516,18 +1547,22 @@ export async function loadDictionaries(options?: {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       const keys = Object.values(DICTIONARY_KEYS) as DictionaryKey[];
+      // 元组第二项 null 表示 RPC 失败（回退该 key 的默认快照）；数组（含空）表示 DB 全集
       const results = await Promise.all(
         keys.map(async (key) => {
           const { data, error } = await supabase.rpc("get_dict", {
             p_dict_key: key,
           });
-          return [key, error ? [] : parseDictionaryRows(data)] as const;
+          return [key, error ? null : parseDictionaryRows(data)] as const;
         }),
       );
 
       const next: DictionarySnapshot = { ...DEFAULT_DICTIONARIES };
       for (const [key, rows] of results) {
-        next[key] = mergeDictionaryItems(key, rows);
+        next[key] =
+          rows === null
+            ? DEFAULT_DICTIONARIES[key]
+            : normalizeDictionaryItems(rows);
       }
       dictionarySnapshot = next;
       dictionaryLoadedAt = Date.now();
@@ -1555,38 +1590,48 @@ function findDictionaryItem(
   return getDictionaryItems(key).find((item) => item.value === value);
 }
 
-/** common.status 文案（未加载/未命中回退编译期常量） */
+/**
+ * TODO(system/010): 其余硬编码枚举展示（角色 / 状态 Badge、筛选下拉）后续逐步迁入本读取层；
+ * 当前真实消费点：字典管理页的状态列 Badge 与状态下拉（dictionaries-table.tsx）。
+ */
+function isSnapshotLoaded(): boolean {
+  return dictionarySnapshot !== null;
+}
+
+/** common.status 文案（未加载回退编译期常量；已加载未命中回退原文，不复活停用项） */
 export function getCommonStatusLabel(value: string): string {
+  if (!isSnapshotLoaded()) {
+    return COMMON_STATUS_LABELS[value] ?? value;
+  }
   return (
-    findDictionaryItem(DICTIONARY_KEYS.commonStatus, value)?.label ??
-    COMMON_STATUS_LABELS[value] ??
-    value
+    findDictionaryItem(DICTIONARY_KEYS.commonStatus, value)?.label ?? value
   );
 }
 
-/** common.status Badge 配色（未加载/未命中回退编译期常量） */
+/** common.status Badge 配色（未加载回退编译期常量；已加载未命中返回空，由消费方兜底） */
 export function getCommonStatusBadgeClass(value: string): string {
+  if (!isSnapshotLoaded()) {
+    return COMMON_STATUS_BADGE_CLASSES[value] ?? "";
+  }
   return (
-    findDictionaryItem(DICTIONARY_KEYS.commonStatus, value)?.color_class ??
-    COMMON_STATUS_BADGE_CLASSES[value] ??
-    ""
+    findDictionaryItem(DICTIONARY_KEYS.commonStatus, value)?.color_class ?? ""
   );
 }
 
-/** common.yesno 文案（未加载/未命中回退编译期常量） */
+/** common.yesno 文案（未加载回退编译期常量；已加载未命中回退原文） */
 export function getCommonYesnoLabel(value: string): string {
-  return (
-    findDictionaryItem(DICTIONARY_KEYS.commonYesno, value)?.label ??
-    COMMON_YESNO_LABELS[value] ??
-    value
-  );
+  if (!isSnapshotLoaded()) {
+    return COMMON_YESNO_LABELS[value] ?? value;
+  }
+  return findDictionaryItem(DICTIONARY_KEYS.commonYesno, value)?.label ?? value;
 }
 
-/** common.yesno Badge 配色（未加载/未命中回退编译期常量） */
+/** common.yesno Badge 配色（未加载回退编译期常量；已加载未命中返回空，由消费方兜底） */
 export function getCommonYesnoBadgeClass(value: string): string {
+  if (!isSnapshotLoaded()) {
+    return COMMON_YESNO_BADGE_CLASSES[value] ?? "";
+  }
   return (
-    findDictionaryItem(DICTIONARY_KEYS.commonYesno, value)?.color_class ??
-    COMMON_YESNO_BADGE_CLASSES[value] ??
-    ""
+    findDictionaryItem(DICTIONARY_KEYS.commonYesno, value)?.color_class ?? ""
   );
 }

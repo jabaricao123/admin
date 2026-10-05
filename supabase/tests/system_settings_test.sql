@@ -120,11 +120,11 @@ select is(
 select has_function('app', 'get_setting', array['text'], 'app.get_setting(text) 存在');
 select has_function('public', 'get_setting', array['text'], 'public.get_setting(text) 薄包装存在');
 select has_function(
-  'app', 'upsert_setting', array['text', 'jsonb', 'text', 'text', 'text'],
+  'app', 'upsert_setting', array['text', 'jsonb', 'text', 'text', 'text', 'boolean'],
   'app.upsert_setting 存在'
 );
 select has_function(
-  'public', 'upsert_setting', array['text', 'jsonb', 'text', 'text', 'text'],
+  'public', 'upsert_setting', array['text', 'jsonb', 'text', 'text', 'text', 'boolean'],
   'public.upsert_setting 薄包装存在'
 );
 select has_function('app', 'get_all_settings', 'app.get_all_settings() 存在');
@@ -165,11 +165,11 @@ select ok(
   'authenticated 可执行 public.get_setting'
 );
 select ok(
-  has_function_privilege('authenticated', 'app.upsert_setting(text,jsonb,text,text,text)', 'EXECUTE'),
+  has_function_privilege('authenticated', 'app.upsert_setting(text,jsonb,text,text,text,boolean)', 'EXECUTE'),
   'authenticated 可执行 app.upsert_setting（函数内 admin 校验）'
 );
 select ok(
-  has_function_privilege('authenticated', 'public.upsert_setting(text,jsonb,text,text,text)', 'EXECUTE'),
+  has_function_privilege('authenticated', 'public.upsert_setting(text,jsonb,text,text,text,boolean)', 'EXECUTE'),
   'authenticated 可执行 public.upsert_setting（函数内 admin 校验）'
 );
 select ok(

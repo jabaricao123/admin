@@ -201,8 +201,12 @@ export function MailConfigForm() {
     );
     setConfigured(true);
     if (nextPassword !== "") {
-      // 与服务端掩码规则一致：**** + 明文尾 4 位
-      setCredentialsMasked(`****${nextPassword.slice(-4)}`);
+      // 掩码只采用 RPC 返回值（≤8 位全掩码由服务端判定），不做本地拼接
+      const { data: statusRows } = await supabase.rpc("get_service_status");
+      const mailStatus = (statusRows ?? []).find(
+        (item) => item.service === "mail",
+      );
+      setCredentialsMasked(mailStatus?.credentials_masked ?? "****");
       setForm((prev) => ({ ...prev, password: "" }));
     }
 
@@ -493,7 +497,7 @@ export function MailConfigForm() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="h-8 w-full sm:w-auto"
+                className="h-11 w-full sm:w-auto lg:h-8"
               >
                 {saving ? (
                   <Loader2Icon

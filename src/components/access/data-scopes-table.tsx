@@ -351,17 +351,17 @@ export function DataScopesTable() {
   };
 
   return (
-    <div className="flex flex-col gap-2 p-0 md:p-6">
-      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
-        <CardContent className="flex flex-col gap-4 p-4 md:p-6">
+    <div className="flex flex-col gap-[5px] p-0 md:p-[5px]">
+      <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card pilot-5">
+        <CardContent className="flex flex-col gap-[5px] p-[5px] md:p-[5px]">
           {loading ? (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-[5px]">
               {Array.from({ length: 5 }).map((_, index) => (
                 <Skeleton key={index} className="h-12 w-full" />
               ))}
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center gap-2 py-8 text-sm">
+            <div className="flex flex-col items-center gap-[5px] py-[5px] text-sm">
               <p className="text-destructive">
                 加载失败：{translateDataScopeErrorMessage(error)}
               </p>
@@ -370,20 +370,20 @@ export function DataScopesTable() {
               </Button>
             </div>
           ) : roles.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-12 text-sm text-muted-foreground">
+            <div className="flex flex-col items-center gap-[5px] py-[5px] text-sm text-muted-foreground">
               <ShieldCheckIcon className="size-8 opacity-60" />
               <span>暂无角色，请先在「角色管理」创建</span>
             </div>
           ) : isMobile ? (
-            <div className="-mx-4 flex flex-col gap-2 px-4 md:mx-0 md:gap-3 md:px-0">
+            <div className="-mx-[5px] flex flex-col gap-[5px] px-[5px] md:mx-0 md:gap-[5px] md:px-0">
               {roles.map((role) => (
                 <div
                   key={role.id}
-                  className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 shadow-xs"
+                  className="flex w-full flex-col gap-[5px] rounded-xl border bg-card p-[5px] shadow-xs"
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-[5px]">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-[5px]">
                         <span className="truncate font-medium">{role.name}</span>
                         <Badge
                           variant="outline"
@@ -405,7 +405,7 @@ export function DataScopesTable() {
                       {role.status === "active" ? "启用" : "停用"}
                     </Badge>
                   </div>
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-[5px]">
                     <span className="text-xs text-muted-foreground">
                       数据范围
                     </span>
@@ -416,7 +416,7 @@ export function DataScopesTable() {
                       </span>
                     ) : null}
                   </div>
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-[5px]">
                     <span className="text-[11px] text-muted-foreground">
                       更新于 {formatDateTime(updatedAt[role.id] ?? null)}
                     </span>
@@ -426,7 +426,7 @@ export function DataScopesTable() {
               ))}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto [&_th]:p-[5px] [&_td]:p-[5px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -494,9 +494,9 @@ export function DataScopesTable() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-none border-0 md:rounded-xl md:border gap-3! py-3!">
+      <Card className="rounded-none border-0 md:rounded-xl md:border gap-[5px]! py-[5px]! pilot-5">
         <CardHeader>
-          <CardTitle className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-[5px]">
             以用户视角预检
             <InfoHint>
               选择用户后按真实会话语义（角色数据范围）计算可见范围统计，用于切换范围前的影响评估。
@@ -504,8 +504,8 @@ export function DataScopesTable() {
             </InfoHint>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4 p-4 md:p-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <CardContent className="flex flex-col gap-[5px] p-[5px] md:p-[5px]">
+          <div className="flex flex-col gap-[5px] sm:flex-row sm:items-center">
             <Select
               value={previewUserId}
               onValueChange={setPreviewUserId}
@@ -542,7 +542,7 @@ export function DataScopesTable() {
           </div>
 
           {previewLoading ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-[5px] sm:grid-cols-2 xl:grid-cols-4">
               {Array.from({ length: 4 }).map((_, index) => (
                 <Skeleton key={index} className="h-20 w-full" />
               ))}
@@ -552,13 +552,13 @@ export function DataScopesTable() {
               预检失败：{translateDataScopeErrorMessage(previewError)}
             </p>
           ) : !preview ? (
-            <div className="flex flex-col items-center gap-2 py-8 text-sm text-muted-foreground">
+            <div className="flex flex-col items-center gap-[5px] py-[5px] text-sm text-muted-foreground">
               <EyeIcon className="size-8 opacity-60" />
               <span>选择用户后展示其可见范围</span>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-[5px]">
+              <div className="flex flex-wrap items-center gap-[5px]">
                 <span className="font-medium">
                   {preview.user_name ?? preview.user_id}
                 </span>
@@ -577,14 +577,14 @@ export function DataScopesTable() {
                   {preview.role_code ? ` · ${preview.role_code}` : ""}
                 </span>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="flex flex-col gap-1 rounded-lg border bg-card p-3">
+              <div className="grid gap-[5px] sm:grid-cols-2 xl:grid-cols-4">
+                <div className="flex flex-col gap-1 rounded-lg border bg-card p-[5px]">
                   <span className="text-xs text-muted-foreground">
                     数据范围
                   </span>
                   {scopeBadge(preview.scope)}
                 </div>
-                <div className="flex flex-col gap-1 rounded-lg border bg-card p-3">
+                <div className="flex flex-col gap-1 rounded-lg border bg-card p-[5px]">
                   <span className="text-xs text-muted-foreground">
                     所属部门
                   </span>
@@ -592,7 +592,7 @@ export function DataScopesTable() {
                     {preview.department_name ?? "未设置"}
                   </span>
                 </div>
-                <div className="flex flex-col gap-1 rounded-lg border bg-card p-3">
+                <div className="flex flex-col gap-1 rounded-lg border bg-card p-[5px]">
                   <span className="text-xs text-muted-foreground">
                     可见用户数
                   </span>
@@ -600,7 +600,7 @@ export function DataScopesTable() {
                     {preview.user_count}
                   </span>
                 </div>
-                <div className="flex flex-col gap-1 rounded-lg border bg-card p-3">
+                <div className="flex flex-col gap-1 rounded-lg border bg-card p-[5px]">
                   <span className="text-xs text-muted-foreground">
                     可见部门数
                   </span>

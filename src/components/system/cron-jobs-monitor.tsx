@@ -39,7 +39,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InfoHint } from "@/components/info-hint";
 import type { Database } from "@/lib/database.types";
-import { translateSystemErrorMessage } from "@/lib/dictionaries";
+import {
+  CRON_JOB_STATUS_BADGE_CLASSES,
+  CRON_RUN_RESULT_BADGE_CLASSES,
+  STATE_BADGE_CLASSES,
+  translateSystemErrorMessage,
+} from "@/lib/dictionaries";
 import { createClient } from "@/lib/supabase/client";
 
 type JobRow = Database["public"]["Views"]["system_cron_jobs_v"]["Row"];
@@ -49,6 +54,7 @@ type RunHistoryArgs =
   Database["public"]["Functions"]["get_cron_run_history"]["Args"];
 
 const ALL_JOBS = "__all__";
+const ALL_MODULES = "__all_modules__";
 const RUN_LIMIT = 50;
 
 /** 登记/调度状态文案（视图 status：active/paused/disabled/unscheduled/orphan） */
@@ -60,39 +66,20 @@ const JOB_STATUS_LABELS: Record<string, string> = {
   orphan: "未登记",
 };
 
-const JOB_STATUS_BADGE_CLASSES: Record<string, string> = {
-  active:
-    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
-  paused:
-    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
-  disabled:
-    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
-  unscheduled:
-    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
-  orphan:
-    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
-};
-
-/** 执行结果（cron.job_run_details.status）Badge */
+/** 执行结果（cron.job_run_details.status）文案 */
 const RUN_RESULT_LABELS: Record<string, string> = {
   succeeded: "成功",
   failed: "失败",
   running: "运行中",
 };
 
-const RUN_RESULT_BADGE_CLASSES: Record<string, string> = {
-  succeeded:
-    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
-  failed:
-    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
-  running:
-    "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
-};
-
-const AMBER_BADGE =
-  "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300";
-const RED_BADGE =
-  "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300";
+/** 列表 key：job_name 为唯一键；为空（类型可空）时用 registry_id 兜底，避免重复 key */
+function jobRowKey(row: JobRow): string {
+  return (
+    row.job_name ??
+    (row.registry_id !== null ? `registry-${row.registry_id}` : "orphan")
+  );
+}
 
 function formatDateTime(value: string | null | undefined): string {
   if (!value) {
@@ -122,7 +109,7 @@ function runResultBadge(result: string | null) {
   return (
     <Badge
       variant="outline"
-      className={RUN_RESULT_BADGE_CLASSES[result] ?? undefined}
+      className={CRON_RUN_RESULT_BADGE_CLASSES[result] ?? undefined}
     >
       {RUN_RESULT_LABELS[result] ?? result}
     </Badge>
@@ -133,18 +120,24 @@ function runResultBadge(result: string | null) {
 function healthAlerts(row: JobRow): { label: string; className: string }[] {
   const alerts: { label: string; className: string }[] = [];
   if (row.is_orphan) {
-    alerts.push({ label: "未登记（孤儿 job）", className: RED_BADGE });
+    alerts.push({
+      label: "未登记（孤儿 job）",
+      className: STATE_BADGE_CLASSES.danger,
+    });
   } else if (!row.is_scheduled) {
-    alerts.push({ label: "未调度", className: AMBER_BADGE });
+    alerts.push({ label: "未调度", className: STATE_BADGE_CLASSES.warning });
   }
   if (row.overdue) {
-    alerts.push({ label: "超期（>2 周期）", className: AMBER_BADGE });
+    alerts.push({
+      label: "超期（>2 周期）",
+      className: STATE_BADGE_CLASSES.warning,
+    });
   }
   const rate = row.failure_rate_24h ?? 0;
   if (rate > 0.5) {
     alerts.push({
       label: `失败率 ${Math.round(rate * 100)}%`,
-      className: RED_BADGE,
+      className: STATE_BADGE_CLASSES.danger,
     });
   }
   return alerts;
@@ -172,10 +165,12 @@ export function CronJobsMonitor() {
   const [error, setError] = React.useState<string | null>(null);
 
   const [runs, setRuns] = React.useState<RunRow[]>([]);
-  const [runsLoading, setRunsLoading] = React.useState(true);
+  const [runsLoading, setRunsLoading] = React.useState(false);
   const [runsError, setRunsError] = React.useState<string | null>(null);
   const [jobFilter, setJobFilter] = React.useState<string>(ALL_JOBS);
+  const [moduleFilter, setModuleFilter] = React.useState<string>(ALL_MODULES);
   const [activeTab, setActiveTab] = React.useState("registry");
+  const runsLoadedRef = React.useRef(false);
 
   const loadRuns = React.useCallback(
     async (jobName: string, options?: { silent?: boolean }) => {
@@ -234,22 +229,83 @@ export function CronJobsMonitor() {
 
   React.useEffect(() => {
     void loadJobs();
-    void loadRuns(ALL_JOBS);
-  }, [loadJobs, loadRuns]);
+  }, [loadJobs]);
+
+  /** 执行历史懒加载：首次切到 history tab 才拉取 */
+  const ensureRunsLoaded = React.useCallback(() => {
+    if (runsLoadedRef.current) {
+      return;
+    }
+    runsLoadedRef.current = true;
+    void loadRuns(jobFilter);
+  }, [jobFilter, loadRuns]);
+
+  const changeTab = (value: string) => {
+    setActiveTab(value);
+    if (value === "history") {
+      ensureRunsLoaded();
+    }
+  };
+
+  const moduleByJob = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const job of jobs) {
+      if (job.job_name && job.module) {
+        map.set(job.job_name, job.module);
+      }
+    }
+    return map;
+  }, [jobs]);
+
+  const moduleNames = React.useMemo(
+    () => [...new Set(moduleByJob.values())],
+    [moduleByJob],
+  );
 
   const jobNames = React.useMemo(() => {
     const names = new Set<string>();
     for (const job of jobs) {
-      if (job.job_name) {
-        names.add(job.job_name);
+      if (!job.job_name) {
+        continue;
       }
+      if (
+        moduleFilter !== ALL_MODULES &&
+        moduleByJob.get(job.job_name) !== moduleFilter
+      ) {
+        continue;
+      }
+      names.add(job.job_name);
     }
     return [...names];
-  }, [jobs]);
+  }, [jobs, moduleFilter, moduleByJob]);
+
+  /** 视图 module 列在前端做执行历史来源模块筛选（RPC 仅支持 job 名参数） */
+  const visibleRuns = React.useMemo(
+    () =>
+      moduleFilter === ALL_MODULES
+        ? runs
+        : runs.filter((run) => moduleByJob.get(run.job_name) === moduleFilter),
+    [runs, moduleFilter, moduleByJob],
+  );
 
   const changeJobFilter = (value: string) => {
+    runsLoadedRef.current = true;
     setJobFilter(value);
     void loadRuns(value);
+  };
+
+  const changeModuleFilter = (value: string) => {
+    setModuleFilter(value);
+    // 已选 job 不属于新模块时重置为全部，避免「模块 × job」组合无结果
+    if (
+      jobFilter !== ALL_JOBS &&
+      value !== ALL_MODULES &&
+      moduleByJob.get(jobFilter) !== value
+    ) {
+      runsLoadedRef.current = true;
+      setJobFilter(ALL_JOBS);
+      void loadRuns(ALL_JOBS);
+    }
   };
 
   if (loading) {
@@ -290,7 +346,7 @@ export function CronJobsMonitor() {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={changeTab}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="registry">任务登记</TabsTrigger>
@@ -333,7 +389,7 @@ export function CronJobsMonitor() {
                       </TableHeader>
                       <TableBody>
                         {jobs.map((row) => (
-                          <TableRow key={row.job_name ?? "orphan"}>
+                          <TableRow key={jobRowKey(row)}>
                             <TableCell className="text-left font-mono text-xs">
                               {row.job_name ?? "（匿名 job）"}
                             </TableCell>
@@ -363,8 +419,9 @@ export function CronJobsMonitor() {
                               <Badge
                                 variant="outline"
                                 className={
-                                  JOB_STATUS_BADGE_CLASSES[row.status ?? ""] ??
-                                  undefined
+                                  CRON_JOB_STATUS_BADGE_CLASSES[
+                                    row.status ?? ""
+                                  ] ?? undefined
                                 }
                               >
                                 {jobStatusLabel(row.status)}
@@ -390,7 +447,7 @@ export function CronJobsMonitor() {
                     {jobs.map((row) =>
                       row.owner_route ? (
                         <Link
-                          key={row.job_name ?? "orphan"}
+                          key={jobRowKey(row)}
                           href={row.owner_route}
                           className="flex flex-col gap-2 rounded-xl border p-4 text-left transition-colors hover:border-primary focus-visible:border-primary focus-visible:outline-none"
                         >
@@ -398,7 +455,7 @@ export function CronJobsMonitor() {
                         </Link>
                       ) : (
                         <div
-                          key={row.job_name ?? "orphan"}
+                          key={jobRowKey(row)}
                           className="flex flex-col gap-2 rounded-xl border p-4"
                         >
                           <JobCardBody row={row} />
@@ -418,14 +475,35 @@ export function CronJobsMonitor() {
             <CardHeader>
               <CardTitle className="flex items-center gap-1.5">
                 执行历史（最近 {RUN_LIMIT} 条）
-                <InfoHint>数据来自 pg_cron 运行明细；可按 job 名筛选</InfoHint>
+                <InfoHint>
+                  数据来自 pg_cron 运行明细；可按来源模块 / job 名筛选（模块取自任务登记视图）
+                </InfoHint>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Select
+                  value={moduleFilter}
+                  onValueChange={changeModuleFilter}
+                >
+                  <SelectTrigger
+                    className="min-h-11 w-full sm:w-48 lg:min-h-8"
+                    aria-label="按来源模块筛选执行历史"
+                  >
+                    <SelectValue placeholder="全部模块" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_MODULES}>全部模块</SelectItem>
+                    {moduleNames.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Select value={jobFilter} onValueChange={changeJobFilter}>
                   <SelectTrigger
-                    className="h-11 w-full sm:w-72 lg:h-8"
+                    className="min-h-11 w-full sm:w-72 lg:min-h-8"
                     aria-label="按 job 名筛选执行历史"
                   >
                     <SelectValue placeholder="全部 job" />
@@ -459,7 +537,7 @@ export function CronJobsMonitor() {
                     重试
                   </Button>
                 </div>
-              ) : runs.length === 0 ? (
+              ) : visibleRuns.length === 0 ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">
                   暂无执行记录
                 </p>
@@ -477,7 +555,7 @@ export function CronJobsMonitor() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {runs.map((run) => (
+                        {visibleRuns.map((run) => (
                           <TableRow key={`${run.runid}`}>
                             <TableCell className="text-left font-mono text-xs">
                               {run.job_name}
@@ -501,7 +579,7 @@ export function CronJobsMonitor() {
                   </div>
 
                   <div className="flex flex-col gap-2 lg:hidden">
-                    {runs.map((run) => (
+                    {visibleRuns.map((run) => (
                       <div
                         key={`${run.runid}`}
                         className="flex flex-col gap-2 rounded-xl border p-4"
@@ -541,7 +619,7 @@ function JobCardBody({ row }: { row: JobRow }) {
         <span className="font-mono text-xs">{row.job_name ?? "（匿名 job）"}</span>
         <Badge
           variant="outline"
-          className={JOB_STATUS_BADGE_CLASSES[row.status ?? ""] ?? undefined}
+          className={CRON_JOB_STATUS_BADGE_CLASSES[row.status ?? ""] ?? undefined}
         >
           {jobStatusLabel(row.status)}
         </Badge>

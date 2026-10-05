@@ -516,10 +516,6 @@ export function ImConfigPanel() {
             const state = states[provider.id];
             const form = forms[provider.id];
             const isEnabled = state?.enabled === true;
-            const isBusy =
-              busy === `save-${provider.id}` ||
-              busy === `test-${provider.id}` ||
-              busy === `switch-${provider.id}`;
 
             return (
               <div
@@ -569,6 +565,7 @@ export function ImConfigPanel() {
                           ? `已保存：${state.credentials_masked[field.key]}`
                           : "未配置"
                       }
+                      className="h-11 lg:h-8"
                       onChange={(event) =>
                         setForms((prev) => ({
                           ...prev,
@@ -644,6 +641,7 @@ export function ImConfigPanel() {
               id="im-admin-contact"
               value={contact}
               placeholder="如 it-support@example.com 或 分机 8000"
+              className="h-11 lg:h-8"
               onChange={(event) => setContact(event.target.value)}
             />
             <FieldDescription>

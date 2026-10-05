@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { STATE_BADGE_CLASSES } from "@/lib/dictionaries";
 import packageJson from "../../../../../package.json";
 
 // @next-codemod-ignore Cache Components：管理端路由均为服务端动态鉴权，允许阻塞式导航。
@@ -85,23 +86,23 @@ function parseChangelog(markdown: string): ChangeVersion[] {
   return versions;
 }
 
-/** 变更类型 Badge 配色：新增绿 / 变更蓝 / 修复红 / 其他灰 */
+/** 变更类型 Badge 配色：新增绿 / 变更蓝 / 修复红 / 其他灰（复用统一语义色） */
 function changeTypeBadgeClass(title: string): string {
   const normalized = title.toLowerCase();
   if (normalized.includes("added") || title.includes("新增")) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300";
+    return STATE_BADGE_CLASSES.success;
   }
   if (normalized.includes("changed") || title.includes("变更")) {
-    return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300";
+    return STATE_BADGE_CLASSES.info;
   }
   if (
     normalized.includes("fixed") ||
     normalized.includes("removed") ||
     title.includes("修复")
   ) {
-    return "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300";
+    return STATE_BADGE_CLASSES.danger;
   }
-  return "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400";
+  return STATE_BADGE_CLASSES.neutral;
 }
 
 function loadChangelog(): { versions: ChangeVersion[]; error: string | null } {

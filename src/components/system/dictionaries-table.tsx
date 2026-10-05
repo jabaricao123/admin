@@ -50,7 +50,14 @@ import {
 } from "@/components/ui/table";
 import { InfoHint } from "@/components/info-hint";
 import type { Database } from "@/lib/database.types";
-import { translateSystemErrorMessage } from "@/lib/dictionaries";
+import {
+  DICTIONARY_KEYS,
+  getDictionaryItems,
+  loadDictionaries,
+  STATE_BADGE_CLASSES,
+  translateSystemErrorMessage,
+  type DictionaryItem,
+} from "@/lib/dictionaries";
 import { createClient } from "@/lib/supabase/client";
 
 type CatalogRow =
@@ -59,20 +66,34 @@ type ItemRow =
   Database["public"]["Functions"]["get_dict_items"]["Returns"][number];
 type DictItemStatus = "active" | "disabled";
 
-const DICT_STATUS_LABELS: Record<DictItemStatus, string> = {
-  active: "启用",
-  disabled: "停用",
-};
-
-const DICT_STATUS_BADGE_CLASSES: Record<DictItemStatus, string> = {
-  active:
-    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
-  disabled:
-    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+/** 状态色兜底：字典项存在但未配 color_class 时按语义色渲染 */
+const DICT_STATUS_FALLBACK_BADGE_CLASSES: Record<DictItemStatus, string> = {
+  active: STATE_BADGE_CLASSES.success,
+  disabled: STATE_BADGE_CLASSES.neutral,
 };
 
 function asDictItemStatus(value: string): DictItemStatus {
   return value === "disabled" ? "disabled" : "active";
+}
+
+/**
+ * 状态展示读取 common.status 字典（真实消费点）：
+ * 命中字典项用其 label / color_class；已加载但未命中（如该项已停用）回退原始 value，
+ * 不再从本地硬编码文案复活。
+ */
+function statusBadgeView(
+  status: DictItemStatus,
+  items: DictionaryItem[],
+): { label: string; className?: string } {
+  const item = items.find((entry) => entry.value === status);
+  if (item) {
+    return {
+      label: item.label,
+      className:
+        item.color_class ?? DICT_STATUS_FALLBACK_BADGE_CLASSES[status],
+    };
+  }
+  return { label: status, className: undefined };
 }
 
 /**
@@ -210,6 +231,41 @@ export function DictionariesTable() {
   const [createForm, setCreateForm] =
     React.useState<CreateDictForm>(EMPTY_CREATE_FORM);
   const [creating, setCreating] = React.useState(false);
+
+  // 字典读取层真实消费点：状态列 / 状态下拉以 common.status 为准
+  const [commonStatusItems, setCommonStatusItems] = React.useState<
+    DictionaryItem[]
+  >(() => getDictionaryItems(DICTIONARY_KEYS.commonStatus));
+
+  React.useEffect(() => {
+    let cancelled = false;
+    // DictionariesLoader 已在 layout 触发加载；这里 await 同一 promise 后同步本地状态
+    void loadDictionaries().then(() => {
+      if (!cancelled) {
+        setCommonStatusItems(getDictionaryItems(DICTIONARY_KEYS.commonStatus));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** 编辑 common.status 后强制刷新快照并同步本页展示（改 label 即时生效） */
+  const refreshCommonStatusItems = React.useCallback(async () => {
+    await loadDictionaries({ force: true });
+    setCommonStatusItems(getDictionaryItems(DICTIONARY_KEYS.commonStatus));
+  }, []);
+
+  const statusOptions = React.useMemo(() => {
+    const options = commonStatusItems
+      .filter((item) => item.value === "active" || item.value === "disabled")
+      .map((item) => ({ value: item.value, label: item.label }));
+    const current = itemForm.status;
+    if (!options.some((option) => option.value === current)) {
+      options.unshift({ value: current, label: `${current}（字典未提供）` });
+    }
+    return options;
+  }, [commonStatusItems, itemForm.status]);
 
   const selectedKeyRef = React.useRef("");
   React.useEffect(() => {
@@ -349,6 +405,9 @@ export function DictionariesTable() {
 
     toast.success(itemForm.mode === "create" ? "字典项已创建" : "字典项已保存");
     setItemOpen(false);
+    if (itemForm.dictKey === DICTIONARY_KEYS.commonStatus) {
+      void refreshCommonStatusItems();
+    }
     void loadCatalog(itemForm.dictKey, { silent: true });
   };
 
@@ -404,6 +463,11 @@ export function DictionariesTable() {
 
     if (itemError) {
       toast.error(translateSystemErrorMessage(itemError.message));
+      toast.info(
+        `字典「${dictKey}」已登记但暂无字典项，请在详情页点击「新增字典项」补建首项`,
+      );
+      setCreateOpen(false);
+      void loadCatalog(dictKey, { silent: true });
       return;
     }
 
@@ -465,7 +529,12 @@ export function DictionariesTable() {
               </InfoHint>
             </CardTitle>
             <CardAction>
-              <Button type="button" size="sm" onClick={openCreateDict}>
+              <Button
+                type="button"
+                size="sm"
+                className="h-11 lg:h-8"
+                onClick={openCreateDict}
+              >
                 <PlusIcon data-icon="inline-start" />
                 新增字典
               </Button>
@@ -524,6 +593,7 @@ export function DictionariesTable() {
               <Button
                 type="button"
                 size="sm"
+                className="h-11 lg:h-8"
                 onClick={openCreateItem}
                 disabled={selectedKey === ""}
               >
@@ -576,6 +646,7 @@ export function DictionariesTable() {
                     <TableBody>
                       {items.map((row) => {
                         const status = asDictItemStatus(row.status);
+                        const statusView = statusBadgeView(status, commonStatusItems);
                         return (
                           <TableRow
                             key={row.value}
@@ -606,9 +677,9 @@ export function DictionariesTable() {
                             <TableCell className="text-center">
                               <Badge
                                 variant="outline"
-                                className={DICT_STATUS_BADGE_CLASSES[status]}
+                                className={statusView.className}
                               >
-                                {DICT_STATUS_LABELS[status]}
+                                {statusView.label}
                               </Badge>
                             </TableCell>
                           </TableRow>
@@ -622,6 +693,7 @@ export function DictionariesTable() {
                 <div className="flex flex-col gap-2 lg:hidden">
                   {items.map((row) => {
                     const status = asDictItemStatus(row.status);
+                    const statusView = statusBadgeView(status, commonStatusItems);
                     return (
                       <button
                         key={row.value}
@@ -633,9 +705,9 @@ export function DictionariesTable() {
                           <span className="font-mono text-xs">{row.value}</span>
                           <Badge
                             variant="outline"
-                            className={DICT_STATUS_BADGE_CLASSES[status]}
+                            className={statusView.className}
                           >
-                            {DICT_STATUS_LABELS[status]}
+                            {statusView.label}
                           </Badge>
                         </div>
                         <div className="flex items-center justify-between gap-2">
@@ -743,7 +815,7 @@ export function DictionariesTable() {
               >
                 <SelectTrigger
                   id="dict-item-color"
-                  className="h-11 w-full lg:h-8"
+                  className="min-h-11 w-full lg:min-h-8"
                   aria-label="配色类名"
                 >
                   <SelectValue placeholder="选择配色" />
@@ -779,23 +851,29 @@ export function DictionariesTable() {
               >
                 <SelectTrigger
                   id="dict-item-status"
-                  className="h-11 w-full lg:h-8"
+                  className="min-h-11 w-full lg:min-h-8"
                   aria-label="字典项状态"
                 >
                   <SelectValue placeholder="选择状态" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">启用</SelectItem>
-                  <SelectItem value="disabled">停用（不再下发）</SelectItem>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <FieldDescription>
+                {`来自 common.status 字典；停用项不再下发（即时生效）`}
+              </FieldDescription>
             </Field>
           </div>
           <SheetFooter className="flex-row items-center justify-end gap-2 border-t">
             <Button
               type="button"
               variant="outline"
-              className="h-8"
+              className="h-11 lg:h-8"
               onClick={() => setItemOpen(false)}
               disabled={savingItem}
             >
@@ -803,7 +881,7 @@ export function DictionariesTable() {
             </Button>
             <Button
               type="button"
-              className="h-8"
+              className="h-11 lg:h-8"
               onClick={() => void handleSaveItem()}
               disabled={savingItem}
             >
@@ -937,7 +1015,7 @@ export function DictionariesTable() {
                   >
                     <SelectTrigger
                       id="dict-first-color"
-                      className="h-11 w-full lg:h-8"
+                      className="min-h-11 w-full lg:min-h-8"
                       aria-label="首项配色类名"
                     >
                       <SelectValue placeholder="选择配色" />

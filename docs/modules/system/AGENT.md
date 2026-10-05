@@ -49,3 +49,4 @@
 - 上游：audit/001、message/001（014）
 - 下游：message/009（渠道配置）、report/005+007（cron+storage）、sync/007（cron 登记）
 - INDEX 规则：4（凭据分域）、5（调度登记）、10
+- 凭据加密密钥容错与轮换预案：[key-rotation.md](./key-rotation.md)

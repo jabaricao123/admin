@@ -2,14 +2,16 @@
 -- 运行：supabase db reset && supabase test db
 -- 覆盖：buckets 存在/私有；storage.objects admin 策略（4 条，仅 authenticated）；函数存在性 +
 --       SECURITY DEFINER + search_path=''；GRANT 面；非 admin 越权拒绝；未配置 P0002；
---       配置不完整 / 未知 provider / bucket 不存在 → failed；配置完整且 bucket 存在 → verified；
+--       配置不完整 / 未知 provider / supabase-storage bucket 不存在 → failed；
+--       s3 完整配置（endpoint/region/access_key/secret_key）→ verified（bucket 归属外部对象存储）；
+--       supabase-storage 配置完整且 bucket 存在 → verified；
 --       掩码不泄明文、审计摘要不落凭据明文；get_storage_usage 聚合（空 bucket 0 / 多对象求和 /
 --       非数字 size 按 0）；RLS 行为（admin 可见可写、engineer 不可见且写被拒、anon 不可见）。
 -- 说明：夹具只在本事务内生效，finish 后 rollback，不污染其他测试文件。
 
 begin;
 
-select plan(55);
+select plan(62);
 
 -- ===========================================================================
 -- 1. buckets：存在 / 私有（5）
@@ -199,7 +201,9 @@ select is(
 reset role;
 
 -- ===========================================================================
--- 7. bucket 不存在 → failed（3）
+-- 7. provider 语义分派：s3 校验 endpoint/region/access_key/secret_key（10）
+--    s3 目标 bucket 由外部对象存储持有，本地不校验 bucket 存在性（原实现必然 failed 的缺陷）；
+--    supabase-storage 保持 storage.buckets 存在性校验。
 -- ===========================================================================
 set local role authenticated;
 select lives_ok(
@@ -208,31 +212,74 @@ select lives_ok(
        '{"provider":"s3","endpoint":"https://s3.example.com","region":"cn-north-1","bucket":"no-such-bucket"}'::jsonb,
        '{"access_key":"minio-access","secret_key":"testStorageSecret9876"}'
      ) $$,
-  'admin 保存完整但 bucket 不存在的配置'
+  'admin 保存完整 s3 配置（bucket 不在本地 storage.buckets 中）'
+);
+select is(
+  (select (public.test_storage_config()) ->> 'ok'),
+  'true',
+  's3 完整配置：test_storage_config 返回 ok=true（不再永远 failed）'
+);
+select is(
+  (select (public.test_storage_config()) ->> 'verify_status'),
+  'verified',
+  's3 完整配置：verify_status=verified'
+);
+select ok(
+  (select (public.test_storage_config()) ->> 'message') like '配置校验通过：S3 端点 %',
+  's3 完整配置：message 标注 S3 端点（连通性实测待出站 ADR）'
+);
+
+select lives_ok(
+  $$ select public.upsert_service_config(
+       'storage',
+       '{"provider":"s3","endpoint":"https://s3.example.com","region":"cn-north-1","bucket":"exports"}'::jsonb,
+       '{"access_key":"minio-access"}'
+     ) $$,
+  'admin 保存缺 secret_key 的 s3 配置'
 );
 select is(
   (select (public.test_storage_config()) ->> 'ok'),
   'false',
-  'bucket 不存在：test_storage_config 返回 ok=false'
+  's3 缺 secret_key：test_storage_config 返回 ok=false'
+);
+select is(
+  (select (public.test_storage_config()) ->> 'message'),
+  '配置不完整：S3 需 endpoint / region / access_key / secret_key',
+  's3 缺 secret_key：message 指明必填键'
+);
+
+-- supabase-storage 通道：bucket 存在性校验保持原语义
+select lives_ok(
+  $$ select public.upsert_service_config(
+       'storage',
+       '{"provider":"supabase-storage","endpoint":"https://storage.example.com","bucket":"no-such-bucket"}'::jsonb,
+       null
+     ) $$,
+  'admin 保存 bucket 不存在的 supabase-storage 配置'
+);
+select is(
+  (select (public.test_storage_config()) ->> 'ok'),
+  'false',
+  'supabase-storage bucket 不存在：返回 ok=false'
 );
 select is(
   (select (public.test_storage_config()) ->> 'message'),
   'bucket 不存在或不可访问：no-such-bucket',
-  'bucket 不存在：message 指明目标 bucket'
+  'supabase-storage bucket 不存在：message 指明目标 bucket'
 );
 reset role;
 
 -- ===========================================================================
--- 8. 配置完整且 bucket 存在 → verified + 掩码/审计（8）
+-- 8. supabase-storage 配置完整且 bucket 存在 → verified + 掩码/审计（8）
 -- ===========================================================================
 set local role authenticated;
 select lives_ok(
   $$ select public.upsert_service_config(
        'storage',
-       '{"provider":"s3","endpoint":"https://s3.example.com","region":"cn-north-1","bucket":"exports","signed_url_ttl_minutes":60,"max_file_size_mb":50,"mime_whitelist":["text/csv","application/pdf"]}'::jsonb,
+       '{"provider":"supabase-storage","endpoint":"https://storage.example.com","bucket":"exports","signed_url_ttl_minutes":60,"max_file_size_mb":50,"mime_whitelist":["text/csv","application/pdf"]}'::jsonb,
        '{"access_key":"minio-access","secret_key":"testStorageSecret9876"}'
      ) $$,
-  'admin 保存完整的对象存储配置'
+  'admin 保存完整的 supabase-storage 配置'
 );
 select is(
   (select (public.test_storage_config()) ->> 'ok'),

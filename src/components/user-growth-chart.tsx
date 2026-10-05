@@ -44,14 +44,14 @@ export function UserGrowthChart({
 }) {
   if (!isAdmin) {
     return (
-      <Card className="@container/card">
+      <Card className="@container/card gap-[5px]! py-[5px]! pilot-5">
         <CardHeader>
-          <CardTitle className="flex items-center gap-1.5">
+          <CardTitle className="flex items-center gap-[5px]">
             注册趋势
             <InfoHint>近 30 天注册用户数</InfoHint>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+        <CardContent className="flex flex-col items-center gap-[5px] py-[5px] text-center">
           <ShieldXIcon className="size-10 text-muted-foreground" />
           <div className="text-lg font-medium">需要管理员权限</div>
           <p className="max-w-md text-sm text-muted-foreground">
@@ -70,9 +70,9 @@ export function UserGrowthChart({
   const lowData = data.reduce((sum, point) => sum + point.count, 0) < 10;
 
   return (
-    <Card className="@container/card">
+    <Card className="@container/card gap-[5px]! py-[5px]! pilot-5">
       <CardHeader>
-        <CardTitle className="flex items-center gap-1.5">
+        <CardTitle className="flex items-center gap-[5px]">
           注册趋势
           <InfoHint>
             {lowData ? (
@@ -83,7 +83,7 @@ export function UserGrowthChart({
           </InfoHint>
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+      <CardContent className="px-[5px] pt-[5px] sm:px-[5px]">
         <ChartContainer
           config={chartConfig}
           className="aspect-auto h-[250px] w-full"

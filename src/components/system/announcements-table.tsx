@@ -306,7 +306,7 @@ export function AnnouncementsTable() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-2 p-4 lg:p-6">
+      <div className="flex flex-col gap-2 p-0 md:p-6">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-72 w-full" />
       </div>
@@ -315,7 +315,7 @@ export function AnnouncementsTable() {
 
   if (error) {
     return (
-      <div className="flex flex-col p-4 lg:p-6">
+      <div className="flex flex-col p-0 md:p-6">
         <Card>
           <CardContent className="flex flex-col items-center gap-2 py-16 text-sm">
             <p className="text-destructive">
@@ -331,14 +331,14 @@ export function AnnouncementsTable() {
   }
 
   return (
-    <div className="flex flex-col gap-2 p-4 lg:p-6">
+    <div className="flex flex-col gap-2 p-0 md:p-6">
       <Card>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm text-muted-foreground">
               共 {rows.length} 条
             </span>
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" className="h-11 lg:h-8" onClick={openCreate}>
               <PlusIcon data-icon="inline-start" />
               新建公告
             </Button>
@@ -559,7 +559,7 @@ export function AnnouncementsTable() {
               >
                 <SelectTrigger
                   id="announcement-audience"
-                  className="h-11 w-full lg:h-8"
+                  className="min-h-11 w-full lg:min-h-8"
                 >
                   <SelectValue placeholder="选择范围" />
                 </SelectTrigger>
@@ -629,7 +629,7 @@ export function AnnouncementsTable() {
             <Button
               type="button"
               variant="outline"
-              className="h-8"
+              className="h-11 lg:h-8"
               onClick={() => setSheetOpen(false)}
               disabled={busy}
             >
@@ -641,7 +641,7 @@ export function AnnouncementsTable() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-8"
+                  className="h-11 lg:h-8"
                   onClick={() => void handleSave()}
                   disabled={busy}
                 >
@@ -657,7 +657,7 @@ export function AnnouncementsTable() {
                 </Button>
                 <Button
                   type="button"
-                  className="h-8"
+                  className="h-11 lg:h-8"
                   onClick={() => void handlePublish()}
                   disabled={busy}
                 >
