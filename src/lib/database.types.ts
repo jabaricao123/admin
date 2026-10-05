@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.18"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -40,7 +45,7 @@ export type Database = {
           created_at: string
           id: string
           published_by: string | null
-          spec: NonNullable<Json>
+          spec: Json
           version: string
         }
         Insert: {
@@ -48,7 +53,7 @@ export type Database = {
           created_at?: string
           id?: string
           published_by?: string | null
-          spec: NonNullable<Json>
+          spec: Json
           version: string
         }
         Update: {
@@ -56,7 +61,7 @@ export type Database = {
           created_at?: string
           id?: string
           published_by?: string | null
-          spec?: NonNullable<Json>
+          spec?: Json
           version?: string
         }
         Relationships: []
@@ -71,7 +76,7 @@ export type Database = {
           key_prefix: string
           last_used_at: string | null
           name: string
-          scopes: NonNullable<Json>
+          scopes: Json
           status: string
           updated_at: string
           updated_by: string | null
@@ -85,7 +90,7 @@ export type Database = {
           key_prefix: string
           last_used_at?: string | null
           name: string
-          scopes?: NonNullable<Json>
+          scopes?: Json
           status?: string
           updated_at?: string
           updated_by?: string | null
@@ -99,10 +104,28 @@ export type Database = {
           key_prefix?: string
           last_used_at?: string | null
           name?: string
-          scopes?: NonNullable<Json>
+          scopes?: Json
           status?: string
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      api_scope_registry: {
+        Row: {
+          description: string | null
+          resource: string
+          scope: string
+        }
+        Insert: {
+          description?: string | null
+          resource: string
+          scope: string
+        }
+        Update: {
+          description?: string | null
+          resource?: string
+          scope?: string
         }
         Relationships: []
       }
@@ -149,7 +172,7 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
-          nodes: NonNullable<Json>
+          nodes: Json
           status: string
           template_id: string
           updated_at: string
@@ -162,7 +185,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           name: string
-          nodes: NonNullable<Json>
+          nodes: Json
           status?: string
           template_id: string
           updated_at?: string
@@ -175,7 +198,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           name?: string
-          nodes?: NonNullable<Json>
+          nodes?: Json
           status?: string
           template_id?: string
           updated_at?: string
@@ -200,7 +223,7 @@ export type Database = {
           id: string
           module: string
           name: string
-          schema: NonNullable<Json>
+          schema: Json
           status: string
           updated_at: string
           updated_by: string | null
@@ -213,7 +236,7 @@ export type Database = {
           id?: string
           module: string
           name: string
-          schema: NonNullable<Json>
+          schema: Json
           status?: string
           updated_at?: string
           updated_by?: string | null
@@ -226,7 +249,7 @@ export type Database = {
           id?: string
           module?: string
           name?: string
-          schema?: NonNullable<Json>
+          schema?: Json
           status?: string
           updated_at?: string
           updated_by?: string | null
@@ -239,7 +262,7 @@ export type Database = {
           created_at: string
           current_seq: number
           flow_version_id: string
-          form_data: NonNullable<Json>
+          form_data: Json
           id: string
           initiator_id: string
           last_urged_at: string | null
@@ -255,7 +278,7 @@ export type Database = {
           created_at?: string
           current_seq?: number
           flow_version_id: string
-          form_data: NonNullable<Json>
+          form_data: Json
           id?: string
           initiator_id: string
           last_urged_at?: string | null
@@ -271,7 +294,7 @@ export type Database = {
           created_at?: string
           current_seq?: number
           flow_version_id?: string
-          form_data?: NonNullable<Json>
+          form_data?: Json
           id?: string
           initiator_id?: string
           last_urged_at?: string | null
@@ -361,30 +384,36 @@ export type Database = {
           email: string | null
           fail_reason: string | null
           id: number
+          im_userid: string | null
           ip: unknown
           success: boolean
           ua: string | null
           user_id: string | null
+          via: string
         }
         Insert: {
           created_at?: string
           email?: string | null
           fail_reason?: string | null
           id?: never
+          im_userid?: string | null
           ip?: unknown
           success: boolean
           ua?: string | null
           user_id?: string | null
+          via?: string
         }
         Update: {
           created_at?: string
           email?: string | null
           fail_reason?: string | null
           id?: never
+          im_userid?: string | null
           ip?: unknown
           success?: boolean
           ua?: string | null
           user_id?: string | null
+          via?: string
         }
         Relationships: []
       }
@@ -455,7 +484,7 @@ export type Database = {
         Row: {
           changed_at: string
           changed_by: string | null
-          data: NonNullable<Json>
+          data: Json
           id: number
           record_id: string
           table_name: string
@@ -464,7 +493,7 @@ export type Database = {
         Insert: {
           changed_at?: string
           changed_by?: string | null
-          data: NonNullable<Json>
+          data: Json
           id?: never
           record_id: string
           table_name: string
@@ -473,7 +502,7 @@ export type Database = {
         Update: {
           changed_at?: string
           changed_by?: string | null
-          data?: NonNullable<Json>
+          data?: Json
           id?: never
           record_id?: string
           table_name?: string
@@ -564,7 +593,7 @@ export type Database = {
       }
       export_jobs: {
         Row: {
-          config: NonNullable<Json>
+          config: Json
           content: string | null
           created_at: string
           error: string | null
@@ -578,7 +607,7 @@ export type Database = {
           status: string
         }
         Insert: {
-          config?: NonNullable<Json>
+          config?: Json
           content?: string | null
           created_at?: string
           error?: string | null
@@ -592,7 +621,7 @@ export type Database = {
           status?: string
         }
         Update: {
-          config?: NonNullable<Json>
+          config?: Json
           content?: string | null
           created_at?: string
           error?: string | null
@@ -624,21 +653,21 @@ export type Database = {
       }
       export_sources: {
         Row: {
-          config_schema: NonNullable<Json>
+          config_schema: Json
           created_at: string
           enabled: boolean
           owner_module: string
           source: string
         }
         Insert: {
-          config_schema?: NonNullable<Json>
+          config_schema?: Json
           created_at?: string
           enabled?: boolean
           owner_module: string
           source: string
         }
         Update: {
-          config_schema?: NonNullable<Json>
+          config_schema?: Json
           created_at?: string
           enabled?: boolean
           owner_module?: string
@@ -691,6 +720,42 @@ export type Database = {
           provider?: string
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      im_qr_tickets: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          fail_reason: string | null
+          im_userid: string | null
+          provider: string
+          status: string
+          ticket: string
+          user_id: string | null
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          fail_reason?: string | null
+          im_userid?: string | null
+          provider: string
+          status?: string
+          ticket: string
+          user_id?: string | null
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          fail_reason?: string | null
+          im_userid?: string | null
+          provider?: string
+          status?: string
+          ticket?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -875,7 +940,7 @@ export type Database = {
           event: string
           id: number
           next_retry_at: string
-          payload: NonNullable<Json>
+          payload: Json
           status: string
         }
         Insert: {
@@ -884,7 +949,7 @@ export type Database = {
           event: string
           id?: never
           next_retry_at?: string
-          payload?: NonNullable<Json>
+          payload?: Json
           status?: string
         }
         Update: {
@@ -893,7 +958,7 @@ export type Database = {
           event?: string
           id?: never
           next_retry_at?: string
-          payload?: NonNullable<Json>
+          payload?: Json
           status?: string
         }
         Relationships: []
@@ -1095,9 +1160,39 @@ export type Database = {
         }
         Relationships: []
       }
+      message_delivery_attempts: {
+        Row: {
+          attempt_no: number
+          attempted_at: string
+          delivery_id: number
+          error: string | null
+          id: number
+          response: string | null
+          status: string
+        }
+        Insert: {
+          attempt_no: number
+          attempted_at?: string
+          delivery_id: number
+          error?: string | null
+          id?: never
+          response?: string | null
+          status: string
+        }
+        Update: {
+          attempt_no?: number
+          attempted_at?: string
+          delivery_id?: number
+          error?: string | null
+          id?: never
+          response?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       message_event_registry: {
         Row: {
-          available_vars: NonNullable<Json>
+          available_vars: Json
           created_at: string
           description: string | null
           event_key: string
@@ -1105,7 +1200,7 @@ export type Database = {
           registered_by: string | null
         }
         Insert: {
-          available_vars?: NonNullable<Json>
+          available_vars?: Json
           created_at?: string
           description?: string | null
           event_key: string
@@ -1113,7 +1208,7 @@ export type Database = {
           registered_by?: string | null
         }
         Update: {
-          available_vars?: NonNullable<Json>
+          available_vars?: Json
           created_at?: string
           description?: string | null
           event_key?: string
@@ -1394,19 +1489,19 @@ export type Database = {
       }
       report_allowed_views: {
         Row: {
-          allowed_columns: NonNullable<Json>
+          allowed_columns: Json
           created_at: string
           registered_by: string | null
           view_name: string
         }
         Insert: {
-          allowed_columns: NonNullable<Json>
+          allowed_columns: Json
           created_at?: string
           registered_by?: string | null
           view_name: string
         }
         Update: {
-          allowed_columns?: NonNullable<Json>
+          allowed_columns?: Json
           created_at?: string
           registered_by?: string | null
           view_name?: string
@@ -1423,7 +1518,7 @@ export type Database = {
       }
       report_definitions: {
         Row: {
-          config: NonNullable<Json>
+          config: Json
           created_at: string
           created_by: string | null
           id: string
@@ -1435,7 +1530,7 @@ export type Database = {
           visibility: string
         }
         Insert: {
-          config?: NonNullable<Json>
+          config?: Json
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1447,7 +1542,7 @@ export type Database = {
           visibility?: string
         }
         Update: {
-          config?: NonNullable<Json>
+          config?: Json
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1715,7 +1810,7 @@ export type Database = {
           resolved_by: string | null
           row_key: string
           run_id: string
-          source_data: NonNullable<Json>
+          source_data: Json
           target_data: Json | null
         }
         Insert: {
@@ -1726,7 +1821,7 @@ export type Database = {
           resolved_by?: string | null
           row_key: string
           run_id: string
-          source_data: NonNullable<Json>
+          source_data: Json
           target_data?: Json | null
         }
         Update: {
@@ -1737,7 +1832,7 @@ export type Database = {
           resolved_by?: string | null
           row_key?: string
           run_id?: string
-          source_data?: NonNullable<Json>
+          source_data?: Json
           target_data?: Json | null
         }
         Relationships: [
@@ -1750,14 +1845,59 @@ export type Database = {
           },
         ]
       }
+      sync_run_stats_daily: {
+        Row: {
+          day: string
+          failed: number
+          rows_failed: number
+          rows_insert: number
+          rows_update: number
+          runs: number
+          success: number
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          day: string
+          failed?: number
+          rows_failed?: number
+          rows_insert?: number
+          rows_update?: number
+          runs?: number
+          success?: number
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          day?: string
+          failed?: number
+          rows_failed?: number
+          rows_insert?: number
+          rows_update?: number
+          runs?: number
+          success?: number
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_run_stats_daily_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "sync_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sync_runs: {
         Row: {
           error: string | null
           executed_by: string | null
           finished_at: string | null
           id: string
+          input_summary: Json | null
           started_at: string
-          stats: NonNullable<Json>
+          stats: Json
           status: string
           task_id: string
           trigger_type: string
@@ -1767,8 +1907,9 @@ export type Database = {
           executed_by?: string | null
           finished_at?: string | null
           id?: string
+          input_summary?: Json | null
           started_at?: string
-          stats?: NonNullable<Json>
+          stats?: Json
           status?: string
           task_id: string
           trigger_type?: string
@@ -1778,8 +1919,9 @@ export type Database = {
           executed_by?: string | null
           finished_at?: string | null
           id?: string
+          input_summary?: Json | null
           started_at?: string
-          stats?: NonNullable<Json>
+          stats?: Json
           status?: string
           task_id?: string
           trigger_type?: string
@@ -1852,7 +1994,7 @@ export type Database = {
       }
       sync_sources: {
         Row: {
-          config: NonNullable<Json>
+          config: Json
           created_at: string
           created_by: string | null
           credentials: string | null
@@ -1866,7 +2008,7 @@ export type Database = {
           verify_status: string
         }
         Insert: {
-          config?: NonNullable<Json>
+          config?: Json
           created_at?: string
           created_by?: string | null
           credentials?: string | null
@@ -1880,7 +2022,7 @@ export type Database = {
           verify_status?: string
         }
         Update: {
-          config?: NonNullable<Json>
+          config?: Json
           created_at?: string
           created_by?: string | null
           credentials?: string | null
@@ -1897,21 +2039,21 @@ export type Database = {
       }
       sync_task_versions: {
         Row: {
-          config: NonNullable<Json>
+          config: Json
           created_at: string
           created_by: string | null
           task_id: string
           version: number
         }
         Insert: {
-          config: NonNullable<Json>
+          config: Json
           created_at?: string
           created_by?: string | null
           task_id: string
           version: number
         }
         Update: {
-          config?: NonNullable<Json>
+          config?: Json
           created_at?: string
           created_by?: string | null
           task_id?: string
@@ -1934,7 +2076,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           direction: string
-          field_mapping: NonNullable<Json>
+          field_mapping: Json
           id: string
           name: string
           source_id: string
@@ -1949,7 +2091,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           direction?: string
-          field_mapping: NonNullable<Json>
+          field_mapping: Json
           id?: string
           name: string
           source_id: string
@@ -1964,7 +2106,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           direction?: string
-          field_mapping?: NonNullable<Json>
+          field_mapping?: Json
           id?: string
           name?: string
           source_id?: string
@@ -2135,7 +2277,7 @@ export type Database = {
       }
       system_services: {
         Row: {
-          config: NonNullable<Json>
+          config: Json
           credentials: string | null
           service: string
           updated_at: string
@@ -2144,7 +2286,7 @@ export type Database = {
           verify_status: string
         }
         Insert: {
-          config?: NonNullable<Json>
+          config?: Json
           credentials?: string | null
           service: string
           updated_at?: string
@@ -2153,7 +2295,7 @@ export type Database = {
           verify_status?: string
         }
         Update: {
-          config?: NonNullable<Json>
+          config?: Json
           credentials?: string | null
           service?: string
           updated_at?: string
@@ -2169,7 +2311,7 @@ export type Database = {
           changed_by: string | null
           id: number
           key: string
-          new_value: NonNullable<Json>
+          new_value: Json
           old_value: Json | null
         }
         Insert: {
@@ -2177,7 +2319,7 @@ export type Database = {
           changed_by?: string | null
           id?: never
           key: string
-          new_value: NonNullable<Json>
+          new_value: Json
           old_value?: Json | null
         }
         Update: {
@@ -2185,7 +2327,7 @@ export type Database = {
           changed_by?: string | null
           id?: never
           key?: string
-          new_value?: NonNullable<Json>
+          new_value?: Json
           old_value?: Json | null
         }
         Relationships: []
@@ -2194,28 +2336,31 @@ export type Database = {
         Row: {
           description: string
           group_name: string
+          is_sensitive: boolean
           key: string
           updated_at: string
           updated_by: string | null
-          value: NonNullable<Json>
+          value: Json
           value_type: string
         }
         Insert: {
           description: string
           group_name: string
+          is_sensitive?: boolean
           key: string
           updated_at?: string
           updated_by?: string | null
-          value: NonNullable<Json>
+          value: Json
           value_type: string
         }
         Update: {
           description?: string
           group_name?: string
+          is_sensitive?: boolean
           key?: string
           updated_at?: string
           updated_by?: string | null
-          value?: NonNullable<Json>
+          value?: Json
           value_type?: string
         }
         Relationships: []
@@ -2321,7 +2466,7 @@ export type Database = {
           headers_enc: string | null
           id: string
           name: string
-          retry_policy: NonNullable<Json>
+          retry_policy: Json
           secret_enc: string
           status: string
           updated_at: string
@@ -2335,7 +2480,7 @@ export type Database = {
           headers_enc?: string | null
           id?: string
           name: string
-          retry_policy?: NonNullable<Json>
+          retry_policy?: Json
           secret_enc: string
           status?: string
           updated_at?: string
@@ -2349,7 +2494,7 @@ export type Database = {
           headers_enc?: string | null
           id?: string
           name?: string
-          retry_policy?: NonNullable<Json>
+          retry_policy?: Json
           secret_enc?: string
           status?: string
           updated_at?: string
@@ -2537,7 +2682,7 @@ export type Database = {
           created_at: string
           current_seq: number
           flow_version_id: string
-          form_data: NonNullable<Json>
+          form_data: Json
           id: string
           initiator_id: string
           last_urged_at: string | null
@@ -2572,7 +2717,9 @@ export type Database = {
           created_at: string
           department: string | null
           department_id: string | null
+          dingtalk_userid: string | null
           email: string | null
+          feishu_userid: string | null
           full_name: string | null
           id: string
           position_id: string | null
@@ -2581,6 +2728,7 @@ export type Database = {
           status: Database["public"]["Enums"]["profile_status"]
           updated_at: string
           updated_by: string | null
+          wecom_userid: string | null
         }
         SetofOptions: {
           from: "*"
@@ -2589,31 +2737,9 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      api_departments: {
-        Args: { p_token: string }
-        Returns: {
-          created_at: string | null
-          created_by: string | null
-          depth: number | null
-          id: string | null
-          leader_id: string | null
-          name: string | null
-          parent_id: string | null
-          path: string | null
-          sort_order: number | null
-          status: string | null
-          updated_at: string | null
-          updated_by: string | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "departments_v"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
+      api_departments: { Args: { p_token: string }; Returns: Json }
       approval_usage_counts: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           flow_version_id: string
           running_count: number
@@ -2627,7 +2753,9 @@ export type Database = {
           created_at: string
           department: string | null
           department_id: string | null
+          dingtalk_userid: string | null
           email: string | null
+          feishu_userid: string | null
           full_name: string | null
           id: string
           position_id: string | null
@@ -2636,6 +2764,7 @@ export type Database = {
           status: Database["public"]["Enums"]["profile_status"]
           updated_at: string
           updated_by: string | null
+          wecom_userid: string | null
         }
         SetofOptions: {
           from: "*"
@@ -2731,7 +2860,7 @@ export type Database = {
         }
       }
       department_headcount: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           department_id: string
           headcount: number
@@ -2741,7 +2870,7 @@ export type Database = {
         }[]
       }
       department_tree: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string | null
           created_by: string | null
@@ -2796,7 +2925,7 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
-          nodes: NonNullable<Json>
+          nodes: Json
           status: string
           template_id: string
           updated_at: string
@@ -2819,7 +2948,7 @@ export type Database = {
           id: string
           module: string
           name: string
-          schema: NonNullable<Json>
+          schema: Json
           status: string
           updated_at: string
           updated_by: string | null
@@ -2953,7 +3082,7 @@ export type Database = {
         Returns: string
       }
       get_all_settings: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           description: string
           group_name: string
@@ -2965,7 +3094,7 @@ export type Database = {
         }[]
       }
       get_announcements: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           audience: string
           content: string
@@ -2995,13 +3124,10 @@ export type Database = {
           status: string
         }[]
       }
-      get_dashboard_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      get_dashboard_stats: { Args: never; Returns: Json }
       get_dict: { Args: { p_dict_key: string }; Returns: Json }
       get_dict_catalog: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           active_count: number
           description: string
@@ -3022,7 +3148,7 @@ export type Database = {
         }[]
       }
       get_push_status: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           channel: string
           enabled: boolean
@@ -3031,7 +3157,7 @@ export type Database = {
         }[]
       }
       get_report_subscriptions: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           channels: string[]
           created_at: string
@@ -3050,7 +3176,7 @@ export type Database = {
         }[]
       }
       get_role_user_counts: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           role_code: string
           role_id: string
@@ -3070,7 +3196,7 @@ export type Database = {
         }[]
       }
       get_service_status: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           config: Json
           credentials_masked: string
@@ -3095,7 +3221,7 @@ export type Database = {
         }[]
       }
       get_storage_usage: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           bucket_id: string
           object_count: number
@@ -3136,7 +3262,7 @@ export type Database = {
         }[]
       }
       get_sync_schedules: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           cron_expr: string
@@ -3156,7 +3282,7 @@ export type Database = {
         }[]
       }
       get_sync_sources: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           config: Json
           created_at: string
@@ -3173,7 +3299,7 @@ export type Database = {
         }[]
       }
       get_sync_task_run_summaries: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           finished_at: string
           run_id: string
@@ -3194,7 +3320,7 @@ export type Database = {
         }[]
       }
       get_sync_tasks: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           config_version: number
           conflict_policy: string
@@ -3216,7 +3342,7 @@ export type Database = {
         }[]
       }
       get_webhooks: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           created_by: string
@@ -3230,41 +3356,6 @@ export type Database = {
           updated_by: string
           url: string
         }[]
-      }
-      im_admin_set_userid: {
-        Args: { p_provider: string; p_user_id: string; p_userid: string }
-        Returns: Json
-      }
-      im_bind_self: { Args: { p_provider: string; p_userid: string }; Returns: Json }
-      im_clear_all_bindings: { Args: Record<PropertyKey, never>; Returns: Json }
-      im_exchange_qr_ticket: { Args: { p_ticket: string }; Returns: Json }
-      im_get_config: { Args: { p_provider: string }; Returns: Json }
-      im_get_enabled_provider: { Args: Record<PropertyKey, never>; Returns: string }
-      im_get_login_options: { Args: Record<PropertyKey, never>; Returns: Json }
-      im_password_login_allowed: { Args: { p_email: string }; Returns: boolean }
-      im_poll_qr_login: { Args: { p_ticket: string }; Returns: Json }
-      im_qr_complete_login: {
-        Args: {
-          p_code: string
-          p_provider: string
-          p_redirect_uri: string
-          p_ticket: string
-        }
-        Returns: Json
-      }
-      im_start_qr_login: {
-        Args: { p_provider: string; p_redirect_uri: string }
-        Returns: Json
-      }
-      im_switch_provider: { Args: { p_provider: string }; Returns: Json }
-      im_test_config: {
-        Args: { p_credentials?: Json; p_provider: string }
-        Returns: Json
-      }
-      im_unbind: { Args: { p_provider: string; p_user_id: string }; Returns: Json }
-      im_upsert_config: {
-        Args: { p_credentials: Json; p_enabled: boolean; p_provider: string }
-        Returns: Json
       }
       grant_menu: {
         Args: { p_menu_key: string; p_role_id: string }
@@ -3280,6 +3371,55 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      im_admin_set_userid: {
+        Args: { p_provider: string; p_user_id: string; p_userid: string }
+        Returns: Json
+      }
+      im_bind_self: {
+        Args: { p_provider: string; p_userid: string }
+        Returns: Json
+      }
+      im_clear_all_bindings: { Args: never; Returns: Json }
+      im_exchange_qr_ticket: { Args: { p_ticket: string }; Returns: Json }
+      im_get_config: { Args: { p_provider: string }; Returns: Json }
+      im_get_enabled_provider: { Args: never; Returns: string }
+      im_get_login_options: { Args: never; Returns: Json }
+      im_handle_callback: {
+        Args: { p_code: string; p_provider: string; p_redirect_uri: string }
+        Returns: Json
+      }
+      im_password_login_allowed: { Args: { p_email: string }; Returns: boolean }
+      im_poll_qr_login: { Args: { p_ticket: string }; Returns: Json }
+      im_qr_complete_login: {
+        Args: {
+          p_code: string
+          p_provider: string
+          p_redirect_uri: string
+          p_ticket: string
+        }
+        Returns: Json
+      }
+      im_start_auth: {
+        Args: { p_provider: string; p_redirect_uri: string; p_state: string }
+        Returns: string
+      }
+      im_start_qr_login: {
+        Args: { p_provider: string; p_redirect_uri: string }
+        Returns: Json
+      }
+      im_switch_provider: { Args: { p_provider: string }; Returns: Json }
+      im_test_config: {
+        Args: { p_credentials?: Json; p_provider: string }
+        Returns: Json
+      }
+      im_unbind: {
+        Args: { p_provider: string; p_user_id: string }
+        Returns: Json
+      }
+      im_upsert_config: {
+        Args: { p_credentials: Json; p_enabled: boolean; p_provider: string }
+        Returns: Json
       }
       instance_detail: {
         Args: { p_instance_id: string }
@@ -3326,7 +3466,18 @@ export type Database = {
           version: number
         }[]
       }
-      mark_all_read: { Args: Record<PropertyKey, never>; Returns: number }
+      list_users: {
+        Args: {
+          p_department_id?: string
+          p_limit?: number
+          p_offset?: number
+          p_role?: string
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      mark_all_read: { Args: never; Returns: number }
       mark_cc_read: { Args: { p_instance_id: string }; Returns: string }
       mark_notification_read: {
         Args: { p_id: number }
@@ -3448,7 +3599,7 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
-          nodes: NonNullable<Json>
+          nodes: Json
           status: string
           template_id: string
           updated_at: string
@@ -3471,7 +3622,7 @@ export type Database = {
           id: string
           module: string
           name: string
-          schema: NonNullable<Json>
+          schema: Json
           status: string
           updated_at: string
           updated_by: string | null
@@ -3485,7 +3636,7 @@ export type Database = {
         }
       }
       offline_announcement: { Args: { p_id: string }; Returns: Json }
-      org_stats: { Args: Record<PropertyKey, never>; Returns: Json }
+      org_stats: { Args: never; Returns: Json }
       position_headcount: { Args: { p_position_id: string }; Returns: number }
       preview_scope: { Args: { p_user_id: string }; Returns: Json }
       publish_announcement: {
@@ -3504,7 +3655,7 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
-          nodes: NonNullable<Json>
+          nodes: Json
           status: string
           template_id: string
           updated_at: string
@@ -3527,7 +3678,7 @@ export type Database = {
           id: string
           module: string
           name: string
-          schema: NonNullable<Json>
+          schema: Json
           status: string
           updated_at: string
           updated_by: string | null
@@ -3564,7 +3715,7 @@ export type Database = {
       publish_report_definition: {
         Args: { p_def_id: string }
         Returns: {
-          config: NonNullable<Json>
+          config: Json
           created_at: string
           created_by: string | null
           id: string
@@ -3604,8 +3755,21 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      record_api_failure: {
+        Args: { p_method: string; p_reason: string; p_token: string }
+        Returns: boolean
+      }
       record_denied_attempt: {
         Args: { p_module: string; p_reason: string; p_route: string }
+        Returns: number
+      }
+      record_im_login_attempt: {
+        Args: {
+          p_fail_reason?: string
+          p_im_userid: string
+          p_provider: string
+          p_success: boolean
+        }
         Returns: number
       }
       record_login_attempt: {
@@ -3615,7 +3779,7 @@ export type Database = {
       register_allowed_view: {
         Args: { p_allowed_columns: Json; p_view_name: string }
         Returns: {
-          allowed_columns: NonNullable<Json>
+          allowed_columns: Json
           created_at: string
           registered_by: string | null
           view_name: string
@@ -3727,6 +3891,7 @@ export type Database = {
         }
       }
       rollback_sync_task: { Args: { p_task_id: string }; Returns: Json }
+      rotate_encryption_key: { Args: never; Returns: Json }
       run_report: { Args: { p_def_id: string }; Returns: Json }
       run_report_subscription_now: {
         Args: { p_subscription_id: string }
@@ -3745,7 +3910,7 @@ export type Database = {
           p_source_view: string
         }
         Returns: {
-          config: NonNullable<Json>
+          config: Json
           created_at: string
           created_by: string | null
           id: string
@@ -3792,8 +3957,8 @@ export type Database = {
       signup_trend: {
         Args: { p_days?: number }
         Returns: {
-          day: string
           count: number
+          day: string
         }[]
       }
       simulate_flow: {
@@ -3802,6 +3967,7 @@ export type Database = {
       }
       submit_instance: {
         Args: {
+          p_cc_user_ids?: string[]
           p_form_data: Json
           p_module: string
           p_ref_id: string
@@ -3813,7 +3979,7 @@ export type Database = {
       test_mail_config: { Args: { p_to: string }; Returns: Json }
       test_push_config: { Args: { p_channel: string }; Returns: Json }
       test_sms_config: { Args: { p_phone: string }; Returns: Json }
-      test_storage_config: { Args: Record<PropertyKey, never>; Returns: Json }
+      test_storage_config: { Args: never; Returns: Json }
       test_sync_source: { Args: { p_id: string }; Returns: Json }
       test_webhook: { Args: { p_webhook_id: string }; Returns: Json }
       toggle_notification_star: {
@@ -3842,7 +4008,7 @@ export type Database = {
       unpublish_report_definition: {
         Args: { p_def_id: string }
         Returns: {
-          config: NonNullable<Json>
+          config: Json
           created_at: string
           created_by: string | null
           id: string
@@ -3860,7 +4026,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      unread_count: { Args: Record<PropertyKey, never>; Returns: number }
+      unread_count: { Args: never; Returns: number }
       update_webhook: {
         Args: {
           p_events: string[]
@@ -3954,7 +4120,7 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
-          nodes: NonNullable<Json>
+          nodes: Json
           status: string
           template_id: string
           updated_at: string
@@ -3983,7 +4149,7 @@ export type Database = {
           id: string
           module: string
           name: string
-          schema: NonNullable<Json>
+          schema: Json
           status: string
           updated_at: string
           updated_by: string | null
@@ -4124,13 +4290,19 @@ export type Database = {
         Returns: Json
       }
       upsert_service_config: {
-        Args: { p_config: Json; p_credentials: string; p_service: string }
+        Args: {
+          p_clear_credentials?: boolean
+          p_config: Json
+          p_credentials: string
+          p_service: string
+        }
         Returns: Json
       }
       upsert_setting: {
         Args: {
           p_description: string
           p_group_name: string
+          p_is_sensitive?: boolean
           p_key: string
           p_value: Json
           p_value_type: string
@@ -4160,6 +4332,7 @@ export type Database = {
       }
       upsert_sync_source: {
         Args: {
+          p_clear_credentials?: boolean
           p_config: Json
           p_credentials: string
           p_id: string
@@ -4188,7 +4361,7 @@ export type Database = {
           created_at: string
           current_seq: number
           flow_version_id: string
-          form_data: NonNullable<Json>
+          form_data: Json
           id: string
           initiator_id: string
           last_urged_at: string | null
@@ -4212,7 +4385,7 @@ export type Database = {
         Returns: undefined
       }
       visible_menus: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           fallback: boolean
           key: string
@@ -4230,7 +4403,7 @@ export type Database = {
           created_at: string
           current_seq: number
           flow_version_id: string
-          form_data: NonNullable<Json>
+          form_data: Json
           id: string
           initiator_id: string
           last_urged_at: string | null
@@ -4275,12 +4448,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4304,11 +4477,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4329,11 +4502,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4354,11 +4527,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4371,11 +4544,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
