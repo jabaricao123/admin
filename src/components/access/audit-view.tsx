@@ -545,7 +545,7 @@ export function AccessAuditView() {
   };
 
   return (
-    <div className="flex flex-col gap-0.5 p-0 md:p-6">
+    <div className="flex flex-col gap-2 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle className="flex items-center gap-1.5">

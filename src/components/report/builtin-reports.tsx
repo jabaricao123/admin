@@ -66,7 +66,7 @@ export function BuiltinReports({ isAdmin }: { isAdmin: boolean }) {
 
   if (current) {
     return (
-      <div className="flex flex-col gap-0.5 p-4 md:p-6">
+      <div className="flex flex-col gap-2 p-4 md:p-6">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
@@ -93,7 +93,7 @@ export function BuiltinReports({ isAdmin }: { isAdmin: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-0.5 p-4 md:p-6">
+    <div className="flex flex-col gap-2 p-4 md:p-6">
       <div>
         <InfoHint className="size-5">
           开箱即用的统计报表，只读消费各模块公开视图；数字随当前账号的数据范围过滤。

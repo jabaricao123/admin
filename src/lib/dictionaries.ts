@@ -621,6 +621,25 @@ export function asSyncRunStatus(value: string): SyncRunStatus {
     : "running";
 }
 
+/** 同步统计数值配色（执行详情统计卡 / 试跑结果 / 列表失败计数共用） */
+export const SYNC_STAT_VALUE_CLASSES = {
+  insert: "text-emerald-600 dark:text-emerald-400",
+  update: "text-blue-600 dark:text-blue-400",
+  conflict: "text-amber-600 dark:text-amber-400",
+  skip: "text-muted-foreground",
+  failed: "text-red-600 dark:text-red-400",
+} as const;
+
+/** 同步警示文字（amber）：源未就绪等需用户处理的提示 */
+export const SYNC_WARNING_TEXT_CLASS = "text-amber-600 dark:text-amber-400";
+
+/** 同步向导 · 已完成步骤图标配色（绿） */
+export const SYNC_STEP_DONE_CLASS = "border-emerald-500 text-emerald-600";
+
+/** 执行错误明细框配色（红，与 failed 状态同色系） */
+export const SYNC_ERROR_CALLOUT_CLASS =
+  "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300";
+
 /** 冲突裁决状态（sync_conflicts.resolution） */
 export type SyncConflictResolution = "pending" | "adopted" | "ignored";
 

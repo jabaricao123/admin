@@ -64,11 +64,14 @@ import {
   SYNC_RUN_STATUS_BADGE_CLASSES,
   SYNC_RUN_STATUS_LABELS,
   SYNC_SOURCE_TYPE_LABELS,
+  SYNC_STAT_VALUE_CLASSES,
   SYNC_STATUS_BADGE_CLASSES,
   SYNC_STATUS_LABELS,
+  SYNC_STEP_DONE_CLASS,
   SYNC_TARGET_FIELD_OPTIONS,
   SYNC_TARGET_TABLE_LABELS,
   SYNC_TARGET_TABLE_OPTIONS,
+  SYNC_WARNING_TEXT_CLASS,
   translateSyncErrorMessage,
   type SyncConflictPolicy,
   type SyncDirection,
@@ -555,13 +558,19 @@ export function SyncTasksTable() {
       if (prev.targetTable === target) {
         return prev;
       }
+      const allowed = new Set(
+        SYNC_TARGET_FIELD_OPTIONS[target].map((option) => option.value),
+      );
       const fallback = SYNC_TARGET_FIELD_OPTIONS[target][0]?.value ?? "name";
       return {
         ...prev,
         targetTable: target,
+        // 白名单内仍存在的目标字段保留映射，否则重置为该表首个字段
         mappings: prev.mappings.map((mapping) => ({
           sourceField: mapping.sourceField,
-          targetField: fallback,
+          targetField: allowed.has(mapping.targetField)
+            ? mapping.targetField
+            : fallback,
         })),
       };
     });
@@ -600,7 +609,7 @@ export function SyncTasksTable() {
   };
 
   return (
-    <div className="flex flex-col gap-0.5 p-0 md:p-6">
+    <div className="flex flex-col gap-2 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex items-center justify-end gap-2">
@@ -706,7 +715,16 @@ export function SyncTasksTable() {
                       <TableRow
                         key={row.id}
                         className="cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`编辑同步任务 ${row.name}`}
                         onClick={() => openEdit(row)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openEdit(row);
+                          }
+                        }}
                       >
                         <TableCell className="text-center font-medium">
                           {row.name}
@@ -809,7 +827,7 @@ export function SyncTasksTable() {
                         active
                           ? "border-primary bg-primary text-primary-foreground"
                           : done
-                            ? "border-emerald-500 text-emerald-600"
+                            ? SYNC_STEP_DONE_CLASS
                             : "border-border",
                       )}
                     >
@@ -831,6 +849,7 @@ export function SyncTasksTable() {
                 <Field>
                   <FieldLabel htmlFor="sync-task-name">任务名称</FieldLabel>
                   <Input
+                    className="h-11 lg:h-8"
                     id="sync-task-name"
                     value={form.name}
                     onChange={(event) =>
@@ -849,11 +868,27 @@ export function SyncTasksTable() {
                     <>
                       <Select
                         value={form.sourceId}
-                        onValueChange={(value) =>
-                          setForm((prev) => ({ ...prev, sourceId: value }))
-                        }
+                        onValueChange={(value) => {
+                          const next =
+                            sources.find((source) => source.id === value) ??
+                            null;
+                          const ready = next
+                            ? asServiceVerifyStatus(next.verify_status) ===
+                                "verified" &&
+                              asSyncStatus(next.status) === "active"
+                            : false;
+                          setForm((prev) => ({
+                            ...prev,
+                            sourceId: value,
+                            // 未就绪源不允许启用：选中即自动落停用草稿
+                            status:
+                              !ready && prev.status === "active"
+                                ? "disabled"
+                                : prev.status,
+                          }));
+                        }}
                       >
-                        <SelectTrigger id="sync-task-source" className="w-full">
+                        <SelectTrigger id="sync-task-source" className="w-full min-h-11 lg:min-h-8">
                           <SelectValue placeholder="选择数据源" />
                         </SelectTrigger>
                         <SelectContent>
@@ -913,7 +948,7 @@ export function SyncTasksTable() {
                             }
                           </Badge>
                           {!sourceReady ? (
-                            <span className="text-amber-600 dark:text-amber-400">
+                            <span className={SYNC_WARNING_TEXT_CLASS}>
                               该数据源未验证通过（或已停用）：任务只能保存为「停用」草稿
                             </span>
                           ) : null}
@@ -935,7 +970,7 @@ export function SyncTasksTable() {
                       changeTargetTable(value as SyncTargetTable)
                     }
                   >
-                    <SelectTrigger id="sync-task-target" className="w-full">
+                    <SelectTrigger id="sync-task-target" className="w-full min-h-11 lg:min-h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -962,7 +997,7 @@ export function SyncTasksTable() {
                       }))
                     }
                   >
-                    <SelectTrigger id="sync-task-direction" className="w-full">
+                    <SelectTrigger id="sync-task-direction" className="w-full min-h-11 lg:min-h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1034,6 +1069,7 @@ export function SyncTasksTable() {
                         placeholder="源字段名"
                         aria-label={`第 ${index + 1} 行源字段`}
                         autoComplete="off"
+                        className="h-11 lg:h-8"
                       />
                       <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground" />
                       <Select
@@ -1050,7 +1086,7 @@ export function SyncTasksTable() {
                         }
                       >
                         <SelectTrigger
-                          className="w-44 shrink-0"
+                          className="w-44 shrink-0 min-h-11 lg:min-h-8"
                           aria-label={`第 ${index + 1} 行目标字段`}
                         >
                           <SelectValue placeholder="目标字段" />
@@ -1105,7 +1141,7 @@ export function SyncTasksTable() {
                       }))
                     }
                   >
-                    <SelectTrigger id="sync-task-policy" className="w-full">
+                    <SelectTrigger id="sync-task-policy" className="w-full min-h-11 lg:min-h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1132,18 +1168,20 @@ export function SyncTasksTable() {
                       }))
                     }
                   >
-                    <SelectTrigger id="sync-task-status" className="w-full">
+                    <SelectTrigger id="sync-task-status" className="w-full min-h-11 lg:min-h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">启用</SelectItem>
+                      <SelectItem value="active" disabled={!sourceReady}>
+                        启用
+                      </SelectItem>
                       <SelectItem value="disabled">停用（草稿）</SelectItem>
                     </SelectContent>
                   </Select>
                   <FieldDescription>
                     {sourceReady
                       ? "启用任务要求数据源已启用且验证通过"
-                      : "当前数据源未验证通过（或已停用）：启用保存会被服务端拒绝，请先选择停用或去验证数据源"}
+                      : "当前数据源未验证通过（或已停用）：「启用」选项已禁用，保存时请选择「停用（草稿）」，并先去验证数据源"}
                   </FieldDescription>
                 </Field>
 
@@ -1170,7 +1208,7 @@ export function SyncTasksTable() {
                       accept=".json,.csv,.txt"
                       onChange={(event) => void handleSampleFile(event)}
                       aria-label="上传样本文件"
-                      className="sm:max-w-xs"
+                      className="h-11 sm:max-w-xs lg:h-8"
                     />
                     <Button
                       type="button"
@@ -1198,22 +1236,22 @@ export function SyncTasksTable() {
                           {
                             label: "新增",
                             value: dryResult.insert ?? 0,
-                            className: "text-emerald-600 dark:text-emerald-400",
+                            className: SYNC_STAT_VALUE_CLASSES.insert,
                           },
                           {
                             label: "更新",
                             value: dryResult.update ?? 0,
-                            className: "text-blue-600 dark:text-blue-400",
+                            className: SYNC_STAT_VALUE_CLASSES.update,
                           },
                           {
                             label: "冲突",
                             value: dryResult.conflict ?? 0,
-                            className: "text-amber-600 dark:text-amber-400",
+                            className: SYNC_STAT_VALUE_CLASSES.conflict,
                           },
                           {
                             label: "跳过",
                             value: dryResult.skip ?? 0,
-                            className: "text-muted-foreground",
+                            className: SYNC_STAT_VALUE_CLASSES.skip,
                           },
                         ].map((item) => (
                           <div
@@ -1263,7 +1301,7 @@ export function SyncTasksTable() {
             {editing && editing.config_version > 1 ? (
               <Button
                 variant="outline"
-                className="mr-auto"
+                className="mr-auto h-11 lg:h-8"
                 onClick={() => void handleRollback()}
                 disabled={rollingBack || saving}
               >
@@ -1281,7 +1319,7 @@ export function SyncTasksTable() {
             <Button
               variant="outline"
               onClick={step > 1 ? previousStep : closeSheet}
-              className="h-8"
+              className="h-11 lg:h-8"
             >
               {step > 1 ? (
                 <>
@@ -1293,7 +1331,11 @@ export function SyncTasksTable() {
               )}
             </Button>
             {step < 4 ? (
-              <Button onClick={nextStep} disabled={saving}>
+              <Button
+                onClick={nextStep}
+                disabled={saving}
+                className="h-11 lg:h-8"
+              >
                 下一步
                 <ArrowRightIcon data-icon="inline-end" />
               </Button>
@@ -1301,7 +1343,7 @@ export function SyncTasksTable() {
               <Button
                 onClick={() => void handleSave()}
                 disabled={saving}
-                className="h-8"
+                className="h-11 lg:h-8"
               >
                 {saving ? (
                   <Loader2Icon

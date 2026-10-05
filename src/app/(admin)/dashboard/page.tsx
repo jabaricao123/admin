@@ -11,6 +11,9 @@ import { UserGrowthChart } from "@/components/user-growth-chart";
 import type { Json } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/server";
 
+// @next-codemod-ignore Cache Components：管理端路由均为服务端动态鉴权，允许阻塞式导航。
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "工作台",
 };
@@ -133,7 +136,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-0.5 py-4">
+    <div className="flex flex-col gap-2 py-4">
       {errors.length > 0 ? (
         <div className="px-4 lg:px-6">
           <p className="text-sm text-destructive">

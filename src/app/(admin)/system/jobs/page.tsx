@@ -5,6 +5,9 @@ import { CronJobsMonitor } from "@/components/system/cron-jobs-monitor";
 import { ForbiddenCard } from "@/components/forbidden-card";
 import { createClient } from "@/lib/supabase/server";
 
+// @next-codemod-ignore Cache Components：管理端路由均为服务端动态鉴权，允许阻塞式导航。
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "定时任务",
 };

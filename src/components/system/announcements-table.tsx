@@ -306,7 +306,7 @@ export function AnnouncementsTable() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-0.5 p-4 lg:p-6">
+      <div className="flex flex-col gap-2 p-4 lg:p-6">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-72 w-full" />
       </div>
@@ -331,7 +331,7 @@ export function AnnouncementsTable() {
   }
 
   return (
-    <div className="flex flex-col gap-0.5 p-4 lg:p-6">
+    <div className="flex flex-col gap-2 p-4 lg:p-6">
       <Card>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">

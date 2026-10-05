@@ -141,7 +141,7 @@ export function AuthInfoPanel() {
     : [];
 
   return (
-    <div className="flex flex-col gap-0.5 p-0 md:p-6">
+    <div className="flex flex-col gap-2 p-0 md:p-6">
       <InfoHint className="size-5">
         上半部分「IM 扫码登录 / 密码登录 / 管理员联系方式」在本页直接配置并即时生效
         （所有敏感操作写入审计）。下半部分为 Supabase Auth 控制台项的只读参考，

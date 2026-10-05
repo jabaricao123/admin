@@ -1,75 +1,23 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-
+import { PageTabs } from "@/components/page-tabs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
-const PAGE_TITLES: Record<string, string> = {
-  "/": "工作台",
-  "/dashboard": "工作台",
-  "/dashboard/todos": "我的待办",
-  "/dashboard/notifications": "我的通知",
-  "/org/departments": "部门管理",
-  "/org/positions": "岗位管理",
-  "/access/roles": "角色管理",
-  "/access/permissions": "菜单权限",
-  "/access/data-scopes": "数据权限",
-  "/access/audit": "权限审计",
-  "/message/inbox": "站内信",
-  "/message/templates": "通知模板",
-  "/message/history": "发送记录",
-  "/org/users": "用户管理",
-  "/org/chart": "组织架构",
-  "/system/services/mail": "邮件服务",
-  "/system/services/storage": "对象存储",
-  "/system/services/push": "消息推送",
-  "/system/services/sms": "短信服务",
-  "/system/services/auth": "身份认证",
-  "/system/settings": "参数配置",
-  "/system/dictionaries": "字典管理",
-  "/system/jobs": "定时任务",
-  "/system/announcements": "公告管理",
-  "/system/about": "关于系统",
-  "/approval/todo": "我的待办",
-  "/approval/mine": "我发起的",
-  "/approval/cc": "抄送我的",
-  "/approval/templates": "审批模板",
-  "/approval/flows": "审批流程",
-  "/audit/operations": "操作日志",
-  "/audit/changes": "数据变更",
-  "/audit/logins": "登录日志",
-  "/audit/compliance": "合规报告",
-  "/sync/sources": "数据源配置",
-  "/sync/tasks": "同步任务",
-  "/sync/runs": "执行记录",
-  "/sync/schedules": "调度管理",
-  "/report/builtin": "预置报表",
-  "/report/custom": "自定义报表",
-  "/report/subscriptions": "报表订阅",
-  "/report/exports": "数据导出",
-  "/integration/api-keys": "API 密钥",
-  "/integration/webhooks": "Webhook",
-  "/integration/logs": "调用日志",
-  "/integration/docs": "接口文档",
-  "/settings/profile": "个人中心",
-};
-
+// 页头 = 侧栏开关 + 多标签页（已打开页面）+ 主题切换。
+// 页面标题来自标签栏（PAGE_TITLES，见 src/lib/page-titles.ts），不再单显 h1。
 export function SiteHeader() {
-  const pathname = usePathname();
-  const title = PAGE_TITLES[pathname] ?? "企业管理系统";
-
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
+      <div className="flex w-full min-w-0 items-center gap-1 px-4 lg:gap-2 lg:px-6">
+        <SidebarTrigger className="-ml-1 shrink-0" />
         <Separator
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
         />
-        <h1 className="text-base font-medium">{title}</h1>
-        <div className="ml-auto flex items-center gap-2">
+        <PageTabs />
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <ThemeToggle />
         </div>
       </div>

@@ -337,7 +337,7 @@ export function StorageConfigForm() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-0.5 p-0 md:p-6">
+      <div className="flex flex-col gap-2 p-0 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
           <CardContent className="flex flex-col gap-4 p-4 md:p-6">
             <div className="grid gap-4 lg:grid-cols-2">
@@ -357,7 +357,7 @@ export function StorageConfigForm() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-0.5 p-0 md:p-6">
+      <div className="flex flex-col gap-2 p-0 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
           <CardContent className="flex flex-col items-center gap-2 py-16 text-sm">
             <p className="text-destructive">
@@ -373,7 +373,7 @@ export function StorageConfigForm() {
   }
 
   return (
-    <div className="flex flex-col gap-0.5 p-0 md:p-6">
+    <div className="flex flex-col gap-2 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="p-4 md:p-6">
           <form

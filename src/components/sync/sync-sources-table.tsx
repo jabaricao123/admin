@@ -416,23 +416,36 @@ export function SyncSourcesTable() {
     }
 
     setUploading(true);
-    const supabase = createClient();
-    const extension = file.name.includes(".")
-      ? file.name.slice(file.name.lastIndexOf("."))
-      : "";
-    const path = `templates/${crypto.randomUUID()}${extension}`;
-    const { error: uploadError } = await supabase.storage
-      .from("sync-templates")
-      .upload(path, file, { upsert: false });
-    setUploading(false);
+    try {
+      const supabase = createClient();
+      const extension = file.name.includes(".")
+        ? file.name.slice(file.name.lastIndexOf("."))
+        : "";
+      // HTTP（非安全上下文）下 crypto.randomUUID 不存在：退回时间戳 + 随机串，文件名唯一性足够
+      const unique =
+        crypto.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const path = `templates/${unique}${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("sync-templates")
+        .upload(path, file, { upsert: false });
 
-    if (uploadError) {
-      toast.error(`模板上传失败：${uploadError.message}`);
-      return;
+      if (uploadError) {
+        toast.error(`模板上传失败：${uploadError.message}`);
+        return;
+      }
+
+      setForm((prev) => ({ ...prev, excelTemplatePath: path }));
+      toast.success("模板已上传，保存后生效");
+    } catch (uploadError) {
+      toast.error(
+        `模板上传失败：${
+          uploadError instanceof Error ? uploadError.message : String(uploadError)
+        }`,
+      );
+    } finally {
+      setUploading(false);
     }
-
-    setForm((prev) => ({ ...prev, excelTemplatePath: path }));
-    toast.success("模板已上传，保存后生效");
   };
 
   const typeIcon = (type: SyncSourceType) => {
@@ -446,7 +459,7 @@ export function SyncSourcesTable() {
   };
 
   return (
-    <div className="flex flex-col gap-0.5 p-0 md:p-6">
+    <div className="flex flex-col gap-2 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex items-center justify-end gap-2">
@@ -554,7 +567,16 @@ export function SyncSourcesTable() {
                       <TableRow
                         key={row.id}
                         className="cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`编辑数据源 ${row.name}`}
                         onClick={() => openEdit(row)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openEdit(row);
+                          }
+                        }}
                       >
                         <TableCell className="text-center font-medium">
                           <span className="inline-flex items-center gap-2">
@@ -614,7 +636,7 @@ export function SyncSourcesTable() {
       >
         <SheetContent
           side="right"
-          className="w-full overflow-hidden sm:max-w-lg"
+          className="w-full overflow-hidden sm:max-w-[480px]"
         >
           <SheetHeader>
             <SheetTitle>{editing ? "编辑数据源" : "新增数据源"}</SheetTitle>
@@ -629,6 +651,7 @@ export function SyncSourcesTable() {
             <Field>
               <FieldLabel htmlFor="sync-source-name">名称</FieldLabel>
               <Input
+                className="h-11 lg:h-8"
                 id="sync-source-name"
                 value={form.name}
                 onChange={(event) =>
@@ -649,7 +672,10 @@ export function SyncSourcesTable() {
                   }))
                 }
               >
-                <SelectTrigger id="sync-source-type" className="w-full">
+                <SelectTrigger
+                  id="sync-source-type"
+                  className="w-full min-h-11 lg:min-h-8"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -669,6 +695,7 @@ export function SyncSourcesTable() {
                 <Field>
                   <FieldLabel htmlFor="sync-api-url">Base URL</FieldLabel>
                   <Input
+                    className="h-11 lg:h-8"
                     id="sync-api-url"
                     value={form.apiBaseUrl}
                     onChange={(event) =>
@@ -689,7 +716,10 @@ export function SyncSourcesTable() {
                       setForm((prev) => ({ ...prev, apiAuthType: value }))
                     }
                   >
-                    <SelectTrigger id="sync-api-auth" className="w-full">
+                    <SelectTrigger
+                      id="sync-api-auth"
+                      className="w-full min-h-11 lg:min-h-8"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -706,6 +736,7 @@ export function SyncSourcesTable() {
                     Token / 密钥
                   </FieldLabel>
                   <Input
+                    className="h-11 lg:h-8"
                     id="sync-api-token"
                     type="password"
                     value={form.apiToken}
@@ -733,6 +764,7 @@ export function SyncSourcesTable() {
                     超时（秒，可选）
                   </FieldLabel>
                   <Input
+                    className="h-11 lg:h-8"
                     id="sync-api-timeout"
                     inputMode="numeric"
                     value={form.apiTimeout}
@@ -759,7 +791,10 @@ export function SyncSourcesTable() {
                       setForm((prev) => ({ ...prev, dbEngine: value }))
                     }
                   >
-                    <SelectTrigger id="sync-db-engine" className="w-full">
+                    <SelectTrigger
+                      id="sync-db-engine"
+                      className="w-full min-h-11 lg:min-h-8"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -774,6 +809,7 @@ export function SyncSourcesTable() {
                 <Field>
                   <FieldLabel htmlFor="sync-db-host">主机</FieldLabel>
                   <Input
+                    className="h-11 lg:h-8"
                     id="sync-db-host"
                     value={form.dbHost}
                     onChange={(event) =>
@@ -787,6 +823,7 @@ export function SyncSourcesTable() {
                   <Field>
                     <FieldLabel htmlFor="sync-db-port">端口</FieldLabel>
                     <Input
+                      className="h-11 lg:h-8"
                       id="sync-db-port"
                       inputMode="numeric"
                       value={form.dbPort}
@@ -803,6 +840,7 @@ export function SyncSourcesTable() {
                   <Field>
                     <FieldLabel htmlFor="sync-db-database">库名</FieldLabel>
                     <Input
+                      className="h-11 lg:h-8"
                       id="sync-db-database"
                       value={form.dbDatabase}
                       onChange={(event) =>
@@ -819,6 +857,7 @@ export function SyncSourcesTable() {
                 <Field>
                   <FieldLabel htmlFor="sync-db-username">账号</FieldLabel>
                   <Input
+                    className="h-11 lg:h-8"
                     id="sync-db-username"
                     value={form.dbUsername}
                     onChange={(event) =>
@@ -834,6 +873,7 @@ export function SyncSourcesTable() {
                 <Field>
                   <FieldLabel htmlFor="sync-db-password">密码</FieldLabel>
                   <Input
+                    className="h-11 lg:h-8"
                     id="sync-db-password"
                     type="password"
                     value={form.dbPassword}
@@ -859,6 +899,7 @@ export function SyncSourcesTable() {
                 <FieldLabel htmlFor="sync-excel-upload">Excel 模板</FieldLabel>
                 <div className="flex flex-col gap-2">
                   <Input
+                    className="h-11 lg:h-8"
                     id="sync-excel-upload"
                     type="file"
                     accept=".xlsx,.xls,.csv"
@@ -961,14 +1002,14 @@ export function SyncSourcesTable() {
             <Button
               variant="outline"
               onClick={closeSheet}
-              className="h-8"
+              className="h-11 lg:h-8"
             >
               取消
             </Button>
             <Button
               onClick={() => void handleSave()}
               disabled={saving || uploading}
-              className="h-8"
+              className="h-11 lg:h-8"
             >
               {saving ? (
                 <Loader2Icon

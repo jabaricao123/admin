@@ -23,6 +23,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import packageJson from "../../../../../package.json";
 
+// @next-codemod-ignore Cache Components：管理端路由均为服务端动态鉴权，允许阻塞式导航。
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "关于系统",
 };
@@ -133,7 +136,7 @@ export default function SystemAboutPage() {
   const shortSha = commitSha ? commitSha.slice(0, 7) : null;
 
   return (
-    <div className="flex flex-col gap-0.5 p-0 md:p-6">
+    <div className="flex flex-col gap-2 p-0 md:p-6">
       <div className="grid gap-4 lg:grid-cols-2">
         {/* 版本信息 */}
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">

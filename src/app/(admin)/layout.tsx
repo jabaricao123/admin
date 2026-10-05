@@ -8,6 +8,9 @@ import { DictionariesLoader } from "@/components/system/dictionaries-loader";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/supabase/server";
 
+// @next-codemod-ignore Cache Components：管理端路由均为服务端动态鉴权，允许阻塞式导航。
+export const instant = false;
+
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 
 export default async function AdminLayout({

@@ -45,14 +45,14 @@ select has_trigger('public', 'sync_sources', 'sync_sources_set_updated_at', 'upd
 -- 2. 函数存在性 + SECURITY DEFINER + search_path + GRANT 面（22）
 -- ===========================================================================
 select has_function(
-  'app', 'upsert_sync_source', array['uuid', 'text', 'text', 'jsonb', 'text', 'text'],
-  'app.upsert_sync_source(uuid,text,text,jsonb,text,text) 存在'
+  'app', 'upsert_sync_source', array['uuid', 'text', 'text', 'jsonb', 'text', 'text', 'boolean'],
+  'app.upsert_sync_source(uuid,text,text,jsonb,text,text,boolean) 存在'
 );
 select has_function('app', 'test_sync_source', array['uuid'], 'app.test_sync_source(uuid) 存在');
 select has_function('app', 'disable_sync_source', array['uuid'], 'app.disable_sync_source(uuid) 存在');
 select has_function('app', 'get_sync_sources', array[]::text[], 'app.get_sync_sources() 存在');
 select has_function(
-  'public', 'upsert_sync_source', array['uuid', 'text', 'text', 'jsonb', 'text', 'text'],
+  'public', 'upsert_sync_source', array['uuid', 'text', 'text', 'jsonb', 'text', 'text', 'boolean'],
   'public.upsert_sync_source 薄包装存在'
 );
 select has_function('public', 'test_sync_source', array['uuid'], 'public.test_sync_source 薄包装存在');
@@ -80,7 +80,7 @@ select ok(
 );
 
 select ok(
-  has_function_privilege('authenticated', 'app.upsert_sync_source(uuid,text,text,jsonb,text,text)', 'EXECUTE'),
+  has_function_privilege('authenticated', 'app.upsert_sync_source(uuid,text,text,jsonb,text,text,boolean)', 'EXECUTE'),
   'authenticated 可执行 app.upsert_sync_source'
 );
 select ok(

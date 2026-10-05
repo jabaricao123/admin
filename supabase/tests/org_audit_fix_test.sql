@@ -6,6 +6,7 @@
 --   * 岗位 4 RPC（upsert create/update、disable、enable、delete）同上（delete after=null）；
 --   * admin_update_profile：update 审计 + diff 仅收口实际变更字段 + actor 记录；
 --   * sync 防环：研发中心 parent→前端组（其子孙）→ 该行 rejected 冲突、未成环、stats.notes 标注；
+--     全 rejected 且无失败行时 run 收敛 success（rejected 属策略性拒绝、非错误）；
 --   * sync parent_name 收紧：同名 active 取 sort_order 最小者并标歧义；仅 disabled 不兜底；
 --   * departments 同级名称唯一索引存在性 / 冲突拒绝 / 软删除豁免 / RPC 中文提示。
 -- 说明：夹具只在本事务内生效，finish 后 rollback，不污染其他测试文件。
@@ -247,8 +248,8 @@ select is(
 );
 select is(
   (select status from public.sync_runs where id = :'run_guard'),
-  'partial',
-  '防环拒绝执行 status=partial（无待裁决 pending）'
+  'success',
+  '全 rejected 无失败行：status=success（rejected 属策略性拒绝、非错误）'
 );
 select is(
   (select resolution from public.sync_conflicts where run_id = :'run_guard'),

@@ -7,13 +7,21 @@ import {
   CircleAlertIcon,
   ListChecksIcon,
   Loader2Icon,
+  RotateCcwIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -33,8 +41,10 @@ import {
   asSyncTriggerType,
   SYNC_CONFLICT_RESOLUTION_BADGE_CLASSES,
   SYNC_CONFLICT_RESOLUTION_LABELS,
+  SYNC_ERROR_CALLOUT_CLASS,
   SYNC_RUN_STATUS_BADGE_CLASSES,
   SYNC_RUN_STATUS_LABELS,
+  SYNC_STAT_VALUE_CLASSES,
   SYNC_TARGET_TABLE_LABELS,
   asSyncTargetTable,
   SYNC_TRIGGER_TYPE_LABELS,
@@ -131,11 +141,11 @@ const summarizeJson = (value: Json | null | undefined): string[] => {
 };
 
 const STAT_ITEMS: { key: keyof RunStats; label: string; className: string }[] = [
-  { key: "insert", label: "新增", className: "text-emerald-600 dark:text-emerald-400" },
-  { key: "update", label: "更新", className: "text-blue-600 dark:text-blue-400" },
-  { key: "conflict", label: "冲突", className: "text-amber-600 dark:text-amber-400" },
-  { key: "skip", label: "跳过", className: "text-muted-foreground" },
-  { key: "failed", label: "失败", className: "text-red-600 dark:text-red-400" },
+  { key: "insert", label: "新增", className: SYNC_STAT_VALUE_CLASSES.insert },
+  { key: "update", label: "更新", className: SYNC_STAT_VALUE_CLASSES.update },
+  { key: "conflict", label: "冲突", className: SYNC_STAT_VALUE_CLASSES.conflict },
+  { key: "skip", label: "跳过", className: SYNC_STAT_VALUE_CLASSES.skip },
+  { key: "failed", label: "失败", className: SYNC_STAT_VALUE_CLASSES.failed },
 ];
 
 export function SyncRunsTable() {
@@ -148,6 +158,7 @@ export function SyncRunsTable() {
   const [conflicts, setConflicts] = React.useState<ConflictRow[]>([]);
   const [conflictsLoading, setConflictsLoading] = React.useState(false);
   const [resolvingId, setResolvingId] = React.useState<string | null>(null);
+  const [rerunning, setRerunning] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -243,6 +254,31 @@ export function SyncRunsTable() {
     void load();
   };
 
+  /**
+   * 重跑本次任务（v1）：复用任务同一执行函数生成新 run，幂等由任务冲突策略保证（runs.md）。
+   * v1 执行输入为样本通道（p_sample）：此处不传样本 = 空跑并记录（旧 run 的样本不回放，
+   * 真实拉取执行器为 v2）；重跑结果进列表，不覆盖当前详情。
+   */
+  const handleRerun = async () => {
+    if (!selected) {
+      return;
+    }
+    setRerunning(true);
+    const supabase = createClient();
+    const { error: rerunError } = await supabase.rpc("rerun_sync_task", {
+      p_task_id: selected.task_id,
+    });
+    setRerunning(false);
+
+    if (rerunError) {
+      toast.error(translateSyncErrorMessage(rerunError.message));
+      return;
+    }
+
+    toast.success("已触发重跑，可在列表查看新的执行记录");
+    void load();
+  };
+
   const renderRunStatus = (status: string) => {
     const normalized = asSyncRunStatus(status);
     return (
@@ -256,7 +292,7 @@ export function SyncRunsTable() {
   };
 
   return (
-    <div className="flex flex-col gap-0.5 p-0 md:p-6">
+    <div className="flex flex-col gap-2 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           {loading ? (
@@ -356,7 +392,16 @@ export function SyncRunsTable() {
                       <TableRow
                         key={run.id}
                         className="cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`查看执行详情 ${run.task_name}`}
                         onClick={() => openDetail(run)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openDetail(run);
+                          }
+                        }}
                       >
                         <TableCell className="text-center font-medium">
                           {run.task_name}
@@ -406,7 +451,8 @@ export function SyncRunsTable() {
                         <TableCell
                           className={cn(
                             "text-center tabular-nums",
-                            stats.failed > 0 && "font-medium text-red-600 dark:text-red-400",
+                            stats.failed > 0 &&
+                              cn("font-medium", SYNC_STAT_VALUE_CLASSES.failed),
                           )}
                         >
                           {stats.failed}
@@ -551,6 +597,7 @@ export function SyncRunsTable() {
                               <Button
                                 size="sm"
                                 variant="outline"
+                                className="h-11 lg:h-7"
                                 disabled={resolvingId === conflict.id}
                                 onClick={() =>
                                   void handleResolve(conflict, "ignored")
@@ -561,6 +608,7 @@ export function SyncRunsTable() {
                               </Button>
                               <Button
                                 size="sm"
+                                className="h-11 lg:h-7"
                                 disabled={resolvingId === conflict.id}
                                 onClick={() =>
                                   void handleResolve(conflict, "adopted")
@@ -593,7 +641,12 @@ export function SyncRunsTable() {
 
                 <TabsContent value="errors">
                   {selected.error ? (
-                    <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300">
+                    <div
+                      className={cn(
+                        "flex items-start gap-2 rounded-xl border p-3 text-xs",
+                        SYNC_ERROR_CALLOUT_CLASS,
+                      )}
+                    >
                       <CircleAlertIcon className="mt-0.5 size-4 shrink-0" />
                       <pre className="whitespace-pre-wrap font-mono">
                         {selected.error}
@@ -608,6 +661,28 @@ export function SyncRunsTable() {
                 </TabsContent>
               </Tabs>
             </div>
+          ) : null}
+
+          {selected &&
+          (asSyncRunStatus(selected.status) === "failed" ||
+            asSyncRunStatus(selected.status) === "partial") ? (
+            <SheetFooter className="flex-row justify-end gap-2">
+              <Button
+                onClick={() => void handleRerun()}
+                disabled={rerunning}
+                className="h-11 lg:h-8"
+              >
+                {rerunning ? (
+                  <Loader2Icon
+                    className="animate-spin"
+                    data-icon="inline-start"
+                  />
+                ) : (
+                  <RotateCcwIcon data-icon="inline-start" />
+                )}
+                重跑
+              </Button>
+            </SheetFooter>
           ) : null}
         </SheetContent>
       </Sheet>

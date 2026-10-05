@@ -5,6 +5,9 @@ import { DataScopesTable } from "@/components/access/data-scopes-table";
 import { ForbiddenCard } from "@/components/forbidden-card";
 import { createClient } from "@/lib/supabase/server";
 
+// @next-codemod-ignore Cache Components：管理端路由均为服务端动态鉴权，允许阻塞式导航。
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "数据权限",
 };

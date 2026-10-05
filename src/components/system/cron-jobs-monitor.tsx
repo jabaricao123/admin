@@ -254,7 +254,7 @@ export function CronJobsMonitor() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-0.5 p-4 lg:p-6">
+      <div className="flex flex-col gap-2 p-4 lg:p-6">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-96 w-full" />
       </div>
@@ -279,7 +279,7 @@ export function CronJobsMonitor() {
   }
 
   return (
-    <div className="flex flex-col gap-0.5 p-4 lg:p-6">
+    <div className="flex flex-col gap-2 p-4 lg:p-6">
       {/* 只读边界说明（INDEX 规则 5：启停回各模块调度页） */}
       <div className="flex items-start gap-2 rounded-xl border bg-muted/40 p-3 text-sm">
         <InfoIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />

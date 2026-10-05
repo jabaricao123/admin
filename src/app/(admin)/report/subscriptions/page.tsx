@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import { ReportSubscriptions } from "@/components/report/report-subscriptions";
 import { createClient } from "@/lib/supabase/server";
 
+// @next-codemod-ignore Cache Components：管理端路由均为服务端动态鉴权，允许阻塞式导航。
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "报表订阅",
 };

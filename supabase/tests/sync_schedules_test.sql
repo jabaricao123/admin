@@ -154,7 +154,10 @@ select is(
 select has_function('app', 'cron_field_values', array['text', 'integer', 'integer'], 'app.cron_field_values 存在');
 select has_function('app', 'cron_expr_valid', array['text'], 'app.cron_expr_valid 存在');
 select has_function('app', 'next_cron_run', array['text', 'text', 'timestamptz'], 'app.next_cron_run 存在');
-select has_function('app', 'sync_schedule_register_cron', array['uuid', 'text'], 'app.sync_schedule_register_cron 存在');
+select has_function(
+  'app', 'sync_schedule_register_cron', array['uuid', 'text', 'text'],
+  'app.sync_schedule_register_cron 存在（含时区参数）'
+);
 select has_function('app', 'sync_schedule_unregister_cron', array['uuid'], 'app.sync_schedule_unregister_cron 存在');
 select has_function(
   'app', 'upsert_sync_schedule',
@@ -216,7 +219,7 @@ select ok(
   'cron 回调 run_scheduled_sync 无 API 角色执行权（仅 pg_cron 可达）'
 );
 select ok(
-  not has_function_privilege('authenticated', 'app.sync_schedule_register_cron(uuid,text)', 'EXECUTE')
+  not has_function_privilege('authenticated', 'app.sync_schedule_register_cron(uuid,text,text)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'app.cron_field_values(text,integer,integer)', 'EXECUTE'),
   'authenticated 无注册/解析内部函数执行权'
 );

@@ -20,6 +20,9 @@ import { createClient } from "@/lib/supabase/server";
 
 import { ProfileImBinding } from "./profile-im-binding";
 
+// @next-codemod-ignore Cache Components：管理端路由均为服务端动态鉴权，允许阻塞式导航。
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "个人中心",
 };
@@ -70,7 +73,7 @@ export default async function SettingsProfilePage({
   const role = (profile?.role ?? "engineer") as UserRole;
 
   return (
-    <div className="flex flex-col gap-0.5 p-0 md:p-6">
+    <div className="flex flex-col gap-2 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

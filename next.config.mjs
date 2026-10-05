@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 多标签页保活（cacheComponents）：客户端导航用 React Activity 隐藏页面而非卸载，
+  // 表单/滚动/筛选等状态切回标签时保留（Next.js 保活最近 3 个路由）。
+  // 管理端全路由服务端动态鉴权，各 page/layout 以 instant=false 选择退出静态预渲染。
+  cacheComponents: true,
   output: "standalone",
   allowedDevOrigins: ["192.168.10.213"],
   async redirects() {

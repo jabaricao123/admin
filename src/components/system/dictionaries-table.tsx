@@ -414,7 +414,7 @@ export function DictionariesTable() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-0.5 p-0 md:p-6">
+      <div className="flex flex-col gap-2 p-0 md:p-6">
         <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
           <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
             <CardContent className="flex flex-col gap-3 p-4 md:p-6">
@@ -437,7 +437,7 @@ export function DictionariesTable() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-0.5 p-0 md:p-6">
+      <div className="flex flex-col gap-2 p-0 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
           <CardContent className="flex flex-col items-center gap-2 py-16 text-sm">
             <p className="text-destructive">
@@ -453,7 +453,7 @@ export function DictionariesTable() {
   }
 
   return (
-    <div className="flex flex-col gap-0.5 p-0 md:p-6">
+    <div className="flex flex-col gap-2 p-0 md:p-6">
       <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         {/* 左侧：字典分组导航 */}
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">

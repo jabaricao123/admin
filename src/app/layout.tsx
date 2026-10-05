@@ -8,6 +8,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./globals.css";
 
+// @next-codemod-ignore Cache Components：管理端路由均为服务端动态鉴权，允许阻塞式导航。
+export const instant = false;
+
 export const metadata: Metadata = {
   title: {
     default: "企业管理系统",

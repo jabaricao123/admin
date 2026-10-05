@@ -5,6 +5,8 @@
 ## [Unreleased]
 
 ### Added
+- 多标签页（shell）：页头单标题改为「已打开页面」标签栏（`src/components/page-tabs.tsx` + `src/lib/page-titles.ts`，`site-header.tsx` 接入）——工作台固定标签不可关（保证标签永不为空）；其余标签单个关闭（X / 鼠标中键）与「刷新当前页 / 关闭其他 / 关闭全部」菜单（刷新用于保活标签数据手动重取）；标签列表会话内保留（sessionStorage `admin.page-tabs`，刷新恢复、关浏览器清空）；标签多时横向滚动并自动滚入活动标签；未登记路由回退系统名标题（DESIGN v2.9）
+- 页面状态保活（shell）：`next.config.mjs` 启用 `cacheComponents`——客户端导航用 React Activity 隐藏页面而非卸载，表单/滚动/筛选等状态切回标签时保留（Next.js 保活最近 3 个路由，更早标签切回时重新渲染）；50 个 page/layout 增 `export const instant = false`（管理端全路由服务端动态鉴权，显式允许阻塞式导航）
 - PC 扫码真二维码（im/007）：登录页扫码 Tab 由「跳转按钮」改为内嵌二维码（飞书 / 钉钉用 `qrcode.react` 渲染厂商授权 URL，企业微信内嵌官方 `qrConnect` 托管页 iframe），修复「手机扫 PC 二维码必然 `im_state_invalid`」的伪扫码缺陷（复审 B1）；新增 ticket 轮询路径并与既有 state cookie 路径并存（state `qr.` 前缀分流）
 - 数据库（im/007）：新表 `im_qr_tickets`（ticket 一次性 / 5 分钟过期 / 绑定匹配失败即作废；RLS + 零 API 角色授权）；4 个新 RPC —— `im_start_qr_login`（anon 生成 ticket + 授权 URL）、`im_poll_qr_login`（anon 轮询，只回状态与失败原因）、`im_qr_complete_login`（im_backend，手机回调换 code + 绑定匹配 + 原子标记）、`im_exchange_qr_ticket`（im_backend，PC 一次性换身份）；`im_start_auth` / `im_handle_callback` 签名与实现不变、state cookie 逻辑不变（移动端 H5 免登 / 桌面一键登录回归通过）
 - 登录页 PC 扫码 Tab：`src/components/im-qr-login.tsx`（二维码 / iframe 渲染 + 1 秒轮询 + 过期刷新 + 未绑定原因展示）、`/auth/qr/exchange`（ticket 换标准 Supabase session）、回调路由 `/auth/callback/<provider>` 按 state 前缀分流；pgTAP 69 断言 + 本地 mock 三家厂商全链路证据

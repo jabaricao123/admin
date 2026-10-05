@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import type { Database, Json } from "@/lib/database.types";
 import {
   asSyncScheduleStatus,
@@ -50,6 +51,7 @@ import {
   asSyncTargetTable,
   SYNC_TRIGGER_TYPE_LABELS,
   SYNC_TRIGGER_TYPE_OPTIONS,
+  SYNC_WARNING_TEXT_CLASS,
   SYNC_WEEKDAY_LABELS,
   translateSyncErrorMessage,
   type SyncCronPreset,
@@ -165,9 +167,10 @@ export function SyncSchedulesTable() {
   const [sampleText, setSampleText] = React.useState("");
   const [running, setRunning] = React.useState(false);
 
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (): Promise<ScheduleRow[]> => {
     setLoading(true);
     setError(null);
+    let items: ScheduleRow[] = [];
     try {
       const supabase = createClient();
       const [scheduleRes, taskRes] = await Promise.all([
@@ -178,7 +181,8 @@ export function SyncSchedulesTable() {
         setError(scheduleRes.error.message);
         setSchedules([]);
       } else {
-        setSchedules(scheduleRes.data ?? []);
+        items = scheduleRes.data ?? [];
+        setSchedules(items);
       }
       setTasks(taskRes.error ? [] : (taskRes.data ?? []));
     } catch (loadError) {
@@ -188,6 +192,7 @@ export function SyncSchedulesTable() {
       setSchedules([]);
     }
     setLoading(false);
+    return items;
   }, []);
 
   React.useEffect(() => {
@@ -229,10 +234,15 @@ export function SyncSchedulesTable() {
   };
 
   const applySaved = (data: Json | null) => {
-    const result = (data ?? null) as { webhook_token?: string | null } | null;
+    const result = (data ?? null) as {
+      id?: string;
+      status?: string;
+      webhook_token?: string | null;
+    } | null;
     if (result?.webhook_token) {
       setGeneratedToken(result.webhook_token);
     }
+    return result;
   };
 
   const handleSave = async () => {
@@ -266,9 +276,28 @@ export function SyncSchedulesTable() {
       return;
     }
 
-    applySaved(data);
-    toast.success(editing ? "已保存" : "已创建调度");
-    await load();
+    const result = applySaved(data);
+    if (result?.status === "disabled_pending_unschedule") {
+      toast.success("已停用，当次执行完成后将注销定时任务");
+    } else {
+      toast.success(editing ? "已保存" : "已创建调度");
+    }
+    const items = await load();
+
+    // 用服务端最新行回填编辑态：Sheet 状态 Select 与后端一致（含停用待注销瞬态）
+    if (editing) {
+      const updated = items.find((item) => item.id === editing.id) ?? null;
+      if (updated) {
+        setEditing(updated);
+        setForm((prev) => ({
+          ...prev,
+          status:
+            asSyncScheduleStatus(updated.status) === "active"
+              ? "active"
+              : "disabled",
+        }));
+      }
+    }
   };
 
   const handleRegenerateToken = async () => {
@@ -320,14 +349,28 @@ export function SyncSchedulesTable() {
       status?: string;
       webhook_token?: string | null;
     } | null;
+
+    // 先取服务端最新行，再用新行打开 Sheet（三态：active/disabled/disabled_pending_unschedule）
+    const items = await load();
+    const updated = items.find((item) => item.id === row.id) ?? row;
+
+    if (!enabled) {
+      toast.success(
+        asSyncScheduleStatus(result?.status ?? updated.status) ===
+          "disabled_pending_unschedule"
+          ? "已停用，当次执行完成后将注销定时任务"
+          : "已停用",
+      );
+      return;
+    }
+
     if (result?.webhook_token) {
-      openEdit(row);
+      openEdit(updated);
       setGeneratedToken(result.webhook_token);
       toast.success("已启用并生成 webhook token");
       return;
     }
-    toast.success(enabled ? "已启用" : "已停用");
-    await load();
+    toast.success("已启用");
   };
 
   const handleManualRun = async () => {
@@ -398,29 +441,11 @@ export function SyncSchedulesTable() {
     return "仅手动触发";
   };
 
-  const renderRowActions = (row: ScheduleRow) => {
-    const normalized = asSyncScheduleStatus(row.status);
-    const enabled = normalized === "active";
-    return (
-      <div
-        className="flex items-center justify-center gap-2"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <Switch
-          checked={enabled}
-          disabled={togglingId === row.id}
-          aria-label={`${enabled ? "停用" : "启用"}调度`}
-          onCheckedChange={(checked) => void handleToggle(row, checked)}
-        />
-      </div>
-    );
-  };
-
   const cronPreview =
     form.triggerType === "cron" ? buildCronExpr(form) : null;
 
   return (
-    <div className="flex flex-col gap-0.5 p-0 md:p-6">
+    <div className="flex flex-col gap-2 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex items-center justify-end gap-2">
@@ -460,47 +485,75 @@ export function SyncSchedulesTable() {
             </div>
           ) : isMobile ? (
             <div className="-mx-4 flex flex-col gap-2 px-4 md:mx-0 md:gap-3 md:px-0">
-              {schedules.map((row) => (
-                <button
-                  key={row.id}
-                  type="button"
-                  data-slot="sync-schedule-card"
-                  onClick={() => openEdit(row)}
-                  className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">
-                        {row.task_name}
+              {schedules.map((row) => {
+                const enabled =
+                  asSyncScheduleStatus(row.status) === "active";
+                return (
+                  <div
+                    key={row.id}
+                    data-slot="sync-schedule-card"
+                    className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50"
+                  >
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`编辑调度 ${row.task_name}`}
+                      onClick={() => openEdit(row)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openEdit(row);
+                        }
+                      }}
+                      className="flex cursor-pointer flex-col gap-2 rounded-lg focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">
+                            {row.task_name}
+                          </div>
+                          <div className="truncate text-xs leading-tight text-muted-foreground">
+                            {renderCronSummary(row)} · {row.timezone}
+                          </div>
+                        </div>
+                        {renderStatusBadge(row.status)}
                       </div>
-                      <div className="truncate text-xs leading-tight text-muted-foreground">
-                        {renderCronSummary(row)} · {row.timezone}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant="outline">
+                          {
+                            SYNC_TRIGGER_TYPE_LABELS[
+                              asSyncTriggerType(row.trigger_type)
+                            ]
+                          }
+                        </Badge>
+                        <Badge variant="outline">
+                          {
+                            SYNC_TARGET_TABLE_LABELS[
+                              asSyncTargetTable(row.target_table)
+                            ]
+                          }
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span>上次：{formatDateTime(row.last_run_at)}</span>
+                        <span>下次：{formatDateTime(row.next_run_at)}</span>
                       </div>
                     </div>
-                    {renderStatusBadge(row.status)}
+                    {/* 移动卡片启停入口（桌面端行内 Switch 已移除，启停统一收口 Sheet 状态） */}
+                    <div className="flex items-center justify-between gap-4 text-sm">
+                      <span className="text-muted-foreground">启停</span>
+                      <Switch
+                        checked={enabled}
+                        disabled={togglingId === row.id}
+                        aria-label={`${enabled ? "停用" : "启用"}调度`}
+                        onCheckedChange={(checked) =>
+                          void handleToggle(row, checked)
+                        }
+                      />
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="outline">
-                      {
-                        SYNC_TRIGGER_TYPE_LABELS[
-                          asSyncTriggerType(row.trigger_type)
-                        ]
-                      }
-                    </Badge>
-                    <Badge variant="outline">
-                      {
-                        SYNC_TARGET_TABLE_LABELS[
-                          asSyncTargetTable(row.target_table)
-                        ]
-                      }
-                    </Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span>上次：{formatDateTime(row.last_run_at)}</span>
-                    <span>下次：{formatDateTime(row.next_run_at)}</span>
-                  </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -514,7 +567,6 @@ export function SyncSchedulesTable() {
                     <TableHead className="text-center">状态</TableHead>
                     <TableHead className="text-center">上次执行</TableHead>
                     <TableHead className="text-center">下次执行</TableHead>
-                    <TableHead className="text-center">启停</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -522,7 +574,16 @@ export function SyncSchedulesTable() {
                     <TableRow
                       key={row.id}
                       className="cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`编辑调度 ${row.task_name}`}
                       onClick={() => openEdit(row)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openEdit(row);
+                        }
+                      }}
                     >
                       <TableCell className="text-center font-medium">
                         {row.task_name}
@@ -551,9 +612,6 @@ export function SyncSchedulesTable() {
                       <TableCell className="text-center text-xs text-muted-foreground">
                         {formatDateTime(row.next_run_at)}
                       </TableCell>
-                      <TableCell className="text-center">
-                        {renderRowActions(row)}
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -573,7 +631,7 @@ export function SyncSchedulesTable() {
       >
         <SheetContent
           side="right"
-          className="w-full overflow-hidden sm:max-w-2xl"
+          className="w-full overflow-hidden sm:max-w-[560px]"
         >
           <SheetHeader>
             <SheetTitle>{editing ? "编辑调度" : "新建调度"}</SheetTitle>
@@ -594,7 +652,7 @@ export function SyncSchedulesTable() {
                     setForm((prev) => ({ ...prev, taskId: value }))
                   }
                 >
-                  <SelectTrigger id="sync-schedule-task" className="w-full">
+                  <SelectTrigger id="sync-schedule-task" className="w-full min-h-11 lg:min-h-8">
                     <SelectValue placeholder="选择同步任务" />
                   </SelectTrigger>
                   <SelectContent>
@@ -625,7 +683,7 @@ export function SyncSchedulesTable() {
                   }))
                 }
               >
-                <SelectTrigger id="sync-schedule-trigger" className="w-full">
+                <SelectTrigger id="sync-schedule-trigger" className="w-full min-h-11 lg:min-h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -655,7 +713,7 @@ export function SyncSchedulesTable() {
                       }))
                     }
                   >
-                    <SelectTrigger id="sync-schedule-preset" className="w-full">
+                    <SelectTrigger id="sync-schedule-preset" className="w-full min-h-11 lg:min-h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -686,7 +744,7 @@ export function SyncSchedulesTable() {
                         >
                           <SelectTrigger
                             id="sync-schedule-weekday"
-                            className="w-full"
+                            className="w-full min-h-11 lg:min-h-8"
                           >
                             <SelectValue />
                           </SelectTrigger>
@@ -703,6 +761,7 @@ export function SyncSchedulesTable() {
                     <Field className="flex-1">
                       <FieldLabel htmlFor="sync-schedule-time">时间</FieldLabel>
                       <Input
+                        className="h-11 lg:h-8"
                         id="sync-schedule-time"
                         type="time"
                         value={form.dailyTime}
@@ -732,7 +791,7 @@ export function SyncSchedulesTable() {
                         }))
                       }
                       placeholder="0 9 * * 1-5"
-                      className="font-mono text-xs"
+                      className="h-11 font-mono text-xs lg:h-8"
                       autoComplete="off"
                     />
                     <FieldDescription>
@@ -753,14 +812,14 @@ export function SyncSchedulesTable() {
                 <div className="text-sm font-medium">Webhook token</div>
                 {generatedToken ? (
                   <div className="flex flex-col gap-2">
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                    <p className={cn("text-xs", SYNC_WARNING_TEXT_CLASS)}>
                       新 token 仅显示这一次，请立即复制保存；旧 token 已失效。
                     </p>
                     <div className="flex items-center gap-2">
                       <Input
                         readOnly
                         value={generatedToken}
-                        className="font-mono text-xs"
+                        className="h-11 font-mono text-xs lg:h-8"
                         aria-label="webhook token"
                       />
                       <Button
@@ -802,6 +861,7 @@ export function SyncSchedulesTable() {
             <Field>
               <FieldLabel htmlFor="sync-schedule-timezone">时区</FieldLabel>
               <Input
+                className="h-11 lg:h-8"
                 id="sync-schedule-timezone"
                 value={form.timezone}
                 onChange={(event) =>
@@ -824,7 +884,7 @@ export function SyncSchedulesTable() {
                   }))
                 }
               >
-                <SelectTrigger id="sync-schedule-status" className="w-full">
+                <SelectTrigger id="sync-schedule-status" className="w-full min-h-11 lg:min-h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -876,14 +936,14 @@ export function SyncSchedulesTable() {
             <Button
               variant="outline"
               onClick={closeSheet}
-              className="h-8"
+              className="h-11 lg:h-8"
             >
               取消
             </Button>
             <Button
               onClick={() => void handleSave()}
               disabled={saving}
-              className="h-8"
+              className="h-11 lg:h-8"
             >
               {saving ? (
                 <Loader2Icon
