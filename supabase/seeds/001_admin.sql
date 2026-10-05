@@ -25,7 +25,7 @@ values (
   'authenticated',
   'authenticated',
   'admin@example.com',
-  crypt('admin123', gen_salt('bf')),
+  extensions.crypt('admin123', extensions.gen_salt('bf')),
   now(),
   '{"provider":"email","providers":["email"]}',
   '{"full_name":"系统管理员"}',

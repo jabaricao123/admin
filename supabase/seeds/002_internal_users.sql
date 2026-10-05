@@ -19,7 +19,7 @@ begin
       '00000000-0000-0000-0000-000000000000',
       v_id, 'authenticated', 'authenticated',
       v_role || '@example.com',
-      crypt(v_role || '123', gen_salt('bf')),
+      extensions.crypt(v_role || '123', extensions.gen_salt('bf')),
       now(),
       '{"provider":"email","providers":["email"]}',
       jsonb_build_object('full_name', initcap(v_role) || ' 测试'),
