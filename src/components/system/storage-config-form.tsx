@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -37,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { InfoHint } from "@/components/info-hint";
 import type { Database } from "@/lib/database.types";
 import {
   asServiceVerifyStatus,
@@ -337,7 +337,7 @@ export function StorageConfigForm() {
 
   if (loading) {
     return (
-      <div className="flex flex-col p-0 md:gap-6 md:p-6">
+      <div className="flex flex-col gap-0.5 p-0 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
           <CardContent className="flex flex-col gap-4 p-4 md:p-6">
             <div className="grid gap-4 lg:grid-cols-2">
@@ -357,7 +357,7 @@ export function StorageConfigForm() {
 
   if (error) {
     return (
-      <div className="flex flex-col p-0 md:gap-6 md:p-6">
+      <div className="flex flex-col gap-0.5 p-0 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
           <CardContent className="flex flex-col items-center gap-2 py-16 text-sm">
             <p className="text-destructive">
@@ -373,7 +373,7 @@ export function StorageConfigForm() {
   }
 
   return (
-    <div className="flex flex-col p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="p-4 md:p-6">
           <form
@@ -636,10 +636,10 @@ export function StorageConfigForm() {
           <CardTitle className="flex items-center gap-2">
             <HardDriveIcon className="size-4 text-muted-foreground" />
             Bucket 用量
+            <InfoHint>
+              storage.objects 聚合：文件数与占用字节（含空 bucket）
+            </InfoHint>
           </CardTitle>
-          <CardDescription>
-            storage.objects 聚合：文件数与占用字节（含空 bucket）
-          </CardDescription>
         </CardHeader>
         <CardContent className="p-4 md:p-6">
           {usageLoading ? (

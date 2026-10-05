@@ -7,6 +7,9 @@
 import * as React from "react";
 import {
   AlertTriangleIcon,
+  ArrowDownIcon,
+  ArrowUpDownIcon,
+  ArrowUpIcon,
   CopyIcon,
   DownloadIcon,
   Loader2Icon,
@@ -55,6 +58,21 @@ import {
 import { createClient } from "@/lib/supabase/client";
 
 type LogRow = Database["public"]["Tables"]["integration_call_logs"]["Row"];
+/** 列表不拉 2KB excerpt 列，仅详情按需补拉 */
+type LogListRow = Pick<
+  LogRow,
+  | "id"
+  | "created_at"
+  | "kind"
+  | "key_id"
+  | "webhook_id"
+  | "method_event"
+  | "status_code"
+  | "duration_ms"
+  | "error"
+>;
+type LogDetailRow = LogListRow &
+  Pick<LogRow, "request_excerpt" | "response_excerpt">;
 type ApiKeyRow = Pick<
   Database["public"]["Tables"]["api_keys"]["Row"],
   "id" | "name" | "key_prefix"
@@ -66,6 +84,10 @@ type WebhookRow = Pick<
 
 const ALL = "all";
 const PAGE_SIZE = 20;
+const LOG_LIST_COLUMNS =
+  "id,created_at,kind,key_id,webhook_id,method_event,status_code,duration_ms,error";
+
+type DurationSort = "none" | "desc" | "asc";
 
 const formatDateTime = (value: string | null) =>
   value
@@ -126,7 +148,7 @@ function ExcerptPanel({
         <Button
           variant="ghost"
           size="icon"
-          className="size-7"
+          className="size-11 lg:size-7"
           disabled={!content}
           onClick={() => content && onCopy(content)}
           aria-label={`复制${title}`}
@@ -144,7 +166,7 @@ function ExcerptPanel({
 export function LogsTable() {
   const isMobile = useIsMobile();
 
-  const [rows, setRows] = React.useState<LogRow[]>([]);
+  const [rows, setRows] = React.useState<LogListRow[]>([]);
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -153,6 +175,9 @@ export function LogsTable() {
   const [kindFilter, setKindFilter] = React.useState(ALL);
   const [statusFilter, setStatusFilter] =
     React.useState<(typeof CALL_STATUS_FILTER_OPTIONS)[number]["value"]>(ALL);
+  const [referenceFilter, setReferenceFilter] = React.useState("");
+  const [durationSort, setDurationSort] =
+    React.useState<DurationSort>("none");
   const [dateFrom, setDateFrom] = React.useState("");
   const [dateTo, setDateTo] = React.useState("");
 
@@ -160,7 +185,10 @@ export function LogsTable() {
   const [webhooks, setWebhooks] = React.useState<Map<string, string>>(
     new Map(),
   );
-  const [detail, setDetail] = React.useState<LogRow | null>(null);
+  // 筛选用的映射走 ref：避免参考数据加载完成后触发整页二次拉取
+  const apiKeysRef = React.useRef<Map<string, string>>(new Map());
+  const webhooksRef = React.useRef<Map<string, string>>(new Map());
+  const [detail, setDetail] = React.useState<LogDetailRow | null>(null);
   const [exporting, setExporting] = React.useState(false);
 
   const loadRefs = React.useCallback(async () => {
@@ -175,6 +203,7 @@ export function LogsTable() {
       for (const key of (keysRes.data ?? []) as ApiKeyRow[]) {
         map.set(key.id, `${key.name}（${key.key_prefix}）`);
       }
+      apiKeysRef.current = map;
       setApiKeys(map);
     }
     if (!hooksRes.error) {
@@ -182,6 +211,7 @@ export function LogsTable() {
       for (const hook of (hooksRes.data ?? []) as WebhookRow[]) {
         map.set(hook.id, hook.name);
       }
+      webhooksRef.current = map;
       setWebhooks(map);
     }
   }, []);
@@ -193,7 +223,15 @@ export function LogsTable() {
     const supabase = createClient();
     let query = supabase
       .from("integration_call_logs")
-      .select("*", { count: "exact" })
+      .select(LOG_LIST_COLUMNS, { count: "exact" });
+
+    if (durationSort !== "none") {
+      query = query.order("duration_ms", {
+        ascending: durationSort === "asc",
+        nullsFirst: false,
+      });
+    }
+    query = query
       .order("created_at", { ascending: false })
       .order("id", { ascending: false });
 
@@ -201,7 +239,8 @@ export function LogsTable() {
       query = query.eq("kind", kindFilter);
     }
     if (statusFilter === "failed") {
-      query = query.gte("status_code", 400);
+      // 失败 = HTTP ≥400 或记有 error（含 webhook 超时/无响应，status_code 为 NULL）
+      query = query.or("status_code.gte.400,error.not.is.null");
     } else if (statusFilter === "2xx") {
       query = query.gte("status_code", 200).lte("status_code", 299);
     } else if (statusFilter === "4xx") {
@@ -222,6 +261,27 @@ export function LogsTable() {
       );
     }
 
+    // 密钥/端点模糊筛选：引用名在客户端映射里匹配出 id 再回传服务端（含方法/事件名）
+    const referenceKeyword = referenceFilter.trim().toLowerCase();
+    if (referenceKeyword) {
+      const matchingKeyIds = Array.from(apiKeysRef.current.entries())
+        .filter(([, label]) => label.toLowerCase().includes(referenceKeyword))
+        .map(([id]) => id);
+      const matchingWebhookIds = Array.from(webhooksRef.current.entries())
+        .filter(([, name]) => name.toLowerCase().includes(referenceKeyword))
+        .map(([id]) => id);
+      // PostgREST or 表达式：值内逗号/括号会破坏语法，先中和；* 为 ilike 通配符
+      const pattern = `*${referenceKeyword.replace(/[(),*%\\"]/g, " ").trim()}*`;
+      const clauses = [`method_event.ilike.${pattern}`];
+      if (matchingKeyIds.length > 0) {
+        clauses.push(`key_id.in.(${matchingKeyIds.join(",")})`);
+      }
+      if (matchingWebhookIds.length > 0) {
+        clauses.push(`webhook_id.in.(${matchingWebhookIds.join(",")})`);
+      }
+      query = query.or(clauses.join(","));
+    }
+
     query = query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
     const { data, error: listError, count } = await query;
@@ -234,7 +294,15 @@ export function LogsTable() {
       setTotal(count ?? 0);
     }
     setLoading(false);
-  }, [kindFilter, statusFilter, dateFrom, dateTo, page]);
+  }, [
+    kindFilter,
+    statusFilter,
+    dateFrom,
+    dateTo,
+    page,
+    durationSort,
+    referenceFilter,
+  ]);
 
   React.useEffect(() => {
     void loadRefs();
@@ -246,17 +314,18 @@ export function LogsTable() {
 
   React.useEffect(() => {
     setPage(1);
-  }, [kindFilter, statusFilter, dateFrom, dateTo]);
+  }, [kindFilter, statusFilter, dateFrom, dateTo, referenceFilter, durationSort]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const hasActiveFilters =
     kindFilter !== ALL ||
     statusFilter !== ALL ||
+    referenceFilter.trim() !== "" ||
     dateFrom !== "" ||
     dateTo !== "";
 
-  const referenceName = (row: LogRow) => {
+  const referenceName = (row: LogListRow) => {
     if (row.kind === "api") {
       if (!row.key_id) {
         return "未关联密钥";
@@ -272,8 +341,34 @@ export function LogsTable() {
   const resetFilters = () => {
     setKindFilter(ALL);
     setStatusFilter(ALL);
+    setReferenceFilter("");
     setDateFrom("");
     setDateTo("");
+  };
+
+  const toggleDurationSort = () => {
+    setDurationSort((prev) =>
+      prev === "none" ? "desc" : prev === "desc" ? "asc" : "none",
+    );
+  };
+
+  /** 详情打开：先展示列表字段，再补拉 2KB 级 request/response 摘要 */
+  const openDetail = async (row: LogListRow) => {
+    setDetail({ ...row, request_excerpt: null, response_excerpt: null });
+    const { data, error: detailError } = await createClient()
+      .from("integration_call_logs")
+      .select("request_excerpt,response_excerpt")
+      .eq("id", row.id)
+      .eq("created_at", row.created_at)
+      .maybeSingle();
+    if (detailError || !data) {
+      return;
+    }
+    setDetail((prev) =>
+      prev && prev.id === row.id && prev.created_at === row.created_at
+        ? { ...prev, ...data }
+        : prev,
+    );
   };
 
   const copyText = async (text: string, label: string) => {
@@ -346,7 +441,7 @@ export function LogsTable() {
             <button
               key={`${row.id}-${row.created_at}`}
               type="button"
-              onClick={() => setDetail(row)}
+              onClick={() => void openDetail(row)}
               className="flex w-full flex-col gap-2 rounded-xl border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/50 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
             >
               <div className="flex items-start justify-between gap-3">
@@ -399,7 +494,32 @@ export function LogsTable() {
               <TableHead className="text-center">密钥 / 端点</TableHead>
               <TableHead className="text-center">方法 / 事件</TableHead>
               <TableHead className="text-center">状态码</TableHead>
-              <TableHead className="text-center">耗时</TableHead>
+              <TableHead
+                className="text-center"
+                aria-sort={
+                  durationSort === "asc"
+                    ? "ascending"
+                    : durationSort === "desc"
+                      ? "descending"
+                      : "none"
+                }
+              >
+                <button
+                  type="button"
+                  onClick={toggleDurationSort}
+                  className="inline-flex items-center gap-1 rounded-md px-1 py-0.5 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  aria-label="按耗时排序"
+                >
+                  耗时
+                  {durationSort === "asc" ? (
+                    <ArrowUpIcon className="size-3.5" />
+                  ) : durationSort === "desc" ? (
+                    <ArrowDownIcon className="size-3.5" />
+                  ) : (
+                    <ArrowUpDownIcon className="size-3.5 opacity-60" />
+                  )}
+                </button>
+              </TableHead>
               <TableHead className="text-center">错误</TableHead>
             </TableRow>
           </TableHeader>
@@ -409,14 +529,14 @@ export function LogsTable() {
                 key={`${row.id}-${row.created_at}`}
                 className="cursor-pointer"
                 tabIndex={0}
-                onClick={() => setDetail(row)}
+                onClick={() => void openDetail(row)}
                 onKeyDown={(event) => {
                   if (event.target !== event.currentTarget) {
                     return;
                   }
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    setDetail(row);
+                    void openDetail(row);
                   }
                 }}
               >
@@ -450,7 +570,7 @@ export function LogsTable() {
   };
 
   return (
-    <div className="flex flex-col p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
@@ -489,6 +609,13 @@ export function LogsTable() {
                 ))}
               </SelectContent>
             </Select>
+            <Input
+              value={referenceFilter}
+              onChange={(event) => setReferenceFilter(event.target.value)}
+              placeholder="密钥 / 端点名称"
+              className="h-11 w-full text-base sm:w-44 lg:h-8 lg:text-sm"
+              aria-label="按密钥或端点名称筛选"
+            />
             <Input
               type="date"
               value={dateFrom}
@@ -622,7 +749,7 @@ export function LogsTable() {
                   </div>
                 ) : null}
 
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <ExcerptPanel
                     title="请求摘要"
                     content={detail.request_excerpt}

@@ -24,12 +24,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { InfoHint } from "@/components/info-hint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -502,7 +502,7 @@ export function PermissionsMatrix() {
   );
 
   return (
-    <div className="flex flex-col p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           {loading ? (
@@ -1106,12 +1106,14 @@ function PreviewCard({
   return (
     <Card className="rounded-none border-0 md:rounded-xl md:border gap-3! py-3!">
       <CardHeader>
-        <CardTitle>按角色预览菜单</CardTitle>
-        <CardDescription>
-          基于当前勾选计算（含未保存变更）。本页不调用 visible_menus——该
-          RPC 无参数、只反映当前登录用户，这里在前端按 role_menu_grants
-          复刻其规则。
-        </CardDescription>
+        <CardTitle className="flex items-center gap-1.5">
+          按角色预览菜单
+          <InfoHint>
+            基于当前勾选计算（含未保存变更）。本页不调用 visible_menus——该
+            RPC 无参数、只反映当前登录用户，这里在前端按 role_menu_grants
+            复刻其规则。
+          </InfoHint>
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 p-4 md:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

@@ -11,11 +11,11 @@ import {
 import { toast } from "sonner";
 
 import { ImQrLogin } from "@/components/im-qr-login";
+import { InfoHint } from "@/components/info-hint";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -305,8 +305,10 @@ export function LoginForm({
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">登录</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardTitle className="flex items-center justify-center gap-1.5 text-xl">
+          登录
+          <InfoHint className="size-5">{description}</InfoHint>
+        </CardTitle>
       </CardHeader>
       <CardContent>{body}</CardContent>
     </Card>

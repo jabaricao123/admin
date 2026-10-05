@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { FileClockIcon, ShieldXIcon } from "lucide-react";
 
+import { InfoHint } from "@/components/info-hint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -35,8 +35,10 @@ export function RecentChangesCard({ changes }: { changes: RecentChange[] }) {
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>最近更新</CardTitle>
-        <CardDescription>最近 10 条关键表数据变更</CardDescription>
+        <CardTitle className="flex items-center gap-1.5">
+          最近更新
+          <InfoHint>最近 10 条关键表数据变更</InfoHint>
+        </CardTitle>
         <CardAction>
           <Button variant="outline" size="sm" asChild>
             <Link href="/audit/changes">查看全部</Link>
@@ -124,8 +126,10 @@ export function RecentChangesUnavailable() {
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>最近更新</CardTitle>
-        <CardDescription>最近 10 条关键表数据变更</CardDescription>
+        <CardTitle className="flex items-center gap-1.5">
+          最近更新
+          <InfoHint>最近 10 条关键表数据变更</InfoHint>
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
         <ShieldXIcon className="size-10 text-muted-foreground" />

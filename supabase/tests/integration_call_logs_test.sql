@@ -254,7 +254,7 @@ select set_config(
   true
 );
 set local role authenticated;
-select public.create_webhook('调用日志测试', 'https://127.0.0.1:9/log', array['pgtap.log'],
+select public.create_webhook('调用日志测试', 'https://hooks.example.com/log', array['pgtap.log'],
                              '{"max_attempts":3,"backoff":"linear"}'::jsonb) as wh \gset
 reset role;
 
@@ -335,10 +335,14 @@ reset role;
 
 set local role anon;
 select public.issue_api_token((:'ck'::jsonb ->> 'key')) as tk \gset
-select count(*) as dept_count from public.api_departments((:'tk'::jsonb ->> 'token')) \gset
+select public.api_departments((:'tk'::jsonb ->> 'token')) as dept_pack \gset
 reset role;
 
-select ok(:'dept_count'::integer > 0, 'api_departments 端到端返回部门数据');
+select ok(
+  (:'dept_pack'::jsonb ->> 'ok')::boolean
+    and jsonb_array_length(:'dept_pack'::jsonb -> 'data') > 0,
+  'api_departments 端到端返回 {ok:true,data}'
+);
 select ok(
   (select kind = 'api'
           and method_event = 'api_departments'
@@ -350,9 +354,9 @@ select ok(
   'api 调用写入日志（kind/key_id/状态/耗时）'
 );
 select ok(
-  (select response_excerpt like '[%'
+  (select response_excerpt like '%"ok": true%'
      from public.integration_call_logs where method_event = 'api_departments'),
-  'api 日志响应摘要为 JSON 数组片段'
+  'api 日志响应摘要为状态包片段（{ok:true,data}）'
 );
 select ok(
   (select request_excerpt like '%org:read%'
@@ -366,37 +370,40 @@ select ok(
 );
 
 -- ===========================================================================
--- 9. stats_daily 聚合（6）
+-- 9. stats_daily 聚合（6；按 Asia/Shanghai 业务日）
 -- ===========================================================================
-select app.aggregate_integration_call_stats_daily(current_date) as agg_rows \gset
+select (now() at time zone 'Asia/Shanghai')::date as bday \gset
+
+select app.aggregate_integration_call_stats_daily(:'bday'::date) as agg_rows \gset
 select ok(:'agg_rows'::integer >= 3, '聚合覆盖 ≥3 个 kind+ref 分组');
 select ok(
   (select total = 1 and failed = 0 and avg_duration_ms is not null
           and ref_name = 'pgTAP 日志密钥'
      from public.integration_call_stats_daily
-    where day = current_date and kind = 'api' and ref_id = (:'ck'::jsonb ->> 'id')::uuid),
+    where day = :'bday'::date and kind = 'api' and ref_id = (:'ck'::jsonb ->> 'id')::uuid),
   'api 聚合：total=1 / failed=0 / 名称快照正确'
 );
 select ok(
   (select total = 3 and failed = 2 and avg_duration_ms is not null
      from public.integration_call_stats_daily
-    where day = current_date and kind = 'webhook' and ref_id = (:'wh'::jsonb ->> 'id')::uuid),
+    where day = :'bday'::date and kind = 'webhook' and ref_id = (:'wh'::jsonb ->> 'id')::uuid),
   'webhook 聚合：total=3 / failed=2（500+超时）/ 均值非空'
 );
 select ok(
   (select total = 3 and failed = 1
      from public.integration_call_stats_daily
-    where day = current_date and kind = 'api'
+    where day = :'bday'::date and kind = 'api'
       and ref_id = '00000000-0000-0000-0000-000000000000'::uuid),
   '无引用 api 日志归零 UUID 分组（含 500 记 failed）'
 );
-select app.aggregate_integration_call_stats_daily(current_date) as agg_again \gset
+select app.aggregate_integration_call_stats_daily(:'bday'::date) as agg_again \gset
 select is(
-  (select count(*) from public.integration_call_stats_daily where day = current_date),
+  (select count(*) from public.integration_call_stats_daily where day = :'bday'::date),
   (select count(distinct (kind, coalesce(key_id, webhook_id,
                                         '00000000-0000-0000-0000-000000000000'::uuid)))
      from public.integration_call_logs
-    where created_at >= current_date and created_at < current_date + 1),
+    where created_at >= (:'bday'::date::timestamp at time zone 'Asia/Shanghai')
+      and created_at < ((:'bday'::date + 1)::timestamp at time zone 'Asia/Shanghai')),
   '聚合幂等（重算后分组数与明细一致）'
 );
 select is(:'agg_rows'::integer, :'agg_again'::integer, '重复聚合返回分组数一致');

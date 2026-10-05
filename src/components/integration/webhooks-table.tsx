@@ -54,15 +54,19 @@ import {
   DELIVERY_STATUS_BADGE_CLASSES,
   asDeliveryStatus,
   asWebhookStatus,
+  SECRET_WARNING_CALLOUT_CLASS,
   translateIntegrationErrorMessage,
   WEBHOOK_BACKOFF_LABELS,
   WEBHOOK_BACKOFF_OPTIONS,
+  WEBHOOK_EVENT_COUNT_BADGE_CLASS,
   WEBHOOK_EVENT_GROUPS,
   WEBHOOK_EVENT_LABELS,
   WEBHOOK_MAX_ATTEMPTS_OPTIONS,
   WEBHOOK_STATUS_BADGE_CLASSES,
   WEBHOOK_STATUS_LABELS,
   WEBHOOK_STATUS_OPTIONS,
+  WEBHOOK_TEST_OK_TEXT_CLASS,
+  WEBHOOK_TEST_PENDING_TEXT_CLASS,
 } from "@/lib/dictionaries";
 import { createClient } from "@/lib/supabase/client";
 
@@ -371,8 +375,14 @@ export function WebhooksTable() {
       return false;
     }
     const url = form.url.trim();
-    if (!/^https:\/\/[^\s]+$/.test(url)) {
-      toast.error("URL 必须以 https:// 开头且不含空白字符");
+    let parsedUrl: URL | null = null;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      parsedUrl = null;
+    }
+    if (!parsedUrl || parsedUrl.protocol !== "https:" || !parsedUrl.hostname) {
+      toast.error("请输入合法的 https URL（含主机名，且不含空白字符）");
       return false;
     }
     if (form.events.length === 0) {
@@ -580,7 +590,7 @@ export function WebhooksTable() {
 
   const eventCountBadge = (events: string[]) => (
     <span className="inline-flex items-center gap-1">
-      <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/60 dark:text-violet-300">
+      <Badge variant="outline" className={WEBHOOK_EVENT_COUNT_BADGE_CLASS}>
         {events.length} 个事件
       </Badge>
     </span>
@@ -618,7 +628,7 @@ export function WebhooksTable() {
   const existingHeaders = editing ? asHeadersMasked(editing.headers_masked) : null;
 
   return (
-    <div className="flex flex-col p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -758,8 +768,19 @@ export function WebhooksTable() {
                     return (
                       <TableRow
                         key={row.id}
+                        role="button"
+                        tabIndex={0}
                         className="cursor-pointer"
                         onClick={() => openEdit(row)}
+                        onKeyDown={(event) => {
+                          if (event.target !== event.currentTarget) {
+                            return;
+                          }
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openEdit(row);
+                          }
+                        }}
                       >
                         <TableCell className="text-center font-medium">
                           {row.name}
@@ -857,7 +878,9 @@ export function WebhooksTable() {
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4">
             {secretResult ? (
               <div className="flex flex-col gap-4">
-                <div className="flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-200">
+                <div
+                  className={`flex items-start gap-2 rounded-xl border p-3 text-sm ${SECRET_WARNING_CALLOUT_CLASS}`}
+                >
                   <ShieldAlertIcon className="mt-0.5 size-4 shrink-0" />
                   <p>
                     secret 用于接收端验签（HMAC-SHA256），仅此一次展示，关闭后不可再查看。请立即复制并安全交付。
@@ -967,7 +990,7 @@ export function WebhooksTable() {
                           <label
                             key={event.value}
                             htmlFor={`webhook-event-${event.value}`}
-                            className="flex cursor-pointer items-center gap-3"
+                            className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 has-data-checked:border-primary/40 has-data-checked:bg-primary/5"
                           >
                             <Checkbox
                               id={`webhook-event-${event.value}`}
@@ -1005,7 +1028,7 @@ export function WebhooksTable() {
                     >
                       <SelectTrigger
                         id="webhook-max-attempts"
-                        className="w-full"
+                        className="min-h-11 w-full lg:min-h-8"
                       >
                         <SelectValue />
                       </SelectTrigger>
@@ -1026,7 +1049,10 @@ export function WebhooksTable() {
                         setForm((prev) => ({ ...prev, backoff: value }))
                       }
                     >
-                      <SelectTrigger id="webhook-backoff" className="w-full">
+                      <SelectTrigger
+                        id="webhook-backoff"
+                        className="min-h-11 w-full lg:min-h-8"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1171,9 +1197,9 @@ export function WebhooksTable() {
                     </div>
 
                     {testState.phase === "ok" ? (
-                      <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                        投递成功：HTTP {testState.httpStatus ?? "2xx"} · 耗时{" "}
-                        {testState.elapsedMs} ms
+                      <p className={`text-sm ${WEBHOOK_TEST_OK_TEXT_CLASS}`}>
+                        投递成功：HTTP {testState.httpStatus ?? "2xx"} · 耗时约{" "}
+                        {testState.elapsedMs} ms（含 2 秒轮询粒度）
                       </p>
                     ) : null}
                     {testState.phase === "failed" ? (
@@ -1182,12 +1208,13 @@ export function WebhooksTable() {
                         {testState.httpStatus
                           ? `（HTTP ${testState.httpStatus}）`
                           : ""}{" "}
-                        · 耗时 {testState.elapsedMs} ms
+                        · 耗时约 {testState.elapsedMs} ms（含 2 秒轮询粒度）
                       </p>
                     ) : null}
                     {testState.phase === "pending" ? (
-                      <p className="text-sm text-amber-600 dark:text-amber-400">
-                        15 秒内未收到响应，请检查目标地址连通性；可在投递明细中复查。
+                      <p className={`text-sm ${WEBHOOK_TEST_PENDING_TEXT_CLASS}`}>
+                        15 秒内未收到响应（已等待约{" "}
+                        {Math.round(testState.elapsedMs / 1000)} 秒），请检查目标地址连通性；可在投递明细中复查。
                       </p>
                     ) : null}
                   </div>
@@ -1216,14 +1243,14 @@ export function WebhooksTable() {
                 <Button
                   variant="outline"
                   onClick={closeSheet}
-                  className="h-8"
+                  className="h-11 lg:h-8"
                 >
                   取消
                 </Button>
                 <Button
                   onClick={() => void handleSave()}
                   disabled={saving}
-                  className="h-8"
+                  className="h-11 lg:h-8"
                 >
                   {saving ? (
                     <Loader2Icon

@@ -21,12 +21,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { InfoHint } from "@/components/info-hint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -409,7 +409,7 @@ export function MessageTemplatesTable() {
   const availableVars = registryVars(formEventKey);
 
   return (
-    <div className="flex flex-col p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex items-center justify-between gap-2">
@@ -456,14 +456,14 @@ export function MessageTemplatesTable() {
                   <Card key={event.event_key} className="shadow-xs gap-3! py-3!">
                     <CardHeader className="gap-1 pb-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <CardTitle className="font-mono text-sm">
+                        <CardTitle className="flex items-center gap-1.5 font-mono text-sm">
                           {event.event_key}
+                          {event.description ? (
+                            <InfoHint>{event.description}</InfoHint>
+                          ) : null}
                         </CardTitle>
                         <Badge variant="outline">{event.module}</Badge>
                       </div>
-                      {event.description ? (
-                        <CardDescription>{event.description}</CardDescription>
-                      ) : null}
                       {vars.length > 0 ? (
                         <div className="flex flex-wrap items-center gap-1 pt-1">
                           <span className="text-xs text-muted-foreground">

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { InfoHint } from "@/components/info-hint";
 import {
   ReportEmptyState,
   ReportErrorState,
@@ -25,7 +26,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -228,8 +228,10 @@ export function ActivityReport({ isAdmin }: { isAdmin: boolean }) {
     return (
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
-          <CardTitle>操作活跃度</CardTitle>
-          <CardDescription>按日操作量、活跃用户 Top10</CardDescription>
+          <CardTitle className="flex items-center gap-1.5">
+            操作活跃度
+            <InfoHint>按日操作量、活跃用户 Top10</InfoHint>
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
           <ShieldXIcon className="size-10 text-muted-foreground" />
@@ -329,13 +331,15 @@ export function ActivityReport({ isAdmin }: { isAdmin: boolean }) {
   };
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
+    <div className="flex flex-col gap-0.5">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
-          <CardTitle>操作活跃度</CardTitle>
-          <CardDescription>
-            近 {range.days} 天按日操作量与活跃用户 Top10（数据源 audit_operations_v，仅管理员）
-          </CardDescription>
+          <CardTitle className="flex items-center gap-1.5">
+            操作活跃度
+            <InfoHint>
+              近 {range.days} 天按日操作量与活跃用户 Top10（数据源 audit_operations_v，仅管理员）
+            </InfoHint>
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
@@ -385,10 +389,12 @@ export function ActivityReport({ isAdmin }: { isAdmin: boolean }) {
       {hasData && !loading && !error ? (
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
           <CardHeader>
-            <CardTitle className="text-base">活跃用户 Top 10</CardTitle>
-            <CardDescription>
-              近 {range.days} 天操作量排名（系统/后台调用归入「系统/后台」）
-            </CardDescription>
+            <CardTitle className="flex items-center gap-1.5 text-base">
+              活跃用户 Top 10
+              <InfoHint>
+                近 {range.days} 天操作量排名（系统/后台调用归入「系统/后台」）
+              </InfoHint>
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-4 md:p-6">
             <div className="overflow-x-auto">

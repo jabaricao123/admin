@@ -12,11 +12,11 @@ import {
   TagsIcon,
 } from "lucide-react";
 
+import { InfoHint } from "@/components/info-hint";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -133,7 +133,7 @@ export default function SystemAboutPage() {
   const shortSha = commitSha ? commitSha.slice(0, 7) : null;
 
   return (
-    <div className="flex flex-col gap-4 p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <div className="grid gap-4 lg:grid-cols-2">
         {/* 版本信息 */}
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
@@ -141,10 +141,8 @@ export default function SystemAboutPage() {
             <CardTitle className="flex items-center gap-2">
               <TagsIcon className="size-4 text-muted-foreground" />
               版本信息
+              <InfoHint>当前部署包版本与构建标识（构建时注入）</InfoHint>
             </CardTitle>
-            <CardDescription>
-              当前部署包版本与构建标识（构建时注入）
-            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 p-4 text-sm md:p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -181,10 +179,10 @@ export default function SystemAboutPage() {
             <CardTitle className="flex items-center gap-2">
               <ServerCogIcon className="size-4 text-muted-foreground" />
               技术栈摘要
+              <InfoHint>
+                前端框架与平台依赖版本（读取自 package.json，不含敏感配置）
+              </InfoHint>
             </CardTitle>
-            <CardDescription>
-              前端框架与平台依赖版本（读取自 package.json，不含敏感配置）
-            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 p-4 text-sm md:p-6">
             {TECH_STACK.map((item, index) => (
@@ -207,8 +205,8 @@ export default function SystemAboutPage() {
             <CardTitle className="flex items-center gap-2">
               <ScaleIcon className="size-4 text-muted-foreground" />
               许可信息
+              <InfoHint>软件许可与使用范围声明</InfoHint>
             </CardTitle>
-            <CardDescription>软件许可与使用范围声明</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 p-4 text-sm md:p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -229,8 +227,8 @@ export default function SystemAboutPage() {
             <CardTitle className="flex items-center gap-2">
               <MessageSquareWarningIcon className="size-4 text-muted-foreground" />
               问题上报
+              <InfoHint>内部反馈通道说明</InfoHint>
             </CardTitle>
-            <CardDescription>内部反馈通道说明</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 p-4 text-sm md:p-6">
             <div className="flex items-start gap-2 text-muted-foreground">
@@ -250,10 +248,10 @@ export default function SystemAboutPage() {
           <CardTitle className="flex items-center gap-2">
             <BookOpenIcon className="size-4 text-muted-foreground" />
             更新记录
+            <InfoHint>
+              来自仓库 CHANGELOG.md（随发布流程维护），按版本分段时间线展示
+            </InfoHint>
           </CardTitle>
-          <CardDescription>
-            来自仓库 CHANGELOG.md（随发布流程维护），按版本分段时间线展示
-          </CardDescription>
         </CardHeader>
         <CardContent className="p-4 md:p-6">
           {changelogError ? (

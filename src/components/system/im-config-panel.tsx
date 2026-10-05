@@ -29,7 +29,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -45,6 +44,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { InfoHint } from "@/components/info-hint";
 import type { Database } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/client";
 
@@ -472,16 +472,16 @@ export function ImConfigPanel() {
   }
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
+    <div className="flex flex-col gap-0.5">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <PlugZapIcon className="size-4 text-muted-foreground" />
             IM 扫码登录
+            <InfoHint>
+              三家厂商任一时刻仅启用一家；启用切换会强制所有在线用户重新登录（不清空绑定）。
+            </InfoHint>
           </CardTitle>
-          <CardDescription>
-            三家厂商任一时刻仅启用一家；启用切换会强制所有在线用户重新登录（不清空绑定）。
-          </CardDescription>
           <CardAction className="flex items-center gap-2">
             {enabledProvider ? (
               <Badge
@@ -630,10 +630,10 @@ export function ImConfigPanel() {
           <CardTitle className="flex items-center gap-2">
             <ShieldAlertIcon className="size-4 text-muted-foreground" />
             管理员联系方式
+            <InfoHint>
+              用户扫码后提示「未绑定」时，登录页展示该联系方式并提供一键复制（引导用户找管理员录入绑定）。
+            </InfoHint>
           </CardTitle>
-          <CardDescription>
-            用户扫码后提示「未绑定」时，登录页展示该联系方式并提供一键复制（引导用户找管理员录入绑定）。
-          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 p-4 md:p-6">
           <Field>

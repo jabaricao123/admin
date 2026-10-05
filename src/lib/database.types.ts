@@ -2981,6 +2981,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_api_key_usage: { Args: { p_key_id: string }; Returns: Json }
       get_cron_run_history: {
         Args: { p_job_name?: string; p_limit?: number }
         Returns: {

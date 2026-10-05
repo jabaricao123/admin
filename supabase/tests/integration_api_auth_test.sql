@@ -3,13 +3,14 @@
 -- 覆盖：角色属性/成员资格/白名单授权/RLS 策略；函数存在性 + SECURITY 属性 + search_path=''；
 --       GRANT 面（anon 可 issue/调资源、authenticated/service_role 无签发票，规则 10 例外声明）；
 --       合法 key 签发 token（类型/有效期/claims role/key_id/scopes/exp）；篡改/过期/错误 role/
---       缺 exp/损坏 token 拒绝；api_departments 端到端（anon 持 token 读 departments_v、
---       deleted 过滤、scopes 不符拒绝、角色还原）；anon 无权直查资源；api_client_role 只读。
--- 说明：夹具只在本事务内生效，finish 后 rollback，不污染其他测试文件。
+--       缺 exp/损坏 token 拒绝；api_departments 端到端（jsonb 状态包：ok:true/data、401/403 错误包、
+--       失败留痕 integration_call_logs + audit denied、角色还原）；anon 无权直查资源；api_client_role 只读。
+-- 说明：批次 2 起资源 RPC 守卫失败不再 raise，返回 {ok:false,status,error} 并同事务写调用日志；
+--       夹具只在本事务内生效，finish 后 rollback，不污染其他测试文件。
 
 begin;
 
-select plan(83);
+select plan(92);
 
 -- ===========================================================================
 -- 1. 角色属性 / 成员资格 / 白名单授权 / RLS 策略（19）
@@ -304,43 +305,107 @@ select extensions.sign(
 select is(app.verify_api_token(:'t_noexp'), null::jsonb, '缺 exp 的 token 拒绝');
 
 -- ===========================================================================
--- 6. api_departments：端到端（13）
+-- 6. api_departments：端到端 jsonb 状态包 + 失败留痕（16）
 -- ===========================================================================
 insert into public.departments (id, name, status, sort_order)
 values ('33333333-3333-3333-3333-3333333300ff', '已删除测试部', 'deleted', 99);
 
+select app.api_departments((:'t1'::jsonb) ->> 'token') as d1 \gset
 select ok(
-  (select count(*) from app.api_departments((:'t1'::jsonb) ->> 'token')) >= 6,
-  'org:read token 可读到部门数据（≥ 种子 6 个）'
+  (:'d1'::jsonb ->> 'ok')::boolean
+    and jsonb_array_length(:'d1'::jsonb -> 'data') >= 6,
+  'org:read token 返回 {ok:true,data}（≥ 种子 6 个部门）'
 );
 select ok(
   not exists (
     select 1
-    from app.api_departments((:'t1'::jsonb) ->> 'token') dv
-    where dv.id = '33333333-3333-3333-3333-3333333300ff'::uuid
+    from jsonb_array_elements(:'d1'::jsonb -> 'data') dv
+    where dv ->> 'id' = '33333333-3333-3333-3333-3333333300ff'
   ),
   'deleted 部门不在 API 结果中'
 );
-select throws_ok(
-  format(
-    'select count(*) from app.api_departments(%L)',
-    (:'t2'::jsonb) ->> 'token'
+
+select app.api_departments((:'t2'::jsonb) ->> 'token') as d2 \gset
+select is((:'d2'::jsonb ->> 'ok')::boolean, false, 'scopes 不含 org:read 返回 ok=false（不再 raise）');
+select is((:'d2'::jsonb ->> 'status')::integer, 403, '缺 scope：状态包 status=403');
+select is(
+  :'d2'::jsonb ->> 'error',
+  'API token 缺少所需范围：org:read',
+  '缺 scope：error 说明所需范围'
+);
+
+select app.api_departments('garbage') as d3 \gset
+select is((:'d3'::jsonb ->> 'status')::integer, 401, '无效 token：状态包 status=401');
+
+select app.api_departments(null) as d4 \gset
+select is((:'d4'::jsonb ->> 'status')::integer, 401, 'NULL token：状态包 status=401');
+
+select ok(
+  exists (
+    select 1
+    from public.integration_call_logs
+    where kind = 'api' and method_event = 'api_departments'
+      and status_code = 403
+      and key_id = (:'ak2'::jsonb ->> 'id')::uuid
+      and error like '%缺少所需范围%'
   ),
-  '42501', null, 'scopes 不含 org:read 的资源请求被拒（42501）'
+  '缺 scope 失败调用留痕（kind=api/status=403/关联 key_id）'
 );
-select throws_ok(
-  $$ select count(*) from app.api_departments('garbage') $$,
-  '42501', null, '无效 token 的资源请求被拒（42501）'
+select ok(
+  exists (
+    select 1
+    from public.integration_call_logs
+    where kind = 'api' and method_event = 'api_departments'
+      and status_code = 401
+      and error like '%无效%'
+  ),
+  '无效 token 失败调用留痕（kind=api/status=401）'
 );
-select throws_ok(
-  $$ select count(*) from app.api_departments(null) $$,
-  '42501', null, 'NULL token 的资源请求被拒（42501）'
+select ok(
+  exists (
+    select 1
+    from public.audit_operations
+    where module = 'integration' and action = 'denied'
+      and object_type = 'api_request' and object_id = 'api_departments'
+  ),
+  '失败调用写审计摘要（integration/denied/api_request）'
+);
+select is(
+  public.record_api_failure((:'t1'::jsonb ->> 'token'), 'api_custom', '自定义拒绝'),
+  true,
+  '公开入口 record_api_failure 直接调用返回 true（已留痕）'
+);
+select ok(
+  exists (
+    select 1
+    from public.integration_call_logs
+    where kind = 'api' and method_event = 'api_custom'
+      and status_code = 403
+      and key_id = (:'ak1'::jsonb ->> 'id')::uuid
+      and error = '自定义拒绝'
+  ),
+  '直接调用写 403 明细（方法名/错误原因/关联 key_id）'
+);
+select ok(
+  not exists (
+    select 1
+    from public.audit_operations
+    where action = 'denied' and object_id = 'api_custom'
+      and diff::text like '%' || (:'t1'::jsonb ->> 'token') || '%'
+  ),
+  '审计摘要不落 token 明文（仅 key_prefix）'
+);
+select ok(
+  has_function_privilege('anon', 'public.record_api_failure(text,text,text)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.record_api_failure(text,text,text)', 'EXECUTE')
+  and not has_function_privilege('service_role', 'public.record_api_failure(text,text,text)', 'EXECUTE'),
+  'record_api_failure 仅 GRANT anon（网关入口）'
 );
 
 -- anon 持 token 走 Data API 薄包装；调用后角色还原
 set local role anon;
 
-select count(*) as anon_dept_rows from public.api_departments((:'t1'::jsonb) ->> 'token') \gset
+select public.api_departments((:'t1'::jsonb) ->> 'token') as anon_dept_pack \gset
 select current_setting('role') as anon_role_after \gset
 
 select throws_ok(
@@ -362,7 +427,11 @@ select throws_ok(
 
 reset role;
 
-select ok(:'anon_dept_rows'::int >= 6, 'anon 持有效 token 可读取部门数据');
+select ok(
+  (:'anon_dept_pack'::jsonb ->> 'ok')::boolean
+    and jsonb_array_length(:'anon_dept_pack'::jsonb -> 'data') >= 6,
+  'anon 持有效 token 经薄包装读取 {ok:true,data}'
+);
 select is(:'anon_role_after'::text, 'anon', '资源 RPC 返回后角色还原为 anon（不影响同事务后续语句）');
 
 -- ===========================================================================

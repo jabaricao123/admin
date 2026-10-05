@@ -287,22 +287,22 @@ select set_config(
 set local role authenticated;
 
 select public.create_webhook(
-  '投递 A', 'https://127.0.0.1:9/a', array['approval.approved'],
+  '投递 A', 'https://hooks.example.com/a', array['approval.approved'],
   null,
   '{"Authorization":"Bearer abcdefgh","X-Webhook-Signature":"forged","Content-Type":"text/plain"}'::jsonb
 ) as w1 \gset
 
 select public.create_webhook(
-  '投递 B', 'https://127.0.0.1:9/b',
+  '投递 B', 'https://hooks.example.com/b',
   array['approval.approved', 'sync.run_finished', 'manual.retry', 'manual.retry2']
 ) as w2 \gset
 
 select public.create_webhook(
-  '停用 C', 'https://127.0.0.1:9/c', array['approval.approved']
+  '停用 C', 'https://hooks.example.com/c', array['approval.approved']
 ) as w3 \gset
 
 select public.create_webhook(
-  '终态 D', 'https://127.0.0.1:9/d', array['manual.only'],
+  '终态 D', 'https://hooks.example.com/d', array['manual.only'],
   '{"max_attempts":1,"backoff":"linear"}'::jsonb
 ) as w4 \gset
 

@@ -20,10 +20,10 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { InfoHint } from "@/components/info-hint";
 import { BANNED_ACCOUNT_MESSAGE } from "@/lib/dictionaries";
 
 type ProviderId = "feishu" | "wecom" | "dingtalk";
@@ -77,10 +77,10 @@ export function ProfileImBinding({
         <CardTitle className="flex items-center gap-2">
           <QrCodeIcon className="size-4 text-muted-foreground" />
           IM 账号绑定
+          <InfoHint>
+            绑定后可用已启用厂商扫码 / App 内免登进入系统；解绑仅管理员可操作。
+          </InfoHint>
         </CardTitle>
-        <CardDescription>
-          绑定后可用已启用厂商扫码 / App 内免登进入系统；解绑仅管理员可操作。
-        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 p-4 md:p-6">
         {boundProvider ? (

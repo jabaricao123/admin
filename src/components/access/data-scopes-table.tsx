@@ -20,12 +20,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { InfoHint } from "@/components/info-hint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -351,7 +351,7 @@ export function DataScopesTable() {
   };
 
   return (
-    <div className="flex flex-col p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           {loading ? (
@@ -496,11 +496,13 @@ export function DataScopesTable() {
 
       <Card className="rounded-none border-0 md:rounded-xl md:border gap-3! py-3!">
         <CardHeader>
-          <CardTitle>以用户视角预检</CardTitle>
-          <CardDescription>
-            选择用户后按真实会话语义（角色数据范围）计算可见范围统计，用于切换范围前的影响评估。
-            账号停用或角色未配置时可见范围为空集。
-          </CardDescription>
+          <CardTitle className="flex items-center gap-1.5">
+            以用户视角预检
+            <InfoHint>
+              选择用户后按真实会话语义（角色数据范围）计算可见范围统计，用于切换范围前的影响评估。
+              账号停用或角色未配置时可见范围为空集。
+            </InfoHint>
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

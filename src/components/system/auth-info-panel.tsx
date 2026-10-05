@@ -14,7 +14,6 @@ import {
   ExternalLinkIcon,
   FingerprintIcon,
   GlobeIcon,
-  InfoIcon,
   KeyRoundIcon,
   ShieldCheckIcon,
 } from "lucide-react";
@@ -26,7 +25,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -40,6 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { InfoHint } from "@/components/info-hint";
 import { ImConfigPanel } from "@/components/system/im-config-panel";
 import { PasswordLoginPanel } from "@/components/system/password-login-panel";
 
@@ -142,15 +141,12 @@ export function AuthInfoPanel() {
     : [];
 
   return (
-    <div className="flex flex-col gap-4 p-0 md:gap-6 md:p-6">
-      <div className="flex items-start gap-2 rounded-xl border p-4 text-sm text-muted-foreground">
-        <InfoIcon className="mt-0.5 size-4 shrink-0" />
-        <p>
-          上半部分「IM 扫码登录 / 密码登录 / 管理员联系方式」在本页直接配置并即时生效
-          （所有敏感操作写入审计）。下半部分为 Supabase Auth 控制台项的只读参考，
-          带「外部管理」标注。
-        </p>
-      </div>
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
+      <InfoHint className="size-5">
+        上半部分「IM 扫码登录 / 密码登录 / 管理员联系方式」在本页直接配置并即时生效
+        （所有敏感操作写入审计）。下半部分为 Supabase Auth 控制台项的只读参考，
+        带「外部管理」标注。
+      </InfoHint>
 
       {/* IM 扫码登录配置（im/006） */}
       <ImConfigPanel />
@@ -158,13 +154,10 @@ export function AuthInfoPanel() {
       {/* 密码登录开关（im/006） */}
       <PasswordLoginPanel />
 
-      <div className="flex items-start gap-2 rounded-xl border p-4 text-xs text-muted-foreground">
-        <InfoIcon className="mt-0.5 size-4 shrink-0" />
-        <p>
-          以下为 Supabase Auth 控制台项只读展示：真源在控制台，本页不改这些项的运行时行为，
-          避免与 Supabase 控制台双写冲突。
-        </p>
-      </div>
+      <InfoHint className="size-5">
+        以下为 Supabase Auth 控制台项只读展示：真源在控制台，本页不改这些项的运行时行为，
+        避免与 Supabase 控制台双写冲突。
+      </InfoHint>
 
       {/* 站点与会话概览 */}
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
@@ -172,11 +165,11 @@ export function AuthInfoPanel() {
           <CardTitle className="flex items-center gap-2">
             <GlobeIcon className="size-4 text-muted-foreground" />
             站点与会话概览
+            <InfoHint>
+              当前部署的站点地址与 Supabase Auth 会话策略摘要
+            </InfoHint>
             <ExternalBadge />
           </CardTitle>
-          <CardDescription>
-            当前部署的站点地址与 Supabase Auth 会话策略摘要
-          </CardDescription>
           <CardAction>
             <ConsoleLink
               href={`${consoleInfo.consoleBase}/settings/api`}
@@ -237,11 +230,11 @@ export function AuthInfoPanel() {
           <CardTitle className="flex items-center gap-2">
             <KeyRoundIcon className="size-4 text-muted-foreground" />
             密码策略
+            <InfoHint>
+              用户密码规则由 Supabase Auth 控制台统一管理，本页只读展示默认说明
+            </InfoHint>
             <ExternalBadge />
           </CardTitle>
-          <CardDescription>
-            用户密码规则由 Supabase Auth 控制台统一管理，本页只读展示默认说明
-          </CardDescription>
           <CardAction>
             <ConsoleLink
               href={`${consoleInfo.consoleBase}/auth/settings`}
@@ -275,11 +268,11 @@ export function AuthInfoPanel() {
           <CardTitle className="flex items-center gap-2">
             <FingerprintIcon className="size-4 text-muted-foreground" />
             OAuth 提供商
+            <InfoHint>
+              当前未启用任何第三方登录；启用/停用均在 Supabase 控制台操作
+            </InfoHint>
             <ExternalBadge />
           </CardTitle>
-          <CardDescription>
-            当前未启用任何第三方登录；启用/停用均在 Supabase 控制台操作
-          </CardDescription>
           <CardAction>
             <ConsoleLink
               href={`${consoleInfo.consoleBase}/auth/providers`}
@@ -328,11 +321,11 @@ export function AuthInfoPanel() {
           <CardTitle className="flex items-center gap-2">
             <ShieldCheckIcon className="size-4 text-muted-foreground" />
             回调 URL 清单
+            <InfoHint>
+              供控制台 Redirect URLs 配置参照；以当前访问站点地址推导，支持一键复制
+            </InfoHint>
             <ExternalBadge />
           </CardTitle>
-          <CardDescription>
-            供控制台 Redirect URLs 配置参照；以当前访问站点地址推导，支持一键复制
-          </CardDescription>
           <CardAction>
             <ConsoleLink
               href={`${consoleInfo.consoleBase}/auth/url-configuration`}

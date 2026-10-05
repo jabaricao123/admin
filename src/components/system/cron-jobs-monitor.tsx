@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -38,6 +37,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InfoHint } from "@/components/info-hint";
 import type { Database } from "@/lib/database.types";
 import { translateSystemErrorMessage } from "@/lib/dictionaries";
 import { createClient } from "@/lib/supabase/client";
@@ -254,7 +254,7 @@ export function CronJobsMonitor() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+      <div className="flex flex-col gap-0.5 p-4 lg:p-6">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-96 w-full" />
       </div>
@@ -279,7 +279,7 @@ export function CronJobsMonitor() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+    <div className="flex flex-col gap-0.5 p-4 lg:p-6">
       {/* 只读边界说明（INDEX 规则 5：启停回各模块调度页） */}
       <div className="flex items-start gap-2 rounded-xl border bg-muted/40 p-3 text-sm">
         <InfoIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -305,10 +305,10 @@ export function CronJobsMonitor() {
               <CardTitle className="flex items-center gap-2">
                 <ClockIcon className="size-4 text-muted-foreground" />
                 任务登记（{jobs.length}）
+                <InfoHint>
+                  job 名 / 来源模块 / cron 表达式 / 管理入口 / 上次运行与健康状态
+                </InfoHint>
               </CardTitle>
-              <CardDescription>
-                job 名 / 来源模块 / cron 表达式 / 管理入口 / 上次运行与健康状态
-              </CardDescription>
             </CardHeader>
             <CardContent>
               {jobs.length === 0 ? (
@@ -416,10 +416,10 @@ export function CronJobsMonitor() {
         <TabsContent value="history" className="mt-4">
           <Card className="gap-3! py-3!">
             <CardHeader>
-              <CardTitle>执行历史（最近 {RUN_LIMIT} 条）</CardTitle>
-              <CardDescription>
-                数据来自 pg_cron 运行明细；可按 job 名筛选
-              </CardDescription>
+              <CardTitle className="flex items-center gap-1.5">
+                执行历史（最近 {RUN_LIMIT} 条）
+                <InfoHint>数据来自 pg_cron 运行明细；可按 job 名筛选</InfoHint>
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <div className="flex items-center gap-2">

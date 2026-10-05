@@ -10,6 +10,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Building2Icon, DownloadIcon, Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
+import { InfoHint } from "@/components/info-hint";
 import {
   ReportEmptyState,
   ReportErrorState,
@@ -22,7 +23,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -315,10 +315,12 @@ export function DepartmentStatsReport() {
   return (
     <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
       <CardHeader>
-        <CardTitle>部门分布</CardTitle>
-        <CardDescription>
-          各部门在岗与编制对比（含子部门聚合；数据源 departments_v / profiles / positions_v）
-        </CardDescription>
+        <CardTitle className="flex items-center gap-1.5">
+          部门分布
+          <InfoHint>
+            各部门在岗与编制对比（含子部门聚合；数据源 departments_v / profiles / positions_v）
+          </InfoHint>
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 p-4 md:p-6">
         <div className="flex flex-wrap items-center gap-2">

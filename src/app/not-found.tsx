@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { FileQuestionIcon } from "lucide-react";
 
+import { InfoHint } from "@/components/info-hint";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -18,10 +18,10 @@ export default function NotFound() {
           <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-muted">
             <FileQuestionIcon className="size-6 text-muted-foreground" />
           </div>
-          <CardTitle>页面不存在</CardTitle>
-          <CardDescription>
-            你访问的地址不存在或已被移动。
-          </CardDescription>
+          <CardTitle className="flex items-center justify-center gap-1.5">
+            页面不存在
+            <InfoHint>你访问的地址不存在或已被移动。</InfoHint>
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex justify-center">
           <Button asChild>

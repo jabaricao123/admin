@@ -9,6 +9,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { DownloadIcon, Loader2Icon, UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { InfoHint } from "@/components/info-hint";
 import {
   ReportEmptyState,
   ReportErrorState,
@@ -20,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -213,10 +213,12 @@ export function UserStatsReport() {
   return (
     <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
       <CardHeader>
-        <CardTitle>人员统计</CardTitle>
-        <CardDescription>
-          用户总数、在职 / 停用与角色分布（数据源 profiles，按当前账号数据范围过滤）
-        </CardDescription>
+        <CardTitle className="flex items-center gap-1.5">
+          人员统计
+          <InfoHint>
+            用户总数、在职 / 停用与角色分布（数据源 profiles，按当前账号数据范围过滤）
+          </InfoHint>
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 p-4 md:p-6">
         <div className="flex flex-wrap items-center gap-2">

@@ -6,10 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { InfoHint } from "@/components/info-hint";
 import { Separator } from "@/components/ui/separator";
 import {
   ROLE_BADGE_CLASSES,
@@ -70,14 +70,14 @@ export default async function SettingsProfilePage({
   const role = (profile?.role ?? "engineer") as UserRole;
 
   return (
-    <div className="flex flex-col gap-4 p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserRoundIcon className="size-4 text-muted-foreground" />
             账号信息
+            <InfoHint>当前登录账号的基本信息（姓名在用户管理维护）</InfoHint>
           </CardTitle>
-          <CardDescription>当前登录账号的基本信息（姓名在用户管理维护）</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 p-4 text-sm md:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">

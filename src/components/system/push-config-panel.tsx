@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -35,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { InfoHint } from "@/components/info-hint";
 import type { Database } from "@/lib/database.types";
 import {
   asServiceVerifyStatus,
@@ -248,7 +248,7 @@ export function PushConfigPanel() {
 
   if (loading) {
     return (
-      <div className="flex flex-col p-0 md:gap-6 md:p-6">
+      <div className="flex flex-col gap-0.5 p-0 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
           <CardHeader>
             <Skeleton className="h-5 w-24" />
@@ -266,7 +266,7 @@ export function PushConfigPanel() {
 
   if (error) {
     return (
-      <div className="flex flex-col p-0 md:gap-6 md:p-6">
+      <div className="flex flex-col gap-0.5 p-0 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
           <CardContent className="flex flex-col items-center gap-2 py-16 text-sm">
             <p className="text-destructive">
@@ -282,7 +282,7 @@ export function PushConfigPanel() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       {/* 预留状态 Banner（services-push.md：推送通道为预留能力） */}
       <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-200">
         <InfoIcon className="mt-0.5 size-4 shrink-0" />
@@ -306,10 +306,8 @@ export function PushConfigPanel() {
                 <CardTitle className="flex items-center gap-2">
                   <BellRingIcon className="size-4 text-muted-foreground" />
                   {PUSH_CHANNEL_LABELS[channel]}
+                  <InfoHint>{PUSH_CHANNEL_DESCRIPTIONS[channel]}</InfoHint>
                 </CardTitle>
-                <CardDescription>
-                  {PUSH_CHANNEL_DESCRIPTIONS[channel]}
-                </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-4 p-4 md:p-6">
                 <Field>

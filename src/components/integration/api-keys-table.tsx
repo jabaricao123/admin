@@ -49,13 +49,16 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Database } from "@/lib/database.types";
 import {
+  API_KEY_EXPIRED_BADGE_CLASS,
   API_KEY_EXPIRY_OPTIONS,
+  API_KEY_SCOPE_BADGE_CLASS,
   API_KEY_SCOPE_LABELS,
   API_KEY_SCOPE_OPTIONS,
   API_KEY_STATUS_BADGE_CLASSES,
   API_KEY_STATUS_LABELS,
   API_KEY_STATUS_OPTIONS,
   asApiKeyStatus,
+  SECRET_WARNING_CALLOUT_CLASS,
   translateIntegrationErrorMessage,
   type ApiKeyExpiryPreset,
 } from "@/lib/dictionaries";
@@ -78,6 +81,10 @@ type CreateApiKeyArgs =
 type ProfileRow = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
   "id" | "full_name" | "email"
+>;
+type UsageStatRow = Pick<
+  Database["public"]["Tables"]["integration_call_stats_daily"]["Row"],
+  "ref_id" | "total"
 >;
 
 type IssuedKey = {
@@ -119,10 +126,56 @@ const isExpired = (row: Pick<ApiKeyRow, "expires_at" | "status">) =>
   row.expires_at !== null &&
   new Date(row.expires_at).getTime() <= Date.now();
 
+/**
+ * 近 30 天调用量：优先 get_api_key_usage RPC（明细 + 日聚合按天去重）；
+ * RPC 不可用时回退 integration_call_stats_daily（admin RLS 可读）按 key_id 求和。
+ */
+async function loadUsageTotals(
+  supabase: ReturnType<typeof createClient>,
+  keys: ApiKeyRow[],
+): Promise<Map<string, number>> {
+  const totals = new Map<string, number>();
+  if (keys.length === 0) {
+    return totals;
+  }
+
+  const usageResults = await Promise.all(
+    keys.map((key) => supabase.rpc("get_api_key_usage", { p_key_id: key.id })),
+  );
+  if (usageResults.every((result) => !result.error)) {
+    usageResults.forEach((result, index) => {
+      const payload = result.data as { total?: number | string } | null;
+      const total = Number(payload?.total ?? 0);
+      totals.set(keys[index].id, Number.isFinite(total) ? total : 0);
+    });
+    return totals;
+  }
+
+  // TODO(integration): get_api_key_usage 恢复后删除此降级路径
+  const usageSince = new Date(Date.now() - 30 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const statsRes = await supabase
+    .from("integration_call_stats_daily")
+    .select("ref_id,total")
+    .eq("kind", "api")
+    .gte("day", usageSince)
+    .limit(5000);
+  if (!statsRes.error) {
+    for (const stat of (statsRes.data ?? []) as UsageStatRow[]) {
+      totals.set(stat.ref_id, (totals.get(stat.ref_id) ?? 0) + stat.total);
+    }
+  }
+  return totals;
+}
+
 export function ApiKeysTable() {
   const isMobile = useIsMobile();
   const [rows, setRows] = React.useState<ApiKeyRow[]>([]);
   const [creatorNames, setCreatorNames] = React.useState<Map<string, string>>(
+    new Map(),
+  );
+  const [usageTotals, setUsageTotals] = React.useState<Map<string, number>>(
     new Map(),
   );
   const [loading, setLoading] = React.useState(true);
@@ -177,6 +230,8 @@ export function ApiKeysTable() {
       }
       setCreatorNames(map);
     }
+
+    setUsageTotals(await loadUsageTotals(supabase, items));
 
     setLoading(false);
     return items;
@@ -350,7 +405,7 @@ export function ApiKeysTable() {
           <Badge
             key={scope}
             variant="outline"
-            className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300"
+            className={API_KEY_SCOPE_BADGE_CLASS}
           >
             {API_KEY_SCOPE_LABELS[scope] ?? scope}
           </Badge>
@@ -362,7 +417,7 @@ export function ApiKeysTable() {
     id ? (creatorNames.get(id) ?? "已离职用户") : "—";
 
   return (
-    <div className="flex flex-col p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -457,7 +512,7 @@ export function ApiKeysTable() {
                         {expired ? (
                           <Badge
                             variant="outline"
-                            className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300"
+                            className={API_KEY_EXPIRED_BADGE_CLASS}
                           >
                             已过期
                           </Badge>
@@ -474,6 +529,12 @@ export function ApiKeysTable() {
                     <div className="flex items-center justify-between gap-4 text-sm">
                       <span className="text-muted-foreground">最近调用</span>
                       <span>{formatDateTime(row.last_used_at)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 text-sm">
+                      <span className="text-muted-foreground">
+                        近 30 天调用
+                      </span>
+                      <span>{usageTotals.get(row.id) ?? 0}</span>
                     </div>
                     <div className="flex items-center justify-between gap-4 text-sm">
                       <span className="text-muted-foreground">创建人</span>
@@ -494,6 +555,7 @@ export function ApiKeysTable() {
                     <TableHead className="text-center">状态</TableHead>
                     <TableHead className="text-center">有效期</TableHead>
                     <TableHead className="text-center">最近调用</TableHead>
+                    <TableHead className="text-center">近 30 天调用</TableHead>
                     <TableHead className="text-center">创建人</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -503,8 +565,19 @@ export function ApiKeysTable() {
                     return (
                       <TableRow
                         key={row.id}
+                        role="button"
+                        tabIndex={0}
                         className="cursor-pointer"
                         onClick={() => openDetail(row)}
+                        onKeyDown={(event) => {
+                          if (event.target !== event.currentTarget) {
+                            return;
+                          }
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openDetail(row);
+                          }
+                        }}
                       >
                         <TableCell className="text-center font-medium">
                           {row.name}
@@ -526,7 +599,7 @@ export function ApiKeysTable() {
                             {isExpired(row) ? (
                               <Badge
                                 variant="outline"
-                                className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300"
+                                className={API_KEY_EXPIRED_BADGE_CLASS}
                               >
                                 已过期
                               </Badge>
@@ -538,6 +611,9 @@ export function ApiKeysTable() {
                         </TableCell>
                         <TableCell className="text-center text-xs text-muted-foreground">
                           {formatDateTime(row.last_used_at)}
+                        </TableCell>
+                        <TableCell className="text-center text-xs text-muted-foreground">
+                          {usageTotals.get(row.id) ?? 0}
                         </TableCell>
                         <TableCell className="text-center text-xs text-muted-foreground">
                           {creatorName(row.created_by)}
@@ -626,7 +702,7 @@ export function ApiKeysTable() {
                     {isExpired(detail) ? (
                       <Badge
                         variant="outline"
-                        className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300"
+                        className={API_KEY_EXPIRED_BADGE_CLASS}
                       >
                         已过期
                       </Badge>
@@ -640,7 +716,7 @@ export function ApiKeysTable() {
                       <Badge
                         key={scope}
                         variant="outline"
-                        className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300"
+                        className={API_KEY_SCOPE_BADGE_CLASS}
                       >
                         {API_KEY_SCOPE_LABELS[scope] ?? scope}
                       </Badge>
@@ -760,6 +836,7 @@ export function ApiKeysTable() {
                   onChange={(event) => setDraftName(event.target.value)}
                   placeholder="如：ERP 对接（财务）"
                   autoComplete="off"
+                  className="h-11 text-base lg:h-8 lg:text-sm"
                 />
                 <FieldDescription>
                   名称用于识别调用方与排障，不参与鉴权。
@@ -842,7 +919,9 @@ export function ApiKeysTable() {
 
             {step === 4 && issued ? (
               <div className="flex flex-col gap-4">
-                <div className="flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-200">
+                <div
+                  className={`flex items-start gap-2 rounded-xl border p-3 text-sm ${SECRET_WARNING_CALLOUT_CLASS}`}
+                >
                   <ShieldAlertIcon className="mt-0.5 size-4 shrink-0" />
                   <p>
                     完整密钥仅此一次展示，关闭后不可再查看。请立即复制并通过安全渠道交付使用方。
@@ -880,7 +959,7 @@ export function ApiKeysTable() {
                         <Badge
                           key={scope}
                           variant="outline"
-                          className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300"
+                          className={API_KEY_SCOPE_BADGE_CLASS}
                         >
                           {API_KEY_SCOPE_LABELS[scope] ?? scope}
                         </Badge>

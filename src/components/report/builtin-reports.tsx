@@ -13,6 +13,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 
+import { InfoHint } from "@/components/info-hint";
 import { ActivityReport } from "@/components/report/activity-report";
 import { DepartmentStatsReport } from "@/components/report/department-stats-report";
 import { UserStatsReport } from "@/components/report/user-stats-report";
@@ -21,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -66,7 +66,7 @@ export function BuiltinReports({ isAdmin }: { isAdmin: boolean }) {
 
   if (current) {
     return (
-      <div className="flex flex-col gap-4 p-4 md:gap-6 md:p-6">
+      <div className="flex flex-col gap-0.5 p-4 md:p-6">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
@@ -93,20 +93,27 @@ export function BuiltinReports({ isAdmin }: { isAdmin: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-4 md:p-6">
       <div>
-        <p className="text-sm text-muted-foreground">
+        <InfoHint className="size-5">
           开箱即用的统计报表，只读消费各模块公开视图；数字随当前账号的数据范围过滤。
-        </p>
+        </InfoHint>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {REPORTS.map((report) => (
-          <button
+          <div
             key={report.key}
-            type="button"
+            role="button"
+            tabIndex={0}
             onClick={() => setSelected(report.key)}
-            className="group text-left focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none rounded-xl"
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSelected(report.key);
+              }
+            }}
+            className="group cursor-pointer text-left focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none rounded-xl"
           >
             <Card className="h-full transition-colors group-hover:border-primary/50 gap-3! py-3!">
               <CardHeader>
@@ -115,19 +122,19 @@ export function BuiltinReports({ isAdmin }: { isAdmin: boolean }) {
                     <report.icon className="size-4" />
                   </div>
                   <CardTitle className="text-base">{report.title}</CardTitle>
+                  <InfoHint>{report.description}</InfoHint>
                   {report.key === "activity" && !isAdmin ? (
                     <Badge variant="outline" className="ml-auto text-muted-foreground">
                       需要管理员权限
                     </Badge>
                   ) : null}
                 </div>
-                <CardDescription>{report.description}</CardDescription>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground">
                 {report.hint}
               </CardContent>
             </Card>
-          </button>
+          </div>
         ))}
       </div>
     </div>

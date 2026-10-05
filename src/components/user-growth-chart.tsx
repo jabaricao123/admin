@@ -3,10 +3,10 @@
 import { ShieldXIcon } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
+import { InfoHint } from "@/components/info-hint";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -46,8 +46,10 @@ export function UserGrowthChart({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>注册趋势</CardTitle>
-          <CardDescription>近 30 天注册用户数</CardDescription>
+          <CardTitle className="flex items-center gap-1.5">
+            注册趋势
+            <InfoHint>近 30 天注册用户数</InfoHint>
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
           <ShieldXIcon className="size-10 text-muted-foreground" />
@@ -70,16 +72,16 @@ export function UserGrowthChart({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>注册趋势</CardTitle>
-        <CardDescription>
-          {lowData ? (
-            <span>用户数据还很少，趋势图将在积累更多注册后变得有意义</span>
-          ) : (
-            <span className="hidden @[540px]/card:block">
-              近 30 天按日统计的注册用户数
-            </span>
-          )}
-        </CardDescription>
+        <CardTitle className="flex items-center gap-1.5">
+          注册趋势
+          <InfoHint>
+            {lowData ? (
+              <span>用户数据还很少，趋势图将在积累更多注册后变得有意义</span>
+            ) : (
+              <span>近 30 天按日统计的注册用户数</span>
+            )}
+          </InfoHint>
+        </CardTitle>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         <ChartContainer

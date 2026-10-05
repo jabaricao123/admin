@@ -787,6 +787,14 @@ export const API_KEY_EXPIRY_OPTIONS = (
   Object.keys(API_KEY_EXPIRY_LABELS) as ApiKeyExpiryPreset[]
 ).map((value) => ({ value, label: API_KEY_EXPIRY_LABELS[value] }));
 
+/** API 密钥 · 访问范围 Badge 配色（蓝，列表/详情/签发结果三处共用） */
+export const API_KEY_SCOPE_BADGE_CLASS =
+  "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300";
+
+/** API 密钥 · 「已过期」Badge 配色（amber：active 但 expires_at 已过） */
+export const API_KEY_EXPIRED_BADGE_CLASS =
+  "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300";
+
 /** Webhook 状态（webhooks.status；停用端点不再收到事件） */
 export type WebhookStatus = "active" | "disabled";
 
@@ -891,6 +899,20 @@ export const DELIVERY_STATUS_BADGE_CLASSES: Record<DeliveryStatus, string> = {
 export function asDeliveryStatus(value: string): DeliveryStatus {
   return value === "done" || value === "failed" ? value : "delivering";
 }
+
+/** Webhook · 「N 个事件」Badge 配色（紫，与 API 调用日志的 Webhook 类型同色系） */
+export const WEBHOOK_EVENT_COUNT_BADGE_CLASS =
+  "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/60 dark:text-violet-300";
+
+/** Webhook 测试投递结果文字配色：成功绿 / 超时待定 amber（失败复用 text-destructive） */
+export const WEBHOOK_TEST_OK_TEXT_CLASS =
+  "text-emerald-600 dark:text-emerald-400";
+export const WEBHOOK_TEST_PENDING_TEXT_CLASS =
+  "text-amber-600 dark:text-amber-400";
+
+/** 接口集成 · 一次性密钥/secret 展示警示框（amber；api-keys 与 webhooks 共用） */
+export const SECRET_WARNING_CALLOUT_CLASS =
+  "border-amber-300/60 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-200";
 
 /** 接口集成 RPC 错误：业务拒绝信息已中文（部分带参数），原文透传；其余走通用映射 */
 export function translateIntegrationErrorMessage(message: string): string {
@@ -1225,6 +1247,24 @@ export function callStatusCodeBadgeClass(code: number | null): string {
 
 export function callStatusLabel(code: number | null): string {
   return code === null ? "无响应" : String(code);
+}
+
+/** 接口文档（integration/009）· HTTP 方法 Badge 配色（OpenAPI paths 小写方法名 → 色） */
+export const HTTP_METHOD_BADGE_CLASSES: Record<string, string> = {
+  get: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  post: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
+  put: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+  patch:
+    "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/60 dark:text-violet-300",
+  delete:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+};
+
+/** 接口文档 · 响应状态码 Badge 配色：≥400 红 / 其余（含 3xx）绿 */
+export function apiResponseStatusBadgeClass(status: number): string {
+  return status >= 400
+    ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300"
+    : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300";
 }
 
 /** 调用日志筛选：状态码档位（一键 ≥400 为 failed） */

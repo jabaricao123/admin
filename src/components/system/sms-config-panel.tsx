@@ -25,7 +25,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -61,6 +60,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { InfoHint } from "@/components/info-hint";
 import type { Database } from "@/lib/database.types";
 import {
   asServiceVerifyStatus,
@@ -399,7 +399,7 @@ export function SmsConfigPanel() {
 
   if (loading) {
     return (
-      <div className="flex flex-col p-0 md:gap-6 md:p-6">
+      <div className="flex flex-col gap-0.5 p-0 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
           <CardContent className="flex flex-col gap-4 p-4 md:p-6">
             <div className="grid gap-4 lg:grid-cols-2">
@@ -419,7 +419,7 @@ export function SmsConfigPanel() {
 
   if (error) {
     return (
-      <div className="flex flex-col p-0 md:gap-6 md:p-6">
+      <div className="flex flex-col gap-0.5 p-0 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
           <CardContent className="flex flex-col items-center gap-2 py-16 text-sm">
             <p className="text-destructive">
@@ -437,7 +437,7 @@ export function SmsConfigPanel() {
   const testDisabled = !configured || !form.enabled || testing;
 
   return (
-    <div className="flex flex-col gap-4 p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       {/* 预留状态 Banner（services-sms.md：首期仅配置面骨架） */}
       <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-200">
         <InfoIcon className="mt-0.5 size-4 shrink-0" />
@@ -643,10 +643,12 @@ export function SmsConfigPanel() {
       {/* 模板登记表 */}
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
-          <CardTitle>短信模板登记</CardTitle>
-          <CardDescription>
-            登记服务商后台已审核模板（名称、场景、模板 Code、状态）；只登记，不管理服务商后台
-          </CardDescription>
+          <CardTitle className="flex items-center gap-1.5">
+            短信模板登记
+            <InfoHint>
+              登记服务商后台已审核模板（名称、场景、模板 Code、状态）；只登记，不管理服务商后台
+            </InfoHint>
+          </CardTitle>
           <CardAction className="flex items-center gap-2">
             <Button type="button" size="sm" onClick={openCreateTemplate}>
               <PlusIcon data-icon="inline-start" />

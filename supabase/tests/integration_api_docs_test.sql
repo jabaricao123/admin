@@ -6,7 +6,7 @@
 -- 说明：engineer 为 seeds 内部账号（非 admin）；夹具只在本事务内生效，finish 后 rollback。
 begin;
 
-select plan(39);
+select plan(41);
 
 -- ===========================================================================
 -- 1. 结构：表 / 列 / 约束 / 索引 / RLS（12）
@@ -131,11 +131,28 @@ select ok(
   'v1 覆盖现有开放面（issue_api_token / api_departments）'
 );
 select is(
-  (select count(*) from public.api_docs d,
-                        jsonb_array_elements(d.spec -> 'x-webhook-events')
-    where d.version = 'v1'),
-  6::bigint,
-  'v1 事件清单 6 条（approval 3 + org 1 + sync 1 + ping 1）'
+  (select count(*) from public.api_docs where version = 'v1.1'),
+  1::bigint,
+  'seed：v1.1 已发布（修正版快照）'
+);
+select ok(
+  (select (spec -> 'x-webhook-events') @> '[
+      {"event":"approval.submitted"},{"event":"approval.node_approved"},
+      {"event":"approval.approved"},{"event":"approval.rejected"},
+      {"event":"approval.withdrawn"},{"event":"org.user_changed"},
+      {"event":"sync.run_finished"}]'::jsonb
+     from public.api_docs
+    order by created_at desc, id desc
+    limit 1),
+  '最新版规格事件清单 ⊇ 实际 emit 事件（approval ×5 + org.user_changed + sync.run_finished）'
+);
+select ok(
+  (select not (spec -> 'x-webhook-events') @> '[{"event":"webhook.ping"}]'::jsonb
+       and jsonb_typeof(spec -> 'x-webhook-test') = 'object'
+     from public.api_docs
+    order by created_at desc, id desc
+    limit 1),
+  'webhook.ping 移出事件清单并标注 test_webhook 专用（x-webhook-test）'
 );
 select ok(
   (select jsonb_array_length(spec -> 'x-webhook-signature' -> 'examples') = 2
@@ -179,16 +196,16 @@ select throws_ok(
   '22023', null, '版本号格式非法拒绝'
 );
 select throws_ok(
-  $$ select public.publish_api_doc('v1.1', '{"openapi":"3.1.0","info":{}}'::jsonb, null) $$,
+  $$ select public.publish_api_doc('v1.2', '{"openapi":"3.1.0","info":{}}'::jsonb, null) $$,
   '22023', null, '缺少 paths 拒绝'
 );
 select throws_ok(
-  $$ select public.publish_api_doc('v1.1', '{"info":{},"paths":{}}'::jsonb, null) $$,
+  $$ select public.publish_api_doc('v1.2', '{"info":{},"paths":{}}'::jsonb, null) $$,
   '22023', null, '缺少 openapi 版本字段拒绝'
 );
 select public.publish_api_doc(
-  'v1.1',
-  '{"openapi":"3.1.0","info":{"title":"企业管理系统 · 开放 API","version":"v1.1"},"paths":{"/rpc/api_departments":{"post":{}}}}'::jsonb,
+  'v1.2',
+  '{"openapi":"3.1.0","info":{"title":"企业管理系统 · 开放 API","version":"v1.2"},"paths":{"/rpc/api_departments":{"post":{}}}}'::jsonb,
   '测试版本：补充部门 RPC'
 ) as newdoc \gset
 reset role;
@@ -197,19 +214,19 @@ select isnt(:'newdoc', null::uuid, 'publish 返回快照 id');
 select ok(
   (select changelog = '测试版本：补充部门 RPC'
        and published_by = '11111111-1111-1111-1111-111111111111'::uuid
-     from public.api_docs where version = 'v1.1'),
-  'v1.1 落库 changelog 与发布人'
+     from public.api_docs where version = 'v1.2'),
+  'v1.2 落库 changelog 与发布人'
 );
 select ok(
   exists (
     select 1 from public.audit_operations
      where module = 'integration' and action = 'publish'
-       and object_type = 'api_doc' and object_id = 'v1.1'
+       and object_type = 'api_doc' and object_id = 'v1.2'
   ),
   '发布写审计摘要（publish/api_doc）'
 );
 select throws_ok(
-  $$ select app.publish_api_doc('v1.1', '{"openapi":"3.1.0","info":{},"paths":{}}'::jsonb, null) $$,
+  $$ select app.publish_api_doc('v1.2', '{"openapi":"3.1.0","info":{},"paths":{}}'::jsonb, null) $$,
   'P0001', null, '重复版本被拒（快照不可变）'
 );
 
@@ -224,7 +241,7 @@ select set_config(
 set local role authenticated;
 select is(
   (select count(*) from public.api_docs),
-  2::bigint,
+  3::bigint,
   'RLS：登录用户（非 admin）可见全部版本'
 );
 reset role;
@@ -236,7 +253,7 @@ select set_config(
 );
 set local role authenticated;
 select ok(
-  (select count(*) >= 2 and bool_and(spec ? 'paths') from public.api_docs),
+  (select count(*) >= 3 and bool_and(spec ? 'paths') from public.api_docs),
   'RLS：admin 可见全部版本且规格可读'
 );
 reset role;
@@ -249,8 +266,8 @@ select throws_ok(
 reset role;
 
 select ok(
-  (select count(*) = 1 from public.api_docs where version = 'v1.1'),
-  '版本切换数据源：v1.1 快照唯一'
+  (select count(*) = 1 from public.api_docs where version = 'v1.2'),
+  '版本切换数据源：v1.2 快照唯一'
 );
 
 select * from finish();

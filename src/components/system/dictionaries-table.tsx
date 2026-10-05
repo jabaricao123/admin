@@ -19,7 +19,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -49,6 +48,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { InfoHint } from "@/components/info-hint";
 import type { Database } from "@/lib/database.types";
 import { translateSystemErrorMessage } from "@/lib/dictionaries";
 import { createClient } from "@/lib/supabase/client";
@@ -414,7 +414,7 @@ export function DictionariesTable() {
 
   if (loading) {
     return (
-      <div className="flex flex-col p-0 md:gap-6 md:p-6">
+      <div className="flex flex-col gap-0.5 p-0 md:p-6">
         <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
           <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
             <CardContent className="flex flex-col gap-3 p-4 md:p-6">
@@ -437,7 +437,7 @@ export function DictionariesTable() {
 
   if (error) {
     return (
-      <div className="flex flex-col p-0 md:gap-6 md:p-6">
+      <div className="flex flex-col gap-0.5 p-0 md:p-6">
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
           <CardContent className="flex flex-col items-center gap-2 py-16 text-sm">
             <p className="text-destructive">
@@ -453,15 +453,17 @@ export function DictionariesTable() {
   }
 
   return (
-    <div className="flex flex-col p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         {/* 左侧：字典分组导航 */}
         <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
           <CardHeader>
-            <CardTitle>字典分组</CardTitle>
-            <CardDescription>
-              共 {catalog.length} 个字典；新增字典需登记用途说明
-            </CardDescription>
+            <CardTitle className="flex items-center gap-1.5">
+              字典分组
+              <InfoHint>
+                共 {catalog.length} 个字典；新增字典需登记用途说明
+              </InfoHint>
+            </CardTitle>
             <CardAction>
               <Button type="button" size="sm" onClick={openCreateDict}>
                 <PlusIcon data-icon="inline-start" />
@@ -512,12 +514,12 @@ export function DictionariesTable() {
             <CardTitle className="flex items-center gap-2 font-mono text-base">
               <BookMarkedIcon className="size-4 text-muted-foreground" />
               {selectedKey === "" ? "字典项" : selectedKey}
+              <InfoHint>
+                {selectedMeta
+                  ? selectedMeta.description
+                  : "从左侧选择字典；value 建后不可改，停用项不再下发但存量展示不受影响"}
+              </InfoHint>
             </CardTitle>
-            <CardDescription>
-              {selectedMeta
-                ? selectedMeta.description
-                : "从左侧选择字典；value 建后不可改，停用项不再下发但存量展示不受影响"}
-            </CardDescription>
             <CardAction className="flex items-center gap-2">
               <Button
                 type="button"

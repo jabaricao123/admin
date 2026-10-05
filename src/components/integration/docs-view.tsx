@@ -7,6 +7,7 @@
 import * as React from "react";
 import {
   CopyIcon,
+  FileTextIcon,
   Loader2Icon,
   PlusIcon,
   ShieldCheckIcon,
@@ -45,7 +46,11 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import type { Database, Json } from "@/lib/database.types";
-import { translateIntegrationErrorMessage } from "@/lib/dictionaries";
+import {
+  apiResponseStatusBadgeClass,
+  HTTP_METHOD_BADGE_CLASSES,
+  translateIntegrationErrorMessage,
+} from "@/lib/dictionaries";
 import { createClient } from "@/lib/supabase/client";
 
 type ApiDocRow = Pick<
@@ -62,16 +67,6 @@ type NavItem = { id: string; label: string; method?: string; path?: string };
 type NavGroup = { id: string; label: string; items: NavItem[] };
 
 const HTTP_METHODS = ["get", "post", "put", "patch", "delete", "head", "options"];
-
-const METHOD_BADGE_CLASSES: Record<string, string> = {
-  get: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
-  post: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/60 dark:text-blue-300",
-  put: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
-  patch:
-    "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/60 dark:text-violet-300",
-  delete:
-    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
-};
 
 const asRecord = (value: unknown): Spec | null =>
   typeof value === "object" && value !== null && !Array.isArray(value)
@@ -136,7 +131,45 @@ function buildNav(spec: Spec): NavGroup[] {
   return groups;
 }
 
-function requestParameters(operation: Spec) {
+type ParameterRow = {
+  key: string;
+  name: string;
+  type: string;
+  required: boolean;
+  description: string | null;
+};
+
+/**
+ * 汇总 OpenAPI 请求参数：path 级 + operation 级 parameters（operation 覆盖同名同位置）
+ * 以及 requestBody 的 application/json properties。
+ */
+function requestParameters(
+  operation: Spec,
+  pathItem: Spec | null,
+): ParameterRow[] {
+  const rows = new Map<string, ParameterRow>();
+
+  const collectParameters = (source: unknown) => {
+    for (const raw of asArray(source)) {
+      const parameter = asRecord(raw);
+      const name = asString(parameter?.name);
+      if (!parameter || !name) {
+        continue;
+      }
+      const location = asString(parameter.in) ?? "query";
+      const schema = asRecord(parameter.schema) ?? {};
+      rows.set(`${location}:${name}`, {
+        key: `${location}:${name}`,
+        name: `${name}（${location}）`,
+        type: asString(schema.type) ?? asString(parameter.type) ?? "—",
+        required: parameter.required === true || location === "path",
+        description: asString(parameter.description),
+      });
+    }
+  };
+  collectParameters(pathItem?.parameters);
+  collectParameters(operation.parameters);
+
   const body = asRecord(operation.requestBody);
   const content = asRecord(body?.content);
   const jsonContent = asRecord(content?.["application/json"]);
@@ -148,15 +181,18 @@ function requestParameters(operation: Spec) {
       .filter((value): value is string => Boolean(value)),
   );
 
-  return Object.entries(properties).map(([name, raw]) => {
+  for (const [name, raw] of Object.entries(properties)) {
     const property = asRecord(raw) ?? {};
-    return {
+    rows.set(`body:${name}`, {
+      key: `body:${name}`,
       name,
       type: asString(property.type) ?? "—",
       required: required.has(name),
       description: asString(property.description),
-    };
-  });
+    });
+  }
+
+  return Array.from(rows.values());
 }
 
 function requestExample(operation: Spec): string | null {
@@ -218,6 +254,8 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
   const [loadingVersions, setLoadingVersions] = React.useState(true);
   const [loadingSpec, setLoadingSpec] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [specError, setSpecError] = React.useState<string | null>(null);
+  const [specRetry, setSpecRetry] = React.useState(0);
   const [jumpTarget, setJumpTarget] = React.useState("");
 
   const [publishOpen, setPublishOpen] = React.useState(false);
@@ -272,36 +310,45 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
     void loadVersions();
   }, [loadVersions]);
 
-  React.useEffect(() => {
-    if (!selectedVersion) {
+  const specRequestRef = React.useRef(0);
+
+  /** 按版本加载 OpenAPI 快照；重试时与 loadVersions 一起重跑（specRetry 触发 effect） */
+  const loadSpec = React.useCallback(async (version: string) => {
+    const requestId = specRequestRef.current + 1;
+    specRequestRef.current = requestId;
+
+    if (!version) {
       setSpec(null);
+      setSpecError(null);
+      setLoadingSpec(false);
       return;
     }
-    let cancelled = false;
+
     setLoadingSpec(true);
-    void (async () => {
-      const { data, error: specError } = await createClient()
-        .from("api_docs")
-        .select("spec")
-        .eq("version", selectedVersion)
-        .maybeSingle();
-      if (cancelled) {
-        return;
-      }
-      setLoadingSpec(false);
-      if (specError || !data) {
-        toast.error(
-          `规格加载失败：${translateIntegrationErrorMessage(specError?.message ?? "未知错误")}`,
-        );
-        setSpec(null);
-        return;
-      }
-      setSpec(asRecord(data.spec) ?? {});
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedVersion]);
+    setSpecError(null);
+    const { data, error: specLoadError } = await createClient()
+      .from("api_docs")
+      .select("spec")
+      .eq("version", version)
+      .maybeSingle();
+
+    if (specRequestRef.current !== requestId) {
+      return;
+    }
+    setLoadingSpec(false);
+    if (specLoadError || !data) {
+      const message = specLoadError?.message ?? "未找到该版本文档";
+      setSpec(null);
+      setSpecError(message);
+      toast.error(`规格加载失败：${translateIntegrationErrorMessage(message)}`);
+      return;
+    }
+    setSpec(asRecord(data.spec) ?? {});
+  }, []);
+
+  React.useEffect(() => {
+    void loadSpec(selectedVersion);
+  }, [loadSpec, selectedVersion, specRetry]);
 
   const nav = React.useMemo(() => (spec ? buildNav(spec) : []), [spec]);
 
@@ -388,9 +435,10 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
     method: string,
     path: string,
     operationRaw: unknown,
+    pathItem: Spec | null,
   ) => {
     const operation = asRecord(operationRaw) ?? {};
-    const parameters = requestParameters(operation);
+    const parameters = requestParameters(operation, pathItem);
     const example = requestExample(operation);
     const responses = Object.entries(asRecord(operation.responses) ?? {});
 
@@ -403,7 +451,7 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
         <div className="flex flex-wrap items-center gap-2">
           <Badge
             variant="outline"
-            className={METHOD_BADGE_CLASSES[method] ?? ""}
+            className={HTTP_METHOD_BADGE_CLASSES[method] ?? ""}
           >
             {method.toUpperCase()}
           </Badge>
@@ -432,7 +480,7 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
               </TableHeader>
               <TableBody>
                 {parameters.map((parameter) => (
-                  <TableRow key={parameter.name}>
+                  <TableRow key={parameter.key}>
                     <TableCell className="text-center font-mono text-xs">
                       {parameter.name}
                     </TableCell>
@@ -475,11 +523,7 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
                   <div className="flex items-center gap-2">
                     <Badge
                       variant="outline"
-                      className={
-                        Number(status) >= 400
-                          ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300"
-                          : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300"
-                      }
+                      className={apiResponseStatusBadgeClass(Number(status))}
                     >
                       {status}
                     </Badge>
@@ -499,6 +543,12 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
     );
   };
 
+  /** 版本 + 规格一起重拉：规格 effect 依赖 specRetry，避免只刷列表不刷正文 */
+  const retryLoad = () => {
+    void loadVersions();
+    setSpecRetry((value) => value + 1);
+  };
+
   const renderContent = () => {
     if (loadingVersions || loadingSpec) {
       return (
@@ -509,15 +559,37 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
         </div>
       );
     }
-    if (error || !spec) {
+    if (error || specError) {
       return (
         <div className="flex flex-col items-center gap-2 py-12 text-sm">
           <p className="text-destructive">
-            加载失败：{translateIntegrationErrorMessage(error ?? "暂无接口文档")}
+            {error
+              ? `加载失败：${translateIntegrationErrorMessage(error)}`
+              : `规格加载失败：${translateIntegrationErrorMessage(specError ?? "未知错误")}`}
           </p>
-          <Button variant="outline" onClick={() => void loadVersions()}>
+          <Button variant="outline" onClick={retryLoad}>
             重试
           </Button>
+        </div>
+      );
+    }
+    if (versions.length === 0) {
+      return (
+        <div className="flex flex-col items-center gap-3 py-12 text-sm text-muted-foreground">
+          <FileTextIcon className="size-8 opacity-60" />
+          <span>
+            {isAdmin ? "暂无接口文档，点击发布新版本" : "暂无接口文档"}
+          </span>
+        </div>
+      );
+    }
+    if (!spec) {
+      // 版本已就绪、规格首帧未到（loadSpec effect 启动前的一帧）
+      return (
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-24 w-full" />
+          ))}
         </div>
       );
     }
@@ -572,10 +644,6 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
           ) : null}
         </section>
 
-        <section id="api" className="scroll-mt-20">
-          <h2 className="text-lg font-semibold">API 目录</h2>
-        </section>
-
         {nav.map((group) => (
           <section
             key={group.id}
@@ -589,7 +657,12 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
               );
               const operation = pathItem?.[item.method ?? ""];
               return operation
-                ? renderOperation(item.method ?? "", item.path ?? "", operation)
+                ? renderOperation(
+                    item.method ?? "",
+                    item.path ?? "",
+                    operation,
+                    pathItem,
+                  )
                 : null;
             })}
           </section>
@@ -679,7 +752,7 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
   };
 
   return (
-    <div className="flex flex-col p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card">
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
@@ -705,7 +778,6 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
             {isAdmin ? (
               <Button
                 onClick={openPublish}
-                disabled={versions.length === 0}
                 className="h-11 w-full sm:w-auto lg:h-8"
               >
                 <PlusIcon data-icon="inline-start" />
@@ -713,10 +785,13 @@ export function DocsView({ isAdmin }: { isAdmin: boolean }) {
               </Button>
             ) : null}
             {spec ? (
-              <Select value={jumpTarget} onValueChange={(value) => {
-                setJumpTarget(value);
-                scrollTo(value);
-              }}>
+              <Select
+                value={jumpTarget}
+                onValueChange={(value) => {
+                  setJumpTarget("");
+                  scrollTo(value);
+                }}
+              >
                 <SelectTrigger
                   className="h-11 w-full lg:hidden"
                   aria-label="目录跳转"

@@ -19,12 +19,12 @@ import {
 import { toast } from "sonner";
 
 import { DiffView } from "@/components/audit/diff-view";
+import { InfoHint } from "@/components/info-hint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -545,13 +545,15 @@ export function AccessAuditView() {
   };
 
   return (
-    <div className="flex flex-col p-0 md:gap-6 md:p-6">
+    <div className="flex flex-col gap-0.5 p-0 md:p-6">
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
-          <CardTitle>权限变更记录</CardTitle>
-          <CardDescription>
-            角色、菜单授权、数据范围的角色级变更（audit module=access）
-          </CardDescription>
+          <CardTitle className="flex items-center gap-1.5">
+            权限变更记录
+            <InfoHint>
+              角色、菜单授权、数据范围的角色级变更（audit module=access）
+            </InfoHint>
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
@@ -672,10 +674,12 @@ export function AccessAuditView() {
 
       <Card className="rounded-none border-0 md:rounded-xl md:border md:@container/card gap-3! py-3!">
         <CardHeader>
-          <CardTitle>越权尝试</CardTitle>
-          <CardDescription>
-            被 RLS / 页面守卫拒绝的访问尝试（audit_denied_v）
-          </CardDescription>
+          <CardTitle className="flex items-center gap-1.5">
+            越权尝试
+            <InfoHint>
+              被 RLS / 页面守卫拒绝的访问尝试（audit_denied_v）
+            </InfoHint>
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           {deniedModuleOptions.length > 0 ? (

@@ -17,7 +17,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -25,6 +24,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { InfoHint } from "@/components/info-hint";
 import { createClient } from "@/lib/supabase/client";
 
 const ENABLED_KEY = "password_login_enabled";
@@ -145,10 +145,10 @@ export function PasswordLoginPanel() {
         <CardTitle className="flex items-center gap-2">
           <KeyRoundIcon className="size-4 text-muted-foreground" />
           密码登录
+          <InfoHint>
+            全局开关：关闭后普通用户在 /login 看不到密码 Tab，仅保留扫码登录入口。
+          </InfoHint>
         </CardTitle>
-        <CardDescription>
-          全局开关：关闭后普通用户在 /login 看不到密码 Tab，仅保留扫码登录入口。
-        </CardDescription>
         <CardAction>
           {enabled ? (
             <Badge
