@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 
 /**
- * 工作台统计（get_dashboard_stats RPC 解析结果）。
+ * 工作台统计（org_stats RPC 解析结果；兼容 get_dashboard_stats 委托版）。
  * admin 全量计数；非 admin 仅本人待办数，其余卡片占位。
  */
 export type DashboardStats =
@@ -102,9 +102,9 @@ export function SectionCards({ stats }: { stats: DashboardStats }) {
       ];
 
   return (
-    <div className="grid grid-cols-1 gap-[5px] px-[5px] *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-[5px] @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
+    <div className="grid grid-cols-1 gap-2 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
       {cards.map((card) => (
-        <Card key={card.label} className="@container/card gap-[5px]! py-[5px]! pilot-5">
+        <Card key={card.label} className="@container/card gap-3! py-3!">
           <CardHeader>
             <CardDescription>{card.label}</CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">

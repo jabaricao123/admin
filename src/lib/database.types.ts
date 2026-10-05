@@ -3302,6 +3302,17 @@ export type Database = {
         }[]
       }
       issue_api_token: { Args: { p_key: string }; Returns: Json }
+      list_recent_changes: {
+        Args: { p_limit?: number }
+        Returns: {
+          change_type: string
+          changed_at: string
+          changed_by_name: string
+          record_id: string
+          table_name: string
+          version: number
+        }[]
+      }
       list_recent_versions: {
         Args: { p_limit?: number; p_table: string }
         Returns: {

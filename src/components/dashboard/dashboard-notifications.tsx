@@ -47,7 +47,7 @@ export function DashboardNotifications() {
   const isMobile = useIsMobile();
   const router = useRouter();
   const [rows, setRows] = React.useState<MessageRow[]>([]);
-  const [unreadCount, setUnreadCount] = React.useState(0);
+  const [unreadCount, setUnreadCount] = React.useState<number | null>(0);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [markingAll, setMarkingAll] = React.useState(false);
@@ -75,6 +75,11 @@ export function DashboardNotifications() {
     }
     if (!unreadResult.error) {
       setUnreadCount(unreadResult.data ?? 0);
+    } else if (!listResult.error) {
+      // unread_count 单独失败：用当前页未读行兜底计数，按钮禁用状态随之同步
+      setUnreadCount((listResult.data ?? []).filter(isUnread).length);
+    } else {
+      setUnreadCount(null);
     }
     setLoading(false);
   }, []);
@@ -105,7 +110,7 @@ export function DashboardNotifications() {
         <CardContent className="flex flex-col gap-4 p-4 md:p-6">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">
-              未读 {unreadCount} 条
+              未读 {unreadCount ?? "—"} 条
             </span>
             <Button
               variant="outline"
@@ -140,7 +145,11 @@ export function DashboardNotifications() {
               <p className="text-destructive">
                 加载失败：{translateMessageErrorMessage(error)}
               </p>
-              <Button variant="outline" onClick={() => void load()}>
+              <Button
+                variant="outline"
+                onClick={() => void load()}
+                className="h-11 lg:h-8"
+              >
                 重试
               </Button>
             </div>
@@ -201,6 +210,7 @@ export function DashboardNotifications() {
                     <TableRow
                       key={row.id}
                       className="cursor-pointer"
+                      role="link"
                       tabIndex={0}
                       onClick={() => router.push(INBOX_ROUTE)}
                       onKeyDown={(event) => {

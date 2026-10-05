@@ -38,7 +38,7 @@ function asCount(value: unknown): number {
   return 0;
 }
 
-/** get_dashboard_stats jsonb → 前端类型；结构异常返回 null（页面按占位处理） */
+/** org_stats jsonb → 前端类型；结构异常返回 null（页面按占位处理） */
 function parseDashboardStats(value: Json | null): DashboardStats | null {
   const record = asRecord(value);
   if (!record) {
@@ -57,17 +57,25 @@ function parseDashboardStats(value: Json | null): DashboardStats | null {
   return { isAdmin: false, pendingTodos: asCount(own?.pending_todos) };
 }
 
+/** RPC 原始报错为英文时兜底中文提示；已是中文的业务信息原样透传 */
+function toChineseErrorMessage(message: string): string {
+  return /[\u4e00-\u9fff]/.test(message)
+    ? message
+    : "数据加载失败，请稍后重试";
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
 
   const [statsResult, trendResult, announcementResult] = await Promise.all([
-    supabase.rpc("get_dashboard_stats"),
+    supabase.rpc("org_stats"),
     supabase.rpc("signup_trend", { p_days: SIGNUP_TREND_DAYS }),
     supabase
       .from("published_announcements_v")
       .select("*")
       .order("pinned", { ascending: false })
-      .order("published_at", { ascending: false, nullsFirst: false }),
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .limit(20),
   ]);
 
   const errors: string[] = [];
@@ -86,70 +94,45 @@ export default async function DashboardPage() {
     errors.push(announcementResult.error.message);
   }
 
-  // 最近更新：audit_row_versions 仅 admin 可读（RLS），非 admin 渲染占位
+  // 最近更新：audit 公开 RPC（admin only 内部校验 + 操作人姓名/类型服务端聚合），
+  // 非 admin 不调用，渲染占位
   let changes: RecentChange[] = [];
   if (isAdmin) {
-    const { data, error } = await supabase
-      .from("audit_row_versions")
-      .select("id, table_name, record_id, version, changed_by, changed_at")
-      .order("changed_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(RECENT_CHANGES_LIMIT);
+    const { data, error } = await supabase.rpc("list_recent_changes", {
+      p_limit: RECENT_CHANGES_LIMIT,
+    });
 
     if (error) {
       errors.push(error.message);
     } else {
-      const rows = data ?? [];
-      const actorIds = Array.from(
-        new Set(
-          rows
-            .map((row) => row.changed_by)
-            .filter((value): value is string => value !== null),
-        ),
-      );
-
-      const actorNames = new Map<string, string>();
-      if (actorIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .in("id", actorIds);
-        for (const profile of profiles ?? []) {
-          actorNames.set(
-            profile.id,
-            profile.full_name?.trim() || profile.email || "—",
-          );
-        }
-      }
-
-      changes = rows.map((row) => ({
-        id: row.id,
+      changes = (data ?? []).map((row) => ({
         tableName: row.table_name,
         recordId: row.record_id,
         version: row.version,
-        changedByName: row.changed_by
-          ? (actorNames.get(row.changed_by) ?? null)
-          : null,
+        changeType: row.change_type,
+        changedByName: row.changed_by_name ?? null,
         changedAt: row.changed_at,
       }));
     }
   }
 
   return (
-    <div className="flex flex-col gap-[5px] py-[5px]">
+    <div className="flex flex-col gap-2 py-4">
       {errors.length > 0 ? (
-        <div className="px-[5px] lg:px-[5px]">
+        <div className="px-4 lg:px-6">
           <p className="text-sm text-destructive">
-            加载工作台数据失败：{errors.join("；")}
+            {`加载工作台数据失败：${errors
+              .map(toChineseErrorMessage)
+              .join("；")}`}
           </p>
         </div>
       ) : null}
       <AnnouncementBanner announcements={announcementResult.data ?? []} />
       <SectionCards stats={stats ?? { isAdmin: false, pendingTodos: 0 }} />
-      <div className="px-[5px] lg:px-[5px]">
+      <div className="px-4 lg:px-6">
         <UserGrowthChart data={trendResult.data ?? []} isAdmin={isAdmin} />
       </div>
-      <div className="px-[5px] lg:px-[5px]">
+      <div className="px-4 lg:px-6">
         {isAdmin ? (
           <RecentChangesCard changes={changes} />
         ) : (

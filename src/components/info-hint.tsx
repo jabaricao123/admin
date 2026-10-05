@@ -32,6 +32,8 @@ export function InfoHint({
           onClick={(event) => event.stopPropagation()}
           className={cn(
             "inline-flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none",
+            // 移动端（<1024px）触控区撑到 44×44：box-content padding 扩大命中区，负 margin 保持图标原有占位与视觉
+            "box-content p-3.5 -m-3.5 lg:m-0 lg:p-0",
             className
           )}
         >

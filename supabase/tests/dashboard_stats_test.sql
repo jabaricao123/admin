@@ -1,18 +1,20 @@
 -- pgTAP：dashboard/001+004 — get_dashboard_stats / signup_trend（工作台统计与注册趋势）
 -- 运行：supabase db reset && supabase test db
--- 覆盖：函数存在与安全属性（SECURITY DEFINER + search_path 固定）；GRANT 面（authenticated 可执行、anon 拒绝）；
---       admin 全量分支（用户总数/本周新增/活跃用户与 profiles 表口径一致）；
---       本人待办数（不串号：admin 只见自己的待办、非 admin 不泄露全局计数、无待办者为 0）；
+-- 覆盖：函数存在与安全属性（SECURITY DEFINER + search_path 固定）；GRANT 面（authenticated 可执行、
+--       anon 拒绝；批 2 起 app 实现层对 authenticated/service_role 收口 EXECUTE）；
+--       admin 全量分支（用户总数/本周新增/活跃用户与 profiles 表口径一致）；与 org_stats 的
+--       收敛 parity（admin/非 admin 各一条）；本人待办数（不串号、不泄露全局计数、无待办为 0；
+--       批 2 起 205 条 pending 验证无 200 封顶）；性能索引存在性；
 --       signup_trend 天数边界（默认 30 / 0→1 / 999→365）与逐日计数与 profiles 表一致；非 admin 空集。
 -- 说明：待办夹具直插 approval 实例/任务（测试事务内，rollback）；
 --       模板/流程复用 seed 004（demo.leave）；夹具只在本事务内生效，finish 后 rollback。
 
 begin;
 
-select plan(35);
+select plan(42);
 
 -- ---------------------------------------------------------------------------
--- 夹具：3 个账号（admin / engineer / planner）+ 4 个实例与任务
+-- 夹具：3 个账号（admin / engineer / planner）+ 4 个实例与任务（4b 另加批量账号与 205 实例）
 --   admin   ：2 条 pending + 1 条已办（不应计入）
 --   engineer：1 条 pending
 --   planner ：0 条
@@ -69,7 +71,7 @@ insert into public.approval_tasks (id, instance_id, seq, assignee_id, status, ac
    'dddddddd-dddd-4ddd-8ddd-dddddddddd02', 'pending', null);
 
 -- ===========================================================================
--- 1. 结构与安全属性（10）
+-- 1. 结构与安全属性（14）
 -- ===========================================================================
 select has_function('app', 'get_dashboard_stats', 'app.get_dashboard_stats 存在');
 select has_function('public', 'get_dashboard_stats', 'public.get_dashboard_stats 薄包装存在');
@@ -123,6 +125,20 @@ select ok(
   and not has_function_privilege('anon', 'public.signup_trend(integer)', 'EXECUTE'),
   'anon 不可执行两个公开 RPC'
 );
+select ok(
+  not has_function_privilege('authenticated', 'app.get_dashboard_stats()', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'app.signup_trend(integer)', 'EXECUTE')
+  and not has_function_privilege('service_role', 'app.get_dashboard_stats()', 'EXECUTE')
+  and not has_function_privilege('service_role', 'app.signup_trend(integer)', 'EXECUTE'),
+  'app 实现层对 authenticated/service_role 已收口 EXECUTE（只经 public 薄包装）'
+);
+
+select has_index('public', 'profiles', 'profiles_created_at_idx',
+  'profiles(created_at) 索引存在');
+select has_index('public', 'profiles', 'profiles_status_idx',
+  'profiles(status) 索引存在');
+select has_index('public', 'audit_row_versions', 'audit_row_versions_changed_at_idx',
+  'audit_row_versions(changed_at desc, id desc) 索引存在');
 
 -- ===========================================================================
 -- 2. admin 分支：全量计数与表口径一致 + 本人待办（6）
@@ -157,12 +173,12 @@ select is(
 );
 select is(
   public.get_dashboard_stats(),
-  app.get_dashboard_stats(),
-  'public 包装与 app 实现返回一致'
+  public.org_stats(),
+  'admin：get_dashboard_stats 委托 org_stats 返回一致（收敛）'
 );
 
 -- ===========================================================================
--- 3. 非 admin 分支（engineer）：只见本人统计、不泄露全量计数（7）
+-- 3. 非 admin 分支（engineer）：只见本人统计、不泄露全量计数（8）
 -- ===========================================================================
 reset role;
 set local request.jwt.claims = '{"sub":"dddddddd-dddd-4ddd-8ddd-dddddddddd02","role":"authenticated"}';
@@ -199,6 +215,11 @@ select is(
   1::bigint,
   '非 admin 待办数=本人 1 条（不串 admin 的 2 条）'
 );
+select is(
+  public.get_dashboard_stats(),
+  public.org_stats(),
+  '非 admin：get_dashboard_stats 委托 org_stats 返回一致（收敛）'
+);
 
 -- ===========================================================================
 -- 4. 非 admin 分支（planner）：无待办为 0（1）
@@ -211,6 +232,47 @@ select is(
   (public.get_dashboard_stats() -> 'own' ->> 'pending_todos')::bigint,
   0::bigint,
   '无待办用户 own.pending_todos=0'
+);
+
+-- ===========================================================================
+-- 4b. 待办数无封顶：205 条 pending（旧实现 my_todos limit 200 会封顶）（2）
+-- ===========================================================================
+reset role;
+
+insert into auth.users (id, email, raw_app_meta_data, raw_user_meta_data) values
+  ('dddddddd-dddd-4ddd-8ddd-dddddddddd04', 'dash-bulk@example.com',
+   '{"provider":"email","providers":["email"]}', '{"full_name":"批量待办用户"}');
+
+insert into public.approval_instances
+  (id, title, module, ref_type, ref_id, template_version_id, flow_version_id,
+   form_data, initiator_id)
+select
+  gen_random_uuid(),
+  '批量待办 ' || g,
+  'demo', 'demo_leave', 'dash-bulk-' || g,
+  '44444444-4444-4444-4444-444444444401',
+  '44444444-4444-4444-4444-444444444402',
+  jsonb_build_object('title', '批量待办 ' || g, 'days', 1, 'reason', '测试'),
+  '11111111-1111-1111-1111-111111111111'
+from generate_series(1, 205) as g;
+
+insert into public.approval_tasks (instance_id, seq, assignee_id, status, acted_at)
+select i.id, 1, 'dddddddd-dddd-4ddd-8ddd-dddddddddd04', 'pending', null
+from public.approval_instances i
+where i.ref_id like 'dash-bulk-%';
+
+set local request.jwt.claims = '{"sub":"dddddddd-dddd-4ddd-8ddd-dddddddddd04","role":"authenticated"}';
+set local role authenticated;
+
+select is(
+  (public.org_stats() -> 'own' ->> 'pending_todos')::bigint,
+  205::bigint,
+  'org_stats 待办数=205（无 200 封顶）'
+);
+select is(
+  (public.get_dashboard_stats() -> 'own' ->> 'pending_todos')::bigint,
+  205::bigint,
+  'get_dashboard_stats 待办数=205（无 200 封顶）'
 );
 
 -- ===========================================================================

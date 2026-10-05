@@ -5,6 +5,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRightIcon, ListTodoIcon, ShieldCheckIcon } from "lucide-react";
 
 import {
@@ -16,6 +17,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -41,6 +49,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 
 const TODO_LIMIT = 20;
+const ALL = "all";
 
 type TodoRow = Database["public"]["Functions"]["my_todos"]["Returns"][number];
 type TodoTab = "pending" | "done";
@@ -75,8 +84,10 @@ function todoHref(row: TodoRow): string {
 
 export function DashboardTodos() {
   const isMobile = useIsMobile();
+  const router = useRouter();
   const [tab, setTab] = React.useState<TodoTab>("pending");
   const [rows, setRows] = React.useState<TodoRow[]>([]);
+  const [moduleFilter, setModuleFilter] = React.useState(ALL);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const requestIdRef = React.useRef(0);
@@ -106,7 +117,35 @@ export function DashboardTodos() {
     void load();
   }, [load]);
 
-  const emptyText = tab === "pending" ? "暂无待办" : "暂无已办记录";
+  // 来源模块选项取自当前 tab 的 my_todos 返回行；切换 tab 后失效的选中项复位为全部
+  const moduleOptions = React.useMemo(() => {
+    const options = Array.from(
+      new Set(rows.map((row) => row.module).filter(Boolean)),
+    );
+    options.sort((a, b) => a.localeCompare(b, "zh-CN"));
+    return options;
+  }, [rows]);
+
+  React.useEffect(() => {
+    if (moduleFilter !== ALL && !moduleOptions.includes(moduleFilter)) {
+      setModuleFilter(ALL);
+    }
+  }, [moduleFilter, moduleOptions]);
+
+  const filteredRows = React.useMemo(
+    () =>
+      moduleFilter === ALL
+        ? rows
+        : rows.filter((row) => row.module === moduleFilter),
+    [rows, moduleFilter],
+  );
+
+  const emptyText =
+    moduleFilter !== ALL
+      ? "该来源模块暂无记录"
+      : tab === "pending"
+        ? "暂无待办"
+        : "暂无已办记录";
 
   return (
     <div className="flex flex-col gap-2 p-0 md:p-6">
@@ -138,6 +177,22 @@ export function DashboardTodos() {
                 已办
               </ToggleGroupItem>
             </ToggleGroup>
+            <Select value={moduleFilter} onValueChange={setModuleFilter}>
+              <SelectTrigger
+                className="w-full sm:w-40 min-h-11 lg:min-h-8"
+                aria-label="按来源模块筛选"
+              >
+                <SelectValue placeholder="全部来源" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>全部来源</SelectItem>
+                {moduleOptions.map((module) => (
+                  <SelectItem key={module} value={module}>
+                    {sourceModuleLabel(module)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="flex items-center gap-2 sm:ml-auto">
               <Button
                 variant="outline"
@@ -163,18 +218,22 @@ export function DashboardTodos() {
               <p className="text-destructive">
                 加载失败：{translateApprovalErrorMessage(error)}
               </p>
-              <Button variant="outline" onClick={() => void load()}>
+              <Button
+                variant="outline"
+                onClick={() => void load()}
+                className="h-11 lg:h-8"
+              >
                 重试
               </Button>
             </div>
-          ) : rows.length === 0 ? (
+          ) : filteredRows.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-sm text-muted-foreground">
               <ListTodoIcon className="size-8 opacity-60" />
               <span>{emptyText}</span>
             </div>
           ) : isMobile ? (
             <div className="-mx-4 flex flex-col gap-2 px-4 md:mx-0 md:gap-3 md:px-0">
-              {rows.map((row) => (
+              {filteredRows.map((row) => (
                 <Link
                   key={row.task_id}
                   href={todoHref(row)}
@@ -243,8 +302,23 @@ export function DashboardTodos() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.task_id}>
+                  {filteredRows.map((row) => (
+                    <TableRow
+                      key={row.task_id}
+                      className="cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => router.push(todoHref(row))}
+                      onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) {
+                          return;
+                        }
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          router.push(todoHref(row));
+                        }
+                      }}
+                    >
                       <TableCell className="text-center">
                         <Link
                           href={todoHref(row)}

@@ -36,15 +36,15 @@ export function AnnouncementBanner({
   const [headline, ...rest] = announcements;
 
   return (
-    <div className="px-[5px] lg:px-[5px]">
-      <Card className="border-primary/30 bg-gradient-to-r from-primary/10 to-transparent shadow-xs pilot-5">
-        <CardContent className="flex flex-col gap-[5px]">
-          <div className="flex items-start gap-[5px]">
+    <div className="px-4 lg:px-6">
+      <Card className="border-primary/30 bg-gradient-to-r from-primary/10 to-transparent shadow-xs">
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex items-start gap-3">
             <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
               <MegaphoneIcon className="size-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-[5px]">
+              <div className="flex flex-wrap items-center gap-2">
                 {headline.pinned ? (
                   <Badge>置顶</Badge>
                 ) : (
@@ -69,7 +69,7 @@ export function AnnouncementBanner({
                 size="sm"
                 onClick={() => setExpanded((value) => !value)}
                 aria-expanded={expanded}
-                className="shrink-0"
+                className="h-11 shrink-0 lg:h-8"
               >
                 {expanded ? (
                   <>
@@ -91,9 +91,9 @@ export function AnnouncementBanner({
               {rest.map((item) => (
                 <li
                   key={item.id ?? `${item.title}-${item.published_at ?? ""}`}
-                  className="flex flex-col gap-1 p-[5px]"
+                  className="flex flex-col gap-1 p-3"
                 >
-                  <div className="flex flex-wrap items-center gap-[5px]">
+                  <div className="flex flex-wrap items-center gap-2">
                     {item.pinned ? <Badge>置顶</Badge> : null}
                     <span className="text-sm font-medium">
                       {item.title ?? "公告"}
