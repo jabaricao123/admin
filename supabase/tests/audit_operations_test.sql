@@ -87,7 +87,8 @@ select lives_ok(
   '无会话后台调用可写'
 );
 select is(
-  (select actor_id from public.audit_operations where module = 'system'),
+  (select actor_id from public.audit_operations
+    where module = 'system' and action = 'cleanup' and object_type = 'job'),
   null::uuid,
   '后台调用 actor_id 为 NULL'
 );

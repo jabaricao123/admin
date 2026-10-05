@@ -99,10 +99,10 @@ select ok(
   'anon 无 5 个包装执行权'
 );
 select ok(
-  has_function_privilege('authenticated', 'app.urge_instance(uuid)', 'EXECUTE')
+  not has_function_privilege('authenticated', 'app.urge_instance(uuid)', 'EXECUTE')
   and has_function_privilege('authenticated', 'app.instance_detail(uuid)', 'EXECUTE')
   and has_function_privilege('authenticated', 'app.my_instances(integer)', 'EXECUTE'),
-  'app 侧业务实现与 public 包装同授 authenticated（同 engine 业务 RPC 先例）'
+  'urge_instance 实现层已收口（批次 4 EXECUTE 收口）；instance_detail / my_instances 维持 engine 先例'
 );
 
 -- ---------------------------------------------------------------------------

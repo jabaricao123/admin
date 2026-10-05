@@ -5,7 +5,8 @@
 --     cron.job 同步；next_run_at 按 UTC 解释后本地展示；
 --   * 失败收尾通知属主：report.subscription_failed（订阅）/ report.export_failed（导出）；
 --   * app.cleanup_export_jobs：超期内容置空、近 7 天保留、download 两条过期路径拒绝；
---   * 事件注册表 available_vars 与实际发送键一致（export_ready / 两失败事件）。
+--   * 事件注册表 available_vars 与实际发送键一致（export_ready / 两失败事件；
+--     export_ready 另含 message 批次 1 合并补回的 download_url）。
 -- 说明：夹具只在本事务内生效，finish 后 rollback，不污染其他测试文件。
 
 begin;
@@ -312,8 +313,8 @@ select ok(
 -- ===========================================================================
 select is(
   (select available_vars from public.message_event_registry where event_key = 'report.export_ready'),
-  '["title","body","report_name","row_count","summary"]'::jsonb,
-  'export_ready 变量清单 = 订阅摘要实际发送键（无 download_url）'
+  '["title","body","report_name","row_count","summary","download_url"]'::jsonb,
+  'export_ready 变量清单 = 摘要发送键 + 合并补回的 download_url（message 批次 1 修复）'
 );
 select is(
   (select available_vars from public.message_event_registry where event_key = 'report.subscription_failed'),

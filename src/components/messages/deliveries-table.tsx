@@ -47,7 +47,16 @@ import {
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Database } from "@/lib/database.types";
-import { translateErrorMessage } from "@/lib/dictionaries";
+import {
+  MESSAGE_DELIVERY_CHANNEL_LABELS,
+  MESSAGE_DELIVERY_STATUS_BADGE_CLASSES,
+  MESSAGE_DELIVERY_STATUS_LABELS,
+  asMessageDeliveryChannel,
+  asMessageDeliveryStatus,
+  translateErrorMessage,
+  type MessageDeliveryChannel,
+  type MessageDeliveryStatus,
+} from "@/lib/dictionaries";
 import { createClient } from "@/lib/supabase/client";
 
 const ALL = "all";
@@ -56,34 +65,9 @@ const PAGE_SIZE = 20;
 const FETCH_LIMIT = 500;
 
 type DeliveryRow = Database["public"]["Tables"]["message_deliveries"]["Row"];
-type DeliveryStatus = "success" | "failed" | "degraded";
-type DeliveryChannel = "inbox" | "email" | "push" | "sms";
-
-const STATUS_LABELS: Record<DeliveryStatus, string> = {
-  success: "成功",
-  failed: "失败",
-  degraded: "降级",
-};
-
-/** 状态 Badge：成功绿 / 失败红 / 降级黄（history.md 界面规格） */
-const STATUS_BADGE_CLASSES: Record<DeliveryStatus, string> = {
-  success:
-    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
-  failed:
-    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
-  degraded:
-    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
-};
-
-const CHANNEL_LABELS: Record<DeliveryChannel, string> = {
-  inbox: "站内信",
-  email: "邮件",
-  push: "推送",
-  sms: "短信",
-};
 
 const CHANNEL_ICONS: Record<
-  DeliveryChannel,
+  MessageDeliveryChannel,
   React.ComponentType<React.SVGProps<SVGSVGElement>>
 > = {
   inbox: InboxIcon,
@@ -92,38 +76,50 @@ const CHANNEL_ICONS: Record<
   sms: SendIcon,
 };
 
-const STATUS_OPTIONS: DeliveryStatus[] = ["success", "failed", "degraded"];
-const CHANNEL_OPTIONS: DeliveryChannel[] = ["inbox", "email", "push", "sms"];
+/**
+ * 渠道 → system_services 服务域（重发前校验 verify_status）。
+ * inbox 为内置必达渠道，无对应服务配置，不做降级提示。
+ */
+const CHANNEL_SERVICES: Partial<Record<MessageDeliveryChannel, string>> = {
+  email: "mail",
+  push: "push",
+  sms: "sms",
+};
+
+const STATUS_OPTIONS: MessageDeliveryStatus[] = [
+  "success",
+  "failed",
+  "degraded",
+];
+const CHANNEL_OPTIONS: MessageDeliveryChannel[] = [
+  "inbox",
+  "email",
+  "push",
+  "sms",
+];
 
 const formatDateTime = (value: string) =>
   new Date(value).toLocaleString("zh-CN", { hour12: false });
 
-const asStatus = (value: string): DeliveryStatus =>
-  value === "success" || value === "failed" || value === "degraded"
-    ? value
-    : "failed";
-
-const asChannel = (value: string): DeliveryChannel =>
-  value === "inbox" || value === "email" || value === "push" || value === "sms"
-    ? value
-    : "inbox";
-
 function StatusBadge({ status }: { status: string }) {
-  const key = asStatus(status);
+  const key = asMessageDeliveryStatus(status);
   return (
-    <Badge variant="outline" className={STATUS_BADGE_CLASSES[key]}>
-      {STATUS_LABELS[key]}
+    <Badge
+      variant="outline"
+      className={MESSAGE_DELIVERY_STATUS_BADGE_CLASSES[key]}
+    >
+      {MESSAGE_DELIVERY_STATUS_LABELS[key]}
     </Badge>
   );
 }
 
 function ChannelBadge({ channel }: { channel: string }) {
-  const key = asChannel(channel);
+  const key = asMessageDeliveryChannel(channel);
   const Icon = CHANNEL_ICONS[key];
   return (
     <Badge variant="outline" className="text-muted-foreground">
       <Icon className="size-3" data-icon="inline-start" />
-      {CHANNEL_LABELS[key]}
+      {MESSAGE_DELIVERY_CHANNEL_LABELS[key]}
     </Badge>
   );
 }
@@ -157,6 +153,30 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
 
   const [detail, setDetail] = React.useState<DeliveryRow | null>(null);
   const [resending, setResending] = React.useState(false);
+  /** system_services 的 verify_status 映射（admin 才可调 get_service_status） */
+  const [serviceStatuses, setServiceStatuses] = React.useState<
+    Record<string, string>
+  >({});
+
+  React.useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data, error: statusError } =
+        await createClient().rpc("get_service_status");
+      if (cancelled || statusError || !data) {
+        return;
+      }
+      setServiceStatuses(
+        Object.fromEntries(data.map((row) => [row.service, row.verify_status])),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin]);
 
   const load = React.useCallback(async (options?: { silent?: boolean }) => {
     if (!options?.silent) {
@@ -314,7 +334,7 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
       toast.success(
         updated.status === "success"
           ? "重发成功"
-          : `重发完成（当前状态：${STATUS_LABELS[asStatus(updated.status)]}）`,
+          : `重发完成（当前状态：${MESSAGE_DELIVERY_STATUS_LABELS[asMessageDeliveryStatus(updated.status)]}）`,
       );
     }
     void load({ silent: true });
@@ -459,7 +479,13 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
     );
   };
 
-  const detailChannel = detail ? asChannel(detail.channel) : null;
+  const detailChannel = detail ? asMessageDeliveryChannel(detail.channel) : null;
+  const resendService = detailChannel ? CHANNEL_SERVICES[detailChannel] : undefined;
+  const resendDegradedWarning =
+    isAdmin &&
+    detail?.status === "failed" &&
+    resendService !== undefined &&
+    serviceStatuses[resendService] !== "verified";
 
   return (
     <div className="flex flex-col gap-2 p-0 md:p-6">
@@ -468,7 +494,7 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
           <div className="flex flex-wrap items-center gap-2">
             <Select value={recipientFilter} onValueChange={setRecipientFilter}>
               <SelectTrigger
-                className="h-11 w-full sm:w-36 lg:h-8"
+                className="min-h-11 w-full sm:w-36 lg:min-h-8"
                 aria-label="按收件人筛选"
               >
                 <SelectValue placeholder="全部收件人" />
@@ -484,7 +510,7 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
             </Select>
             <Select value={eventFilter} onValueChange={setEventFilter}>
               <SelectTrigger
-                className="h-11 w-full sm:w-44 lg:h-8"
+                className="min-h-11 w-full sm:w-44 lg:min-h-8"
                 aria-label="按事件筛选"
               >
                 <SelectValue placeholder="全部事件" />
@@ -500,7 +526,7 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
             </Select>
             <Select value={channelFilter} onValueChange={setChannelFilter}>
               <SelectTrigger
-                className="h-11 w-full sm:w-28 lg:h-8"
+                className="min-h-11 w-full sm:w-28 lg:min-h-8"
                 aria-label="按渠道筛选"
               >
                 <SelectValue placeholder="全部渠道" />
@@ -509,14 +535,14 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
                 <SelectItem value={ALL}>全部渠道</SelectItem>
                 {CHANNEL_OPTIONS.map((channel) => (
                   <SelectItem key={channel} value={channel}>
-                    {CHANNEL_LABELS[channel]}
+                    {MESSAGE_DELIVERY_CHANNEL_LABELS[channel]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger
-                className="h-11 w-full sm:w-28 lg:h-8"
+                className="min-h-11 w-full sm:w-28 lg:min-h-8"
                 aria-label="按状态筛选"
               >
                 <SelectValue placeholder="全部状态" />
@@ -525,7 +551,7 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
                 <SelectItem value={ALL}>全部状态</SelectItem>
                 {STATUS_OPTIONS.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {STATUS_LABELS[status]}
+                    {MESSAGE_DELIVERY_STATUS_LABELS[status]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -556,6 +582,9 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
                 清除筛选
               </Button>
             ) : null}
+            <span className="text-xs text-muted-foreground">
+              仅取最近 {FETCH_LIMIT} 条
+            </span>
           </div>
 
           {renderList()}
@@ -563,9 +592,8 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
           {!loading && !error && filtered.length > 0 ? (
             <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
               <span>
-                {hasActiveFilters
-                  ? `匹配 ${filtered.length} 条（共 ${rows.length} 条）· 第 ${currentPage} / ${pageCount} 页`
-                  : `共 ${filtered.length} 条 · 第 ${currentPage} / ${pageCount} 页`}
+                最近 {FETCH_LIMIT} 条 · 共 {filtered.length} 条符合 · 第{" "}
+                {currentPage} / {pageCount} 页
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -605,7 +633,7 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
           <SheetHeader>
             <SheetTitle>
               {detail && detailChannel
-                ? `${CHANNEL_LABELS[detailChannel]}投递 · ${STATUS_LABELS[asStatus(detail.status)]}`
+                ? `${MESSAGE_DELIVERY_CHANNEL_LABELS[detailChannel]}投递 · ${MESSAGE_DELIVERY_STATUS_LABELS[asMessageDeliveryStatus(detail.status)]}`
                 : "投递详情"}
             </SheetTitle>
             <SheetDescription>
@@ -667,17 +695,31 @@ export function DeliveriesTable({ isAdmin }: { isAdmin: boolean }) {
           </div>
           <SheetFooter className="flex-row flex-wrap items-center justify-end gap-2">
             {isAdmin && detail?.status === "failed" ? (
-              <Button onClick={() => void handleResend()} disabled={resending}>
-                {resending ? (
-                  <Loader2Icon
-                    className="animate-spin"
-                    data-icon="inline-start"
-                  />
-                ) : (
-                  <RotateCcwIcon data-icon="inline-start" />
-                )}
-                重发
-              </Button>
+              <>
+                {resendDegradedWarning ? (
+                  <span className="mr-auto text-xs text-amber-600 dark:text-amber-400">
+                    渠道未配置，重发将降级
+                  </span>
+                ) : null}
+                <Button
+                  onClick={() => void handleResend()}
+                  disabled={resending}
+                  className="h-11 lg:h-8"
+                  title={
+                    resendDegradedWarning ? "渠道未配置，重发将降级" : undefined
+                  }
+                >
+                  {resending ? (
+                    <Loader2Icon
+                      className="animate-spin"
+                      data-icon="inline-start"
+                    />
+                  ) : (
+                    <RotateCcwIcon data-icon="inline-start" />
+                  )}
+                  重发
+                </Button>
+              </>
             ) : null}
           </SheetFooter>
         </SheetContent>

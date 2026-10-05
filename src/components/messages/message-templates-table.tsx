@@ -135,6 +135,8 @@ export function MessageTemplatesTable() {
 
   // Sheet 状态
   const [sheetOpen, setSheetOpen] = React.useState(false);
+  /** Sheet 语义：新建（openCreate）/ 编辑（openEditor），标题与说明文案据此区分 */
+  const [sheetMode, setSheetMode] = React.useState<"create" | "edit">("edit");
   const [locked, setLocked] = React.useState(true);
   const [formEventKey, setFormEventKey] = React.useState("");
   const [formChannel, setFormChannel] =
@@ -147,6 +149,10 @@ export function MessageTemplatesTable() {
   const [saving, setSaving] = React.useState(false);
   const [publishing, setPublishing] = React.useState(false);
   const [rollingBackId, setRollingBackId] = React.useState<string | null>(null);
+  /** 回滚二次确认（Sheet 内联确认，替代 window.confirm） */
+  const [rollbackConfirmId, setRollbackConfirmId] = React.useState<
+    string | null
+  >(null);
 
   const load = React.useCallback(async (options?: { silent?: boolean }) => {
     if (!options?.silent) {
@@ -238,6 +244,9 @@ export function MessageTemplatesTable() {
     setLocked(true);
     setSampleJson(defaultSampleJson(registryVars(eventKey)));
     setActiveTab(tab);
+    setRollbackConfirmId(null);
+    // 未配置过的渠道从行内进入等同新建（标题与说明按新建语义展示）
+    setSheetMode(source ? "edit" : "create");
     setSheetOpen(true);
   };
 
@@ -251,6 +260,8 @@ export function MessageTemplatesTable() {
     setLocked(false);
     setSampleJson(defaultSampleJson(varNames(first?.available_vars)));
     setActiveTab("edit");
+    setRollbackConfirmId(null);
+    setSheetMode("create");
     setSheetOpen(true);
   };
 
@@ -338,13 +349,6 @@ export function MessageTemplatesTable() {
   };
 
   const handleRollback = async (row: TemplateRow) => {
-    const confirmed = window.confirm(
-      `确定回滚到 v${row.version}？将复制为新版本并立即生效（历史版本全部保留）。`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
     setRollingBackId(row.id);
     const supabase = createClient();
     const { data, error: rollbackError } = await supabase.rpc(
@@ -358,6 +362,7 @@ export function MessageTemplatesTable() {
       return;
     }
 
+    setRollbackConfirmId(null);
     setFormSubject(data.subject_tpl);
     setFormBody(data.body_tpl);
     setDraftId(null);
@@ -490,76 +495,77 @@ export function MessageTemplatesTable() {
                         return (
                           <div
                             key={channel}
-                            className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3"
+                            className="flex flex-wrap items-center gap-x-3 gap-y-2 py-1"
                           >
-                            <span className="w-12 text-sm font-medium">
-                              {TEMPLATE_CHANNEL_LABELS[channel]}
-                            </span>
-                            {latest ? (
-                              <>
-                                <span className="font-mono text-sm">
-                                  v{latest.version}
-                                </span>
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    TEMPLATE_STATUS_BADGE_CLASSES[
-                                      asTemplateStatus(latest.status)
-                                    ]
-                                  }
-                                >
-                                  {
-                                    TEMPLATE_STATUS_LABELS[
-                                      asTemplateStatus(latest.status)
-                                    ]
-                                  }
-                                </Badge>
-                                {draft && current && draft.id !== current.id ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openEditor(event.event_key, channel)
+                              }
+                              aria-label={`${latest ? "编辑" : "新建"} ${event.event_key} ${TEMPLATE_CHANNEL_LABELS[channel]} 模板`}
+                              className="group flex min-h-11 min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none lg:min-h-8"
+                            >
+                              <span className="w-12 text-sm font-medium">
+                                {TEMPLATE_CHANNEL_LABELS[channel]}
+                              </span>
+                              {latest ? (
+                                <>
+                                  <span className="font-mono text-sm">
+                                    v{latest.version}
+                                  </span>
                                   <Badge
                                     variant="outline"
                                     className={
-                                      TEMPLATE_STATUS_BADGE_CLASSES.draft
+                                      TEMPLATE_STATUS_BADGE_CLASSES[
+                                        asTemplateStatus(latest.status)
+                                      ]
                                     }
                                   >
-                                    草稿 v{draft.version}
+                                    {
+                                      TEMPLATE_STATUS_LABELS[
+                                        asTemplateStatus(latest.status)
+                                      ]
+                                    }
                                   </Badge>
-                                ) : null}
-                                <span className="text-xs text-muted-foreground">
-                                  {formatDateTime(latest.updated_at)}
-                                </span>
-                              </>
-                            ) : (
-                              <Badge variant="ghost">未配置</Badge>
-                            )}
-                            <div className="ml-auto flex items-center gap-1">
+                                  {draft && current && draft.id !== current.id ? (
+                                    <Badge
+                                      variant="outline"
+                                      className={
+                                        TEMPLATE_STATUS_BADGE_CLASSES.draft
+                                      }
+                                    >
+                                      草稿 v{draft.version}
+                                    </Badge>
+                                  ) : null}
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatDateTime(latest.updated_at)}
+                                  </span>
+                                </>
+                              ) : (
+                                <Badge variant="ghost">未配置</Badge>
+                              )}
+                              <span className="ml-auto text-xs font-medium text-primary opacity-80 transition-opacity group-hover:opacity-100">
+                                {latest ? "编辑" : "新建"}
+                              </span>
+                            </button>
+                            {versions.length > 0 ? (
                               <Button
                                 size="sm"
-                                variant={latest ? "outline" : "default"}
-                                onClick={() =>
-                                  openEditor(event.event_key, channel)
-                                }
-                                className="h-9 lg:h-8"
+                                variant="ghost"
+                                onClick={() => {
+                                  setRollbackConfirmId(null);
+                                  openEditor(
+                                    event.event_key,
+                                    channel,
+                                    "history",
+                                  );
+                                }}
+                                className="h-11 lg:h-8"
                               >
-                                {latest ? "编辑" : "新建"}
+                                <HistoryIcon data-icon="inline-start" />
+                                历史版本
                               </Button>
-                              {versions.length > 0 ? (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() =>
-                                    openEditor(
-                                      event.event_key,
-                                      channel,
-                                      "history",
-                                    )
-                                  }
-                                  className="h-9 lg:h-8"
-                                >
-                                  <HistoryIcon data-icon="inline-start" />
-                                  历史版本
-                                </Button>
-                              ) : null}
-                            </div>
+                            ) : null}
                           </div>
                         );
                       })}
@@ -585,16 +591,20 @@ export function MessageTemplatesTable() {
           className="w-full gap-0 sm:w-[52vw] sm:min-w-[420px] sm:max-w-[780px]"
         >
           <SheetHeader className="border-b">
-            <SheetTitle>{locked ? "编辑通知模板" : "新增通知模板"}</SheetTitle>
+            <SheetTitle>
+              {sheetMode === "create" ? "新建通知模板" : "编辑通知模板"}
+            </SheetTitle>
             <SheetDescription className="flex flex-col gap-1">
               <span className="font-mono text-xs">
                 {formEventKey || "（未选择事件）"} ·{" "}
                 {TEMPLATE_CHANNEL_LABELS[formChannel]}
               </span>
               <span className="text-xs">
-                {locked
-                  ? "事件与渠道创建后不可修改；已发布版本内容冻结，保存将生成新草稿版本"
-                  : "选择事件与渠道；发布后事件与渠道不可修改"}
+                {sheetMode === "create"
+                  ? locked
+                    ? "该事件与渠道尚未配置模板；填写标题与正文后保存草稿或发布"
+                    : "为已注册事件选择渠道并填写标题与正文；发布后事件与渠道不可修改"
+                  : "事件与渠道创建后不可修改；已发布版本内容冻结，保存将生成新草稿版本"}
               </span>
             </SheetDescription>
           </SheetHeader>
@@ -630,7 +640,10 @@ export function MessageTemplatesTable() {
                   }}
                   disabled={locked}
                 >
-                  <SelectTrigger id="template-event" className="w-full">
+                  <SelectTrigger
+                    id="template-event"
+                    className="w-full min-h-11 lg:min-h-8"
+                  >
                     <SelectValue placeholder="选择已注册事件" />
                   </SelectTrigger>
                   <SelectContent>
@@ -656,7 +669,10 @@ export function MessageTemplatesTable() {
                   }
                   disabled={locked}
                 >
-                  <SelectTrigger id="template-channel" className="w-full">
+                  <SelectTrigger
+                    id="template-channel"
+                    className="w-full min-h-11 lg:min-h-8"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -696,7 +712,7 @@ export function MessageTemplatesTable() {
                   value={formSubject}
                   onChange={(event) => setFormSubject(event.target.value)}
                   placeholder="如：待办：{{title}}"
-                  className="font-mono"
+                  className="min-h-11 font-mono lg:min-h-8"
                 />
               </Field>
 
@@ -814,23 +830,48 @@ export function MessageTemplatesTable() {
                       <span className="text-xs text-muted-foreground">
                         {formatDateTime(row.updated_at)}
                       </span>
-                      <div className="ml-auto">
-                        {isCurrent ? null : (
+                      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                        {isCurrent ? null : rollbackConfirmId === row.id ? (
+                          <>
+                            <span className="text-xs text-muted-foreground">
+                              确认回滚到 v{row.version}？
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-11 lg:h-8"
+                              disabled={rollingBackId !== null}
+                              onClick={() => void handleRollback(row)}
+                            >
+                              {rollingBackId === row.id ? (
+                                <Loader2Icon
+                                  className="animate-spin"
+                                  data-icon="inline-start"
+                                />
+                              ) : (
+                                <RotateCcwIcon data-icon="inline-start" />
+                              )}
+                              确认回滚
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-11 lg:h-8"
+                              disabled={rollingBackId !== null}
+                              onClick={() => setRollbackConfirmId(null)}
+                            >
+                              取消
+                            </Button>
+                          </>
+                        ) : (
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-9 lg:h-8"
+                            className="h-11 lg:h-8"
                             disabled={rollingBackId !== null}
-                            onClick={() => void handleRollback(row)}
+                            onClick={() => setRollbackConfirmId(row.id)}
                           >
-                            {rollingBackId === row.id ? (
-                              <Loader2Icon
-                                className="animate-spin"
-                                data-icon="inline-start"
-                              />
-                            ) : (
-                              <RotateCcwIcon data-icon="inline-start" />
-                            )}
+                            <RotateCcwIcon data-icon="inline-start" />
                             回滚到 v{row.version}
                           </Button>
                         )}
@@ -852,7 +893,7 @@ export function MessageTemplatesTable() {
             </span>
             <Button
               variant="outline"
-              className="h-8"
+              className="h-11 lg:h-8"
               onClick={() => void handleSaveDraft()}
               disabled={saving || publishing}
             >
@@ -867,7 +908,7 @@ export function MessageTemplatesTable() {
               保存草稿
             </Button>
             <Button
-              className="h-8"
+              className="h-11 lg:h-8"
               onClick={() => void handlePublish()}
               disabled={saving || publishing}
             >

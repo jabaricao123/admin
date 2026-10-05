@@ -1,7 +1,8 @@
 -- pgTAP：message/004+005 — 事件注册表 + 通知文案模板 + 版本化 + send_notification 模板渲染
 -- 运行：supabase db reset && supabase test db
--- 覆盖：结构（表/列/约束/RLS/指针复合外键）；registry seed（8 事件）；register_message_event 幂等；
---       未注册事件拒绝；版本唯一；published 冻结（触发器 + RPC）；草稿续编 / 发布 / 回滚
+-- 覆盖：结构（表/列/约束/RLS/指针复合外键）；registry seed（11 事件）；register_message_event 幂等；
+--       两次登记 available_vars 并集合并不覆盖；未注册事件拒绝；版本唯一；published 冻结（触发器 + RPC）；
+--       草稿续编 / 发布 / 回滚
 --       （复制旧版为 max+1 新版本 + current 指针）；渲染（替换、缺变量保留占位符、JSON null）；
 --       send_notification 走模板渲染与无模板 fallback；权限面（public 薄包装 authenticated 可执行、
 --       app 实现与内部 RPC 不 GRANT、anon/service_role 无）。
@@ -84,15 +85,15 @@ select ok(
 -- ---------------------------------------------------------------------------
 select is(
   (select count(*) from public.message_event_registry),
-  11::bigint, '事件注册表恰 11 个事件（seed 8 + approval.cc + report 失败通知 2）'
+  11::bigint, '事件注册表恰 11 个事件（seed 7 + sync.execute_failed + approval.cc + report 失败通知 2）'
 );
 select is(
   (select array_agg(event_key order by event_key) from public.message_event_registry),
   array[
     'announcement.published', 'approval.approved', 'approval.cc', 'approval.pending',
     'approval.rejected', 'approval.urge', 'report.export_failed', 'report.export_ready',
-    'report.subscription_failed', 'sync.run_finished', 'webhook.delivery_failed'
-  ], '事件清单与规格一致（含 approval.cc / report 失败通知）'
+    'report.subscription_failed', 'sync.execute_failed', 'webhook.delivery_failed'
+  ], '事件清单与规格一致（sync.execute_failed 替代幽灵事件 sync.run_finished）'
 );
 select is(
   (select available_vars from public.message_event_registry where event_key = 'approval.pending'),
@@ -182,7 +183,7 @@ select is(
 );
 select is(
   (select available_vars from app.register_message_event('demo.manual', 'demo2', '演示事件 2', '["c"]'::jsonb)),
-  '["c"]'::jsonb, '重复登记幂等更新 available_vars'
+  '["a","b","c"]'::jsonb, '重复登记 available_vars 并集合并不覆盖'
 );
 select is(
   (select count(*) from public.message_event_registry where event_key = 'demo.manual'),

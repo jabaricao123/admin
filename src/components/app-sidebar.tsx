@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Database } from "@/lib/database.types";
+import { UNREAD_COUNT_CHANGED_EVENT } from "@/lib/message-events";
 import { DEFAULT_MENU_ICON, ICON_MAP } from "@/lib/menu-icons";
 import { createClient } from "@/lib/supabase/client";
 
@@ -49,6 +50,9 @@ type MenuRow = Omit<
 
 /** 加载骨架行数 */
 const SKELETON_ROWS = 6;
+
+/** 未读数轮询间隔（focus / 未读数变更事件仍即时刷新） */
+const UNREAD_POLL_MS = 60_000;
 
 function compareBySortOrder(a: MenuRow, b: MenuRow) {
   if (a.sort_order !== b.sort_order) {
@@ -135,6 +139,7 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user: SidebarUser }) {
   const [groups, setGroups] = React.useState<NavGroup[] | null>(null);
+  const [unreadCount, setUnreadCount] = React.useState(0);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -157,6 +162,31 @@ export function AppSidebar({
     void loadMenus();
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  // 未读徽标：与菜单数据独立；加载时取一次，之后 60s 轮询 + focus / 已读操作事件刷新。
+  React.useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+
+    const refreshUnread = async () => {
+      const { data, error } = await supabase.rpc("unread_count");
+      if (!cancelled && !error) {
+        setUnreadCount(data ?? 0);
+      }
+    };
+
+    void refreshUnread();
+    const timer = window.setInterval(() => void refreshUnread(), UNREAD_POLL_MS);
+    const onFocus = () => void refreshUnread();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener(UNREAD_COUNT_CHANGED_EVENT, onFocus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener(UNREAD_COUNT_CHANGED_EVENT, onFocus);
     };
   }, []);
 
@@ -205,7 +235,7 @@ export function AppSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
         ) : (
-          <NavMain groups={groups} />
+          <NavMain groups={groups} unreadCount={unreadCount} />
         )}
       </SidebarContent>
       <SidebarFooter>

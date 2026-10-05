@@ -31,6 +31,7 @@ import type { Database } from "@/lib/database.types";
 import {
   APPROVAL_INSTANCE_STATUS_BADGE_CLASSES,
   APPROVAL_INSTANCE_STATUS_LABELS,
+  APPROVAL_OVERDUE_BADGE_CLASS,
   APPROVAL_TASK_STATUS_BADGE_CLASSES,
   APPROVAL_TASK_STATUS_LABELS,
   asApprovalInstanceStatus,
@@ -43,9 +44,6 @@ const TODO_LIMIT = 20;
 
 type TodoRow = Database["public"]["Functions"]["my_todos"]["Returns"][number];
 type TodoTab = "pending" | "done";
-
-const overdueBadgeClass =
-  "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300";
 
 function InstanceStatusBadge({ status }: { status: string }) {
   const value = asApprovalInstanceStatus(status);
@@ -209,7 +207,7 @@ export function DashboardTodos() {
                           {isOverdue48h(row.created_at) ? (
                             <Badge
                               variant="outline"
-                              className={overdueBadgeClass}
+                              className={APPROVAL_OVERDUE_BADGE_CLASS}
                             >
                               超48h
                             </Badge>
@@ -273,7 +271,7 @@ export function DashboardTodos() {
                             {isOverdue48h(row.created_at) ? (
                               <Badge
                                 variant="outline"
-                                className={overdueBadgeClass}
+                                className={APPROVAL_OVERDUE_BADGE_CLASS}
                               >
                                 超48h
                               </Badge>

@@ -26,6 +26,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Database } from "@/lib/database.types";
 import { translateMessageErrorMessage } from "@/lib/dictionaries";
+import { notifyUnreadCountChanged } from "@/lib/message-events";
 import { createClient } from "@/lib/supabase/client";
 
 const NOTIFICATION_LIMIT = 20;
@@ -94,6 +95,7 @@ export function DashboardNotifications() {
     }
     toast.success(`已将 ${data ?? 0} 条通知标记为已读`);
     setUnreadCount(0);
+    notifyUnreadCountChanged();
     void load();
   };
 

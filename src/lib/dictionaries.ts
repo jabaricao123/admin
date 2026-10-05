@@ -1015,6 +1015,76 @@ export function translateMessageTemplateErrorMessage(message: string): string {
   return isBusinessRule ? message : translateErrorMessage(message);
 }
 
+// ---------------------------------------------------------------------------
+// 消息中心 · 发送记录（message_deliveries）
+// ---------------------------------------------------------------------------
+
+/**
+ * 投递渠道（message_deliveries.channel）。
+ * 命名带 MESSAGE_ 前缀：接口集成的 webhook 投递已有 DELIVERY_STATUS_* 系列（delivering/done/failed），
+ * 两者语义不同，避免复用同名常量。
+ */
+export type MessageDeliveryChannel = "inbox" | "email" | "push" | "sms";
+
+export const MESSAGE_DELIVERY_CHANNEL_LABELS: Record<
+  MessageDeliveryChannel,
+  string
+> = {
+  inbox: "站内信",
+  email: "邮件",
+  push: "推送",
+  sms: "短信",
+};
+
+export function asMessageDeliveryChannel(
+  value: string,
+): MessageDeliveryChannel {
+  return value === "email" || value === "push" || value === "sms"
+    ? value
+    : "inbox";
+}
+
+/** 投递状态（message_deliveries.status；未知值收敛 unknown，中性展示不误标失败） */
+export type MessageDeliveryStatus =
+  | "success"
+  | "failed"
+  | "degraded"
+  | "unknown";
+
+export const MESSAGE_DELIVERY_STATUS_LABELS: Record<
+  MessageDeliveryStatus,
+  string
+> = {
+  success: "成功",
+  failed: "失败",
+  degraded: "降级",
+  unknown: "未知",
+};
+
+/** 状态 Badge：成功绿 / 失败红 / 降级黄 / 未知中性（history.md 界面规格） */
+export const MESSAGE_DELIVERY_STATUS_BADGE_CLASSES: Record<
+  MessageDeliveryStatus,
+  string
+> = {
+  success:
+    "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/60 dark:text-emerald-300",
+  failed:
+    "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300",
+  degraded:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/60 dark:text-amber-300",
+  unknown:
+    "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400",
+};
+
+/** 数据库 string 收敛到已知投递状态；未知值按「未知」中性展示（fail-safe） */
+export function asMessageDeliveryStatus(
+  value: string,
+): MessageDeliveryStatus {
+  return value === "success" || value === "failed" || value === "degraded"
+    ? value
+    : "unknown";
+}
+
 /* -------------------------------------------------------------------------- */
 /* 报表中心（report/004 + report/008）                                         */
 /* -------------------------------------------------------------------------- */

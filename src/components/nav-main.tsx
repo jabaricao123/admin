@@ -27,7 +27,14 @@ export type NavGroup = {
   items: NavItem[];
 };
 
-export function NavMain({ groups }: { groups: NavGroup[] }) {
+export function NavMain({
+  groups,
+  unreadCount,
+}: {
+  groups: NavGroup[];
+  /** 站内信未读数：与菜单数据无关，仅命中收件箱路由时渲染徽标 */
+  unreadCount: number;
+}) {
   const pathname = usePathname();
   const { setOpenMobile, isMobile } = useSidebar();
 
@@ -44,6 +51,8 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                     ? pathname === "/"
                     : pathname === item.url ||
                       pathname.startsWith(`${item.url}/`);
+                const showUnreadBadge =
+                  item.url === "/message/inbox" && unreadCount > 0;
 
                 return (
                   <SidebarMenuItem key={item.url}>
@@ -63,6 +72,14 @@ export function NavMain({ groups }: { groups: NavGroup[] }) {
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
+                    {showUnreadBadge ? (
+                      <span
+                        aria-label={`${unreadCount} 条未读`}
+                        className="pointer-events-none absolute top-1/2 right-1 z-10 flex h-5 min-w-5 -translate-y-1/2 items-center justify-center rounded-full bg-primary px-1 text-[10px] leading-none font-semibold text-primary-foreground tabular-nums group-data-[collapsible=icon]:top-0.5 group-data-[collapsible=icon]:right-0.5 group-data-[collapsible=icon]:h-2 group-data-[collapsible=icon]:min-w-2 group-data-[collapsible=icon]:translate-y-0 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:text-[0]"
+                      >
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    ) : null}
                   </SidebarMenuItem>
                 );
               })}

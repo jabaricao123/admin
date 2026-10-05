@@ -1,6 +1,6 @@
 -- pgTAP：system 批次 2 修复项 2 —— 渠道分发改走 get_service_config（message_use_service_config）
 -- 覆盖：attempt_channel_delivery 不再直读 system_services（prosrc 断言）、经白名单读取口；
---       服务未配置 → degraded（行为不变）；verified + relay → pg_net 入队 success；
+--       服务未配置 → degraded（行为不变）；verified + relay → pg_net 入队 queued；
 --       凭据解密失败 → degraded 且 error 标注可读原因、站内信必达不受影响；
 --       未知渠道 → failed；GRANT 面不变（内部函数不授 API 角色）。
 -- 说明：夹具只在本事务内生效，finish 后 rollback，不污染其他测试文件。
@@ -123,8 +123,8 @@ select app.send_notification(
 
 select is(
   (select status from public.message_deliveries where idempotency_key = :'msg2' || ':email'),
-  'success',
-  'mail verified + relay：email 经 pg_net 入队 success'
+  'queued',
+  'mail verified + relay：email 经 pg_net 入队 queued（批次 2 语义：真实结果待投递器回写）'
 );
 select ok(
   (select response from public.message_deliveries where idempotency_key = :'msg2' || ':email')

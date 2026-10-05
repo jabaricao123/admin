@@ -2,12 +2,12 @@
 -- 运行：supabase db reset && supabase test db
 -- 覆盖：分区表结构（PARTITION BY RANGE + 202610/202611 分区 + 唯一 (idempotency_key, created_at)）；
 --       ensure_message_partition 幂等；inbox 必达 success；无 mail 配置 email/push 降级不报错
---       （degraded 非 failed）；mail verified + relay_api_url → pg_net 入队 success；
---       重发（admin、仅 failed、attempts+1、幂等键不变）；90 天清理；RLS 本人/越权；cron 登记。
+--       （degraded 非 failed）；mail verified + relay_api_url → pg_net 入队 queued；
+--       重发（admin、failed/queued 超时、attempts+1、幂等键不变）；90 天清理；RLS 本人/越权；cron 登记。
 -- 说明：夹具只在本事务内生效，finish 后 rollback，不污染其他测试文件。
 
 begin;
-select plan(70);
+select plan(78);
 
 -- ---------------------------------------------------------------------------
 -- 夹具：u1 收件人 / u2 他人 / u3 admin；清空服务配置保证降级路径确定性
@@ -350,8 +350,8 @@ select app.send_notification(
 
 select is(
   (select status from public.message_deliveries where idempotency_key = :'msg2' || ':email'),
-  'success',
-  'mail verified + relay_api_url：email 经 pg_net 入队 success'
+  'queued',
+  'mail verified + relay_api_url：email 经 pg_net 入队 queued（真实结果待投递器回写）'
 );
 select ok(
   (select response from public.message_deliveries where idempotency_key = :'msg2' || ':email')
@@ -400,17 +400,17 @@ select set_config(
 select r.status as status, r.attempts as attempts
 from public.resend_delivery(:failed_id) r \gset resend_
 
-select is(:'resend_status'::text, 'success', 'admin 重发失败记录成功（relay 可达）');
+select is(:'resend_status'::text, 'queued', 'admin 重发失败记录入队 queued（relay 可达）');
 select is(:resend_attempts::integer, 2, '重发后 attempts +1');
 
 select throws_ok(
   format('select public.resend_delivery(%s)', :failed_id),
-  '22023', '仅失败记录可重发（当前状态：success）',
-  '已成功记录不可重复重发'
+  '22023', null,
+  'queued 未超 10 分钟不可重复重发（避免重复入队）'
 );
 select throws_ok(
   format('select public.resend_delivery(%s)', :degraded_id),
-  '22023', '仅失败记录可重发（当前状态：degraded）',
+  '22023', '仅失败或排队超时记录可重发（当前状态：degraded）',
   '降级记录不可重发（渠道不可用，非失败）'
 );
 select throws_ok(
@@ -549,6 +549,80 @@ select is(
     where jobname in ('message-ensure-partitions', 'message-cleanup-deliveries')),
   2::bigint,
   'pg_cron 调度已注册（cron.job 同名 job）'
+);
+
+-- ---------------------------------------------------------------------------
+-- M. 幂等重放：deliveries.created_at 取 messages.created_at 确定值（批次 1 修复；4）
+-- ---------------------------------------------------------------------------
+insert into public.messages (id, recipient_id, event_key, title, body, created_at)
+overriding system value
+values (
+  9800061, '00000000-0000-4000-a000-000000000052', 'approval.approved',
+  '幂等重放', '正文', '2026-10-15T00:00:00Z'
+);
+
+select is(
+  app.dispatch_message_channels(9800061),
+  2,
+  '首轮分发 2 个外部渠道尝试（email/push 模板）'
+);
+select is(
+  (select count(*) from public.message_deliveries where message_id = 9800061),
+  3::bigint,
+  '首轮写入 inbox + email + push 三条'
+);
+
+-- 模拟跨时间戳重放：再次 dispatch 同 message（旧实现 created_at=now() 必新增重复行）
+select app.dispatch_message_channels(9800061);
+
+select is(
+  (select count(*) from public.message_deliveries where message_id = 9800061),
+  3::bigint,
+  '重放同 message 同渠道命中唯一约束 do nothing，不重复插入'
+);
+select ok(
+  (select bool_and(d.created_at = m.created_at)
+     from public.message_deliveries d
+     join public.messages m on m.id = d.message_id
+    where d.message_id = 9800061),
+  'deliveries.created_at 取 messages.created_at 确定值'
+);
+
+-- ---------------------------------------------------------------------------
+-- N. send_notification dispatch 异常隔离：messages 必达（批次 1 修复；4）
+-- ---------------------------------------------------------------------------
+-- 模拟结构型异常：messages.created_at 默认值临时改到无分区的 2020-01，
+-- dispatch 写 deliveries 触发「no partition of relation」→ 被捕获降级（audit + warning）。
+alter table public.messages alter column created_at set default '2020-01-15T00:00:00Z'::timestamptz;
+
+select lives_ok(
+  $$ select app.send_notification(
+       '00000000-0000-4000-a000-000000000051', 'approval.approved',
+       '{"title":"隔离测试","body":"dispatch 异常"}'::jsonb) $$,
+  'dispatch 结构型异常被隔离：send_notification 不抛错'
+);
+
+alter table public.messages alter column created_at set default now();
+
+select max(id) as iso_msg
+from public.messages
+where event_key = 'approval.approved' and title = '隔离测试' \gset
+
+select is(
+  (select count(*) from public.messages where id = :iso_msg),
+  1::bigint,
+  'dispatch 抛错仍落库 messages（站内信必达）'
+);
+select is(
+  (select count(*) from public.audit_operations
+    where module = 'message' and action = 'dispatch_degraded' and object_id = :'iso_msg'),
+  1::bigint,
+  '结构型异常降级写 audit（message/dispatch_degraded）'
+);
+select is(
+  (select count(*) from public.message_deliveries where message_id = :iso_msg),
+  0::bigint,
+  '分发失败无 deliveries 行（降级不产生噪音记录）'
 );
 
 select * from finish();

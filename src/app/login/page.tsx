@@ -8,6 +8,9 @@ import { createClient } from "@/lib/supabase/server";
 
 // @next-codemod-ignore Cache Components：管理端路由均为服务端动态鉴权，允许阻塞式导航。
 export const instant = false;
+// 登录页预渲染排查（message 批次 4）：Next 16 Cache Components 下页面默认动态，
+// cookies()（createClient）不再产生「未标记动态」警告，dynamic = "force-dynamic" 已无必要；
+// 本路由经 instant = false 退出静态预渲染，build 产物标记 ƒ (Dynamic)，无需其他修复。
 
 export const metadata: Metadata = {
   title: "登录",

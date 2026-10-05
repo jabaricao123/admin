@@ -41,13 +41,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { sourceModuleLabel } from "@/components/approval/approval-utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Database } from "@/lib/database.types";
 import { translateMessageErrorMessage } from "@/lib/dictionaries";
+import { notifyUnreadCountChanged } from "@/lib/message-events";
 import { createClient } from "@/lib/supabase/client";
 
 const PAGE_SIZE = 20;
 const ALL = "all";
+
+/** 来源模块下拉最多枚举条数（去重后来源数远小于此，防大表全量拉取） */
+const SOURCE_OPTIONS_LIMIT = 1000;
 
 type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 type InboxTab = "all" | "unread" | "starred";
@@ -57,27 +62,14 @@ const REF_TYPE_ROUTES: Record<string, (refId: string) => string> = {
   approval: (refId) => `/approval/todo?highlight=${encodeURIComponent(refId)}`,
 };
 
-/** source_module → 展示名；未知模块回退显示原始标识 */
-const SOURCE_MODULE_LABELS: Record<string, string> = {
-  dashboard: "工作台",
-  org: "组织管理",
-  access: "权限管理",
-  approval: "审批中心",
-  report: "报表中心",
-  audit: "审计中心",
-  integration: "接口集成",
-  sync: "数据同步",
-  system: "系统管理",
-  message: "消息中心",
-};
-
 const formatDateTime = (value: string) =>
   new Date(value).toLocaleString("zh-CN", { hour12: false });
 
 const isUnread = (row: MessageRow) => row.read_at === null;
 
+/** 来源模块展示名（与审批中心共享字典）；消息侧无来源时回退「系统」 */
 const sourceLabel = (module: string | null) =>
-  module ? (SOURCE_MODULE_LABELS[module] ?? module) : "系统";
+  module ? sourceModuleLabel(module) : "系统";
 
 const getRefRoute = (row: MessageRow): string | null => {
   if (!row.ref_type || !row.ref_id) {
@@ -109,6 +101,7 @@ export function InboxTable() {
     const { data, error: countError } = await createClient().rpc("unread_count");
     if (!countError) {
       setUnreadCount(data ?? 0);
+      notifyUnreadCountChanged();
     }
   }, []);
 
@@ -132,6 +125,8 @@ export function InboxTable() {
       if (tab === "unread") {
         query = query.is("read_at", null);
       } else if (tab === "starred") {
+        // TODO(message 后续)：recent_notifications RPC 目前仅支持 p_limit，不支持 starred 过滤，
+        // 星标 tab 因此直查 messages 表（RLS 仅本人行）做前端过滤；RPC 增加参数后再切回。
         query = query.eq("starred", true);
       }
       if (sourceFilter !== ALL) {
@@ -141,7 +136,7 @@ export function InboxTable() {
       const [listResult, unreadResult, sourceResult] = await Promise.all([
         query,
         supabase.rpc("unread_count"),
-        supabase.from("messages").select("source_module"),
+        supabase.from("messages").select("source_module").limit(SOURCE_OPTIONS_LIMIT),
       ]);
 
       if (requestId !== requestIdRef.current) {
@@ -331,7 +326,12 @@ export function InboxTable() {
                 value="unread"
                 className="h-11 flex-1 px-3 lg:h-8 lg:flex-none"
               >
-                未读{unreadCount > 0 ? `（${unreadCount}）` : ""}
+                未读
+                {unreadCount > 0
+                  ? sourceFilter !== ALL
+                    ? `（全部 ${unreadCount}）`
+                    : `（${unreadCount}）`
+                  : ""}
               </ToggleGroupItem>
               <ToggleGroupItem
                 value="starred"
@@ -348,7 +348,7 @@ export function InboxTable() {
               }}
             >
               <SelectTrigger
-                className="h-11 w-full sm:w-44 lg:h-8"
+                className="min-h-11 w-full sm:w-44 lg:min-h-8"
                 aria-label="按来源模块筛选"
               >
                 <SelectValue placeholder="全部来源" />
@@ -605,6 +605,7 @@ export function InboxTable() {
                     variant="outline"
                     onClick={() => void toggleStar()}
                     disabled={acting}
+                    className="h-11 lg:h-8"
                   >
                     <StarIcon
                       data-icon="inline-start"
@@ -616,13 +617,14 @@ export function InboxTable() {
                     variant="outline"
                     onClick={() => void markUnread()}
                     disabled={acting || !detail.read_at}
+                    className="h-11 lg:h-8"
                   >
                     <MailIcon data-icon="inline-start" />
                     标为未读
                   </Button>
                 </div>
                 {detailRefRoute ? (
-                  <Button asChild>
+                  <Button asChild className="h-11 lg:h-8">
                     <Link href={detailRefRoute}>
                       去处理
                       <ArrowRightIcon data-icon="inline-end" />
